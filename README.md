@@ -1,20 +1,38 @@
 # wej-api
 API for WeJ music service
 
-# Objects
+# Models
 - Song:
     Song info (name, artist, album cover, song file?)
     Votes?
     When song gets added to a queue reset votes, however store total vote info in db when a queue is closed
     total number of plays
-- Queue:
+    link/function to play
+- Session:
     list of songs in the queue
     unique id that's generated when a new queue object is created
     unique id can be used to modify the queue using api
-    Currently playing song
+    Currently playing song - time started and whether it's paused
+    size
+    User who created the queue
+    voters who are allowed to vote (give out api tokens with a code scan, give them a timeout)
 - App:
+    Start api, connect to db (and cache)
     Stores all of the queues
+- User
+    login creds
+    account level (Free, bar, exec)
 
+# Technologies
+- Backend language: GO
+    Fast, multi platform, good way to learn
+- Frontend language: React Native
+    Multi platform, reactive
+- API framework: Gin
+    Lightweight and fast, don't need anything more than that
+- Database: TBD
+- Distributed cache: Redis
+    open source, can store hashes, scales well
 
 # Business
 Three use tiers:
@@ -32,3 +50,8 @@ Three use tiers:
     No ads, $100 per month? (again, should calculate an estimate. This will probably be expensive)
     Maybe do a DJ mode where songs are only played for 15-30 seconds to go through more songs
 Could pitch by saving money by replacing a DJ
+
+# User story
+- As a user, I can create a session of the app to display publicly that contains a currently playing song, a queue of songs that 
+are up next with a number of votes, and a qr and number code for people to join and contribute
+- As a user, I can join a session and see the queue of songs, add songs to the queue and vote for songs I want to hear
