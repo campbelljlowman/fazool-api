@@ -30,7 +30,8 @@ API for WeJ music service
     Multi platform, reactive
 - API framework: Gin
     Lightweight and fast, don't need anything more than that
-- Database: TBD
+- Database: postgres
+    available as a service, durable, well established
 - Distributed cache: Redis
     open source, can store hashes, scales well
 

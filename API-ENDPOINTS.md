@@ -4,5 +4,5 @@
 - play/pause
 - get queue
 - user login
-- user create queue
+- user create session
 
