@@ -11,6 +11,8 @@ func initializeRoutes(router *gin.Engine){
 
 	// Sessions
 	router.POST("/session", createNewSession)
+	router.GET("/session", getAllSessions)
+	router.GET("/session/:sessionID", getSessionFromID)
 }
 
 

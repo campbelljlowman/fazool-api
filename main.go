@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var sessions  map[int]Session
+var sessions = make(map[int]Session)
 
 func main()  {
 	router := gin.Default()
