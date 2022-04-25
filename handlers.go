@@ -13,6 +13,8 @@ func initializeRoutes(router *gin.Engine){
 	router.POST("/session", createNewSession)
 	router.GET("/session", getAllSessions)
 	router.GET("/session/:sessionID", getSessionFromID)
+	router.PUT("session/:sessionID", voteForSong)
+	router.PATCH("session/:sessionID", currentlyPlayingAction)
 }
 
 
