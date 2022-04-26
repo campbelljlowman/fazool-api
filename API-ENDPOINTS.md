@@ -5,4 +5,5 @@
 - get queue
 - user login
 - user create session
+- join queue
 

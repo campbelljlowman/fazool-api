@@ -14,7 +14,7 @@ func initializeRoutes(router *gin.Engine){
 	router.GET("/session", getAllSessions)
 	router.GET("/session/:sessionID", getSessionFromID)
 	router.PUT("session/:sessionID", voteForSong)
-	router.PATCH("session/:sessionID", currentlyPlayingAction)
+	router.PATCH("session/:sessionID", updateCurrentlyPlaying)
 }
 
 

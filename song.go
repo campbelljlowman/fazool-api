@@ -1,10 +1,15 @@
 package main
 
+// Basic info for displaying a song in UI
 type Song struct {
-	SongID int `json:"songID"`
+	SongID int `json:"song_id"`
 	Title string `json:"title"`
 	Artist string `json:"artist"`
 	Votes int `json:"votes"`
+}
+
+type SongAction struct {
+	Action string `json:"action"`
 }
 
 func populateSongs(){

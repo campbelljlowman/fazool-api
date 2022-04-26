@@ -1,8 +1,6 @@
 package main
 
 import (
-	// "encoding/json"
-	// "fmt"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -11,13 +9,13 @@ import (
 )
 
 type Session struct {
-	SessionID int `json:"sessionID"`
-	CurrentlyPlaying Song `json:"currentlyPlaying"`
+	SessionID int `json:"session_id"`
+	CurrentlyPlaying Song `json:"currently_playing"`
 	Queue map[int] Song `json:"queue"`
 }
 
 type Vote struct{
-	SongId int `json:"songID"`
+	SongId int `json:"song_id"`
 	Vote int `json:"vote"`
 }
 
@@ -50,6 +48,7 @@ func getSessionFromID(c *gin.Context){
 }
 
 func voteForSong(c *gin.Context){
+	// Describe expected JSON
 	// Get sesion ID from URL
 	sessionIDString := c.Param("sessionID")
 	sessionID, err := strconv.Atoi(sessionIDString)
@@ -85,8 +84,36 @@ func voteForSong(c *gin.Context){
 	c.Status(http.StatusOK)
 }
 
-func currentlyPlayingAction(c *gin.Context){
-	
+func updateCurrentlyPlaying(c *gin.Context){
+	// update currently playing song
+	// Advance to next song (highest in queue), play or pause
+	// TODO: Describe expected JSON
+	// Options are strings: advance, play, pause
+
+	// Get sesion ID from URL
+	sessionIDString := c.Param("sessionID")
+	sessionID, err := strconv.Atoi(sessionIDString)
+	if err != nil{
+		// TODO: return error for incorrect param
+	}
+
+	songAction := SongAction{}
+	c.BindJSON(&songAction)
+	action := songAction.Action
+
+	switch action {
+	case "advance":
+		// Move song with most votes to next playing
+		advanceSong(sessionID)
+	case "play":
+		// call play song on player plugin
+	case "pause":
+		// call pause song on player plugin
+	default:
+		// return error for invalid action being called
+	}
+	c.Status(http.StatusOK)
+
 }
 
 // Helpers
@@ -100,4 +127,22 @@ func getNewSessionId() int {
 	} else {
 		return newSessionId
 	}
+}
+
+func advanceSong(sessionID int) {
+	session := sessions[sessionID]
+
+	queue := session.Queue
+	var highestVotes int
+	var highestVotesKey int
+	// TODO: make sure default value is not 0
+	for key, element := range queue{
+		if (highestVotes < element.Votes) {
+			highestVotes = element.Votes
+			highestVotesKey = key
+		} 
+	}
+	session.CurrentlyPlaying = session.Queue[highestVotesKey]
+	sessions[sessionID] = session
+	delete(session.Queue, highestVotesKey)
 }
