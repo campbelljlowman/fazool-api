@@ -118,8 +118,8 @@ func updateCurrentlyPlaying(c *gin.Context){
 
 // Helpers
 func getNewSessionId() int {
-	// TODO: Make not recursive 
-	// TODO: Make session ID range more like kahoot (all same # of digits)
+	// TODO: Make not recursive (Use UUID?)
+	// TODO: Make session ID range more like kahoot (all same # of digits) 
 	newSessionId := rand.Intn(1000)
 	_, key_exists := sessions[newSessionId]
 	if key_exists {

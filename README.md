@@ -16,6 +16,8 @@ API for WeJ music service
     size
     User who created the queue
     voters who are allowed to vote (give out api tokens with a code scan, give them a timeout)
+    Explicit song filter
+    Streaming service to target
 - App:
     Start api, connect to db (and cache)
     Stores all of the queues
