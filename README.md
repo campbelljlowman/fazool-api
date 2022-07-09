@@ -3,27 +3,27 @@ API for WeJ music service
 
 # Models
 - Song:
-    Song info (name, artist, album cover, song file?)
-    Votes?
-    When song gets added to a queue reset votes, however store total vote info in db when a queue is closed
-    total number of plays
-    link/function to play
+    - Song info (name, artist, album cover, song file?)
+    - Votes?
+    - When song gets added to a queue reset votes, however store total vote info in db when a queue is closed
+    - Total number of plays
+    - Link/function to play
 - Session:
-    list of songs in the queue
-    unique id that's generated when a new queue object is created
-    unique id can be used to modify the queue using api
-    Currently playing song - time started and whether it's paused
-    size
-    User who created the queue
-    voters who are allowed to vote (give out api tokens with a code scan, give them a timeout)
-    Explicit song filter
-    Streaming service to target
+    - list of songs in the queue
+    - unique id that's generated when a new queue object is created
+    - unique id can be used to modify the queue using api
+    - Currently playing song - time started and whether it's paused
+    - size
+    - User who created the queue
+    - voters who are allowed to vote (give out api tokens with a code scan, give them a timeout)
+    - Explicit song filter
+    - Streaming service to target
 - App:
-    Start api, connect to db (and cache)
-    Stores all of the queues
+    - Start api, connect to db (and cache)
+    - Stores all of the queues
 - User
-    login creds
-    account level (Free, bar, exec)
+    - login creds
+    - account level (Free, bar, unlimited)
 
 # Technologies
 - Backend language: GO
@@ -55,6 +55,5 @@ Three use tiers:
 Could pitch by saving money by replacing a DJ
 
 # User story
-- As a user, I can create a session of the app to display publicly that contains a currently playing song, a queue of songs that 
-are up next with a number of votes, and a qr and number code for people to join and contribute
-- As a user, I can join a session and see the queue of songs, add songs to the queue and vote for songs I want to hear
+- As a WeJ facilitator, I can create a session of the app to display publicly that contains a currently playing song, a queue of songs that are up next with a number of votes, and a qr and number code for people to join and contribute
+- As a WeJ user, I can join a session and see the queue of songs, add songs to the queue and vote for songs I want to hear
