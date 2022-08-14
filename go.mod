@@ -1,6 +1,6 @@
 module github.com/campbelljlowman/WeJ-API
 
-go 1.18
+go 1.19
 
 require (
 	github.com/gin-contrib/sse v0.1.0 // indirect

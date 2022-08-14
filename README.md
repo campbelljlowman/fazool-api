@@ -68,3 +68,9 @@ Could pitch by saving money by replacing a DJ
 # User story
 - As a WeJ facilitator, I can create a session of the app to display publicly that contains a currently playing song, a queue of songs that are up next with a number of votes, and a qr and number code for people to join and contribute
 - As a WeJ user, I can join a session and see the queue of songs, add songs to the queue and vote for songs I want to hear
+
+# Env setup
+
+1. Install go 
+2. cd to project root
+3. run `go run .`
