@@ -18,6 +18,8 @@ type Vote struct{
 	SongId int `json:"song_id"`
 	Vote int `json:"vote"`
 }
+//TODO: Investigate using pointers to these structs in the data structures, it might make it easier to 
+// Allow you to update the values in place rather than make a copy
 
 // Handlers
 func createNewSession(c *gin.Context){
