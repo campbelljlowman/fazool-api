@@ -1,4 +1,4 @@
-module github.com/campbelljlowman/WeJ-API
+module github.com/campbelljlowman/fazool-api
 
 go 1.19
 

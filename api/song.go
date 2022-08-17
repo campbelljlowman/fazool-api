@@ -1,4 +1,4 @@
-package main
+package api
 
 // Basic info for displaying a song in UI
 type Song struct {
@@ -6,13 +6,14 @@ type Song struct {
 	Title string `json:"title"`
 	Artist string `json:"artist"`
 	Votes int `json:"votes"`
+	Image string `json:"image"`
 }
 
 type SongAction struct {
 	Action string `json:"action"`
 }
 
-func populateSongs(){
+func PopulateSongs(){
 	songs[1] = Song{
 		SongID: 1,
 		Title: "The Jackie",
