@@ -28,7 +28,7 @@ func createNewSession(c *gin.Context){
 		SessionID: sessionID,
 		Queue: make(map[int]Song),
 	}
-	sessions[sessionID] = new_session
+	sessions[sessionID] = &new_session
 	c.JSON(http.StatusOK, gin.H{"sessionID": sessionID})
 }
 
@@ -49,8 +49,7 @@ func getSessionFromID(c *gin.Context){
 	c.JSON(http.StatusOK, session)
 }
 
-func voteForSong(c *gin.Context){
-	// Describe expected JSON
+func updateQueue(c *gin.Context){
 	// Get sesion ID from URL
 	sessionIDString := c.Param("sessionID")
 	sessionID, err := strconv.Atoi(sessionIDString)
@@ -58,32 +57,36 @@ func voteForSong(c *gin.Context){
 		// TODO: return error for incorrect param
 	}
 
-	// Get vote from JSON body
-	newVote := Vote{}
-	c.BindJSON(&newVote)
+	// // Get vote from JSON body
+	// newVote := Vote{}
+	// c.BindJSON(&newVote)
 
 	// Get session from memory using ID
-	session, key_exists := sessions[sessionID]
+	sessionPtr, key_exists := sessions[sessionID]
 	if !key_exists{
 		// error if queue doesn't exist
 	}
 
-	// Add vote to queue
-	// Get copy of song voted on
-	song := songs[newVote.SongId]
-	var currentVotes int
-	// Get current number of votes song has
-	_, songExistsInQueue := session.Queue[newVote.SongId]
-	if songExistsInQueue{
-		currentVotes = session.Queue[newVote.SongId].Votes
-	} else {
-		currentVotes = 0
-	}
-	song.Votes = currentVotes + newVote.Vote
-	// Store new song in queue
-	session.Queue[newVote.SongId] = song
+	session := *sessionPtr
+	session.SessionID = 3
+	print(session.SessionID)
 
-	c.Status(http.StatusOK)
+	// // Add vote to queue
+	// // Get copy of song voted on
+	// song := songs[newVote.SongId]
+	// var currentVotes int
+	// // Get current number of votes song has
+	// _, songExistsInQueue := session.Queue[newVote.SongId]
+	// if songExistsInQueue{
+	// 	currentVotes = session.Queue[newVote.SongId].Votes
+	// } else {
+	// 	currentVotes = 0
+	// }
+	// song.Votes = currentVotes + newVote.Vote
+	// // Store new song in queue
+	// session.Queue[newVote.SongId] = song
+
+	// c.Status(http.StatusOK)
 }
 
 func updateCurrentlyPlaying(c *gin.Context){
