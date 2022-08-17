@@ -2,7 +2,7 @@ package api
 
 // Basic info for displaying a song in UI
 type Song struct {
-	SongID string `json:"song_id"`
+	SongID string `json:"id"`
 	Title string `json:"title"`
 	Artist string `json:"artist"`
 	Votes int `json:"votes"`

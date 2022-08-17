@@ -11,22 +11,15 @@ import (
 type Session struct {
 	SessionID int `json:"session_id"`
 	CurrentlyPlaying Song `json:"currently_playing"`
-	Queue map[int] Song `json:"queue"`
+	Queue map[string] *Song `json:"queue"`
 }
-
-type Vote struct{
-	SongId int `json:"song_id"`
-	Vote int `json:"vote"`
-}
-//TODO: Investigate using pointers to these structs in the data structures, it might make it easier to 
-// Allow you to update the values in place rather than make a copy
 
 // Handlers
 func createNewSession(c *gin.Context){
 	sessionID := getNewSessionId()
 	new_session := Session{
 		SessionID: sessionID,
-		Queue: make(map[int]Song),
+		Queue: make(map[string]*Song),
 	}
 	sessions[sessionID] = &new_session
 	c.JSON(http.StatusOK, gin.H{"sessionID": sessionID})
@@ -50,43 +43,31 @@ func getSessionFromID(c *gin.Context){
 }
 
 func updateQueue(c *gin.Context){
-	// Get sesion ID from URL
 	sessionIDString := c.Param("sessionID")
 	sessionID, err := strconv.Atoi(sessionIDString)
 	if err != nil{
 		// TODO: return error for incorrect param
 	}
 
-	// // Get vote from JSON body
-	// newVote := Vote{}
-	// c.BindJSON(&newVote)
+	votedSong := Song{}
+	c.BindJSON(&votedSong)	
 
-	// Get session from memory using ID
-	sessionPtr, key_exists := sessions[sessionID]
+	session, key_exists := sessions[sessionID]
 	if !key_exists{
 		// error if queue doesn't exist
 	}
 
-	session := *sessionPtr
-	session.SessionID = 3
-	print(session.SessionID)
+	queuedSong, songExistsInQueue := session.Queue[votedSong.SongID]
+	if songExistsInQueue{
+		queuedSong.Votes += votedSong.Votes
+		print("asdf")
+		print(queuedSong.Votes)
+	} else {
+		//TODO: Validate the values of song
+		session.Queue[votedSong.SongID] = &votedSong
+	}
 
-	// // Add vote to queue
-	// // Get copy of song voted on
-	// song := songs[newVote.SongId]
-	// var currentVotes int
-	// // Get current number of votes song has
-	// _, songExistsInQueue := session.Queue[newVote.SongId]
-	// if songExistsInQueue{
-	// 	currentVotes = session.Queue[newVote.SongId].Votes
-	// } else {
-	// 	currentVotes = 0
-	// }
-	// song.Votes = currentVotes + newVote.Vote
-	// // Store new song in queue
-	// session.Queue[newVote.SongId] = song
-
-	// c.Status(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 func updateCurrentlyPlaying(c *gin.Context){
@@ -135,19 +116,19 @@ func getNewSessionId() int {
 }
 
 func advanceSong(sessionID int) {
-	session := sessions[sessionID]
+	// session := sessions[sessionID]
 
-	queue := session.Queue
-	var highestVotes int
-	var highestVotesKey int
-	// TODO: make sure default value is not 0
-	for key, element := range queue{
-		if (highestVotes < element.Votes) {
-			highestVotes = element.Votes
-			highestVotesKey = key
-		} 
-	}
-	session.CurrentlyPlaying = session.Queue[highestVotesKey]
-	sessions[sessionID] = session
-	delete(session.Queue, highestVotesKey)
+	// queue := session.Queue
+	// var highestVotes int
+	// var highestVotesKey int
+	// // TODO: make sure default value is not 0
+	// for key, element := range queue{
+	// 	if (highestVotes < element.Votes) {
+	// 		highestVotes = element.Votes
+	// 		// highestVotesKey = key
+	// 	} 
+	// }
+	// // session.CurrentlyPlaying = session.Queue[highestVotesKey]
+	// sessions[sessionID] = session
+	// delete(session.Queue, highestVotesKey)
 }
