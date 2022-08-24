@@ -43,6 +43,7 @@ func getSessionFromID(c *gin.Context){
 }
 
 func updateQueue(c *gin.Context){
+	//TODO: Fix - This errors if called on a queue that doesn't exist
 	sessionIDString := c.Param("sessionID")
 	sessionID, err := strconv.Atoi(sessionIDString)
 	if err != nil{

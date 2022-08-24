@@ -4,6 +4,11 @@ import(
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/campbelljlowman/fazool-api/graph"
+	"github.com/campbelljlowman/fazool-api/graph/generated"
 )
 
 var sessions = make(map[int]*Session)
@@ -12,6 +17,15 @@ var songs = make(map[int]Song)
 
 func InitializeRoutes(router *gin.Engine){
 	router.GET("/hc", healthCheck)
+
+	// Graphql
+	router.GET("/playground", func(c *gin.Context) {
+		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
+	})
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
+	router.POST("/query", func(c *gin.Context) {
+		srv.ServeHTTP(c.Writer, c.Request)
+	})
 
 	// Sessions
 	router.POST("/session", createNewSession)
