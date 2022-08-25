@@ -6,6 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.15
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.8.1
+	github.com/gorilla/websocket v1.5.0
 	github.com/vektah/gqlparser/v2 v2.4.8
 )
 
@@ -16,7 +17,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.10.1 // indirect
 	github.com/goccy/go-json v0.9.7 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect

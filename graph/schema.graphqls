@@ -2,27 +2,42 @@
 #
 # https://gqlgen.com/getting-started/
 
-type Todo {
-  id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
+type Song {
+  id: String!
+  title: String!
+  artist: String!
+  image: String!
+  votes: Int!
 }
 
-type User {
-  id: ID!
-  name: String!
+type Session {
+  id: Int!
+  currentlyPlaying: Song
+  queue: [Song!]
+}
+
+enum QueueAction {
+  PLAY
+  PAUSE
+  ADVANCE
+}
+
+input SongUpdate {
+  id: String!
+  title: String
+  artist: String
+  image: String
+  vote: Int!
 }
 
 type Query {
-  todos: [Todo!]!
-}
-
-input NewTodo {
-  text: String!
-  userId: String!
+  session(session: Int): Session
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  createSession: Session!
+  updateQueue(session: Int, song: SongUpdate): Session!
+  updateCurrentlyPlaying(session: Int, action: QueueAction): Session!
 }
+
+# Subscription
