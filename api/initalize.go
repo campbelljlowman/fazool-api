@@ -5,7 +5,7 @@ import(
 
 	"github.com/gin-gonic/gin"
 	"github.com/99designs/gqlgen/graphql/playground"
-	
+
 	"github.com/campbelljlowman/fazool-api/graph"
 )
 
@@ -20,7 +20,6 @@ func InitializeRoutes(router *gin.Engine){
 	router.GET("/playground", func(c *gin.Context) {
 		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
 	})
-	
 	srv := graph.NewGraphQLServer(&graph.Resolver{})
 	router.POST("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)

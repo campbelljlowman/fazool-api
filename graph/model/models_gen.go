@@ -2,19 +2,73 @@
 
 package model
 
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+import (
+	"fmt"
+	"io"
+	"strconv"
+)
+
+type Session struct {
+	ID               int     `json:"id"`
+	CurrentlyPlaying *Song   `json:"currentlyPlaying"`
+	Queue            []*Song `json:"queue"`
 }
 
-type Todo struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
-	Done bool   `json:"done"`
-	User *User  `json:"user"`
+type Song struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Artist string `json:"artist"`
+	Image  string `json:"image"`
+	Votes  int    `json:"votes"`
 }
 
-type User struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+type SongUpdate struct {
+	ID     string  `json:"id"`
+	Title  *string `json:"title"`
+	Artist *string `json:"artist"`
+	Image  *string `json:"image"`
+	Vote   int     `json:"vote"`
+}
+
+type QueueAction string
+
+const (
+	QueueActionPlay    QueueAction = "PLAY"
+	QueueActionPause   QueueAction = "PAUSE"
+	QueueActionAdvance QueueAction = "ADVANCE"
+)
+
+var AllQueueAction = []QueueAction{
+	QueueActionPlay,
+	QueueActionPause,
+	QueueActionAdvance,
+}
+
+func (e QueueAction) IsValid() bool {
+	switch e {
+	case QueueActionPlay, QueueActionPause, QueueActionAdvance:
+		return true
+	}
+	return false
+}
+
+func (e QueueAction) String() string {
+	return string(e)
+}
+
+func (e *QueueAction) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = QueueAction(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid QueueAction", str)
+	}
+	return nil
+}
+
+func (e QueueAction) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

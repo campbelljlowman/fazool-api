@@ -11,14 +11,24 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 )
 
-// CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
+// CreateSession is the resolver for the createSession field.
+func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, error) {
+	panic(fmt.Errorf("not implemented: CreateSession - createSession"))
 }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: Todos - todos"))
+// UpdateQueue is the resolver for the updateQueue field.
+func (r *mutationResolver) UpdateQueue(ctx context.Context, session *int, song *model.SongUpdate) (*model.Session, error) {
+	panic(fmt.Errorf("not implemented: UpdateQueue - updateQueue"))
+}
+
+// UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
+func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, session *int, action *model.QueueAction) (*model.Session, error) {
+	panic(fmt.Errorf("not implemented: UpdateCurrentlyPlaying - updateCurrentlyPlaying"))
+}
+
+// Session is the resolver for the session field.
+func (r *queryResolver) Session(ctx context.Context, session *int) ([]*model.Session, error) {
+	panic(fmt.Errorf("not implemented: Session - session"))
 }
 
 // Mutation returns generated.MutationResolver implementation.

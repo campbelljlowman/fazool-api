@@ -31,7 +31,7 @@ input SongUpdate {
 }
 
 type Query {
-  session(session: Int): Session
+  session(session: Int): [Session]
 }
 
 type Mutation {
