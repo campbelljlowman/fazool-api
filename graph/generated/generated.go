@@ -45,8 +45,8 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Mutation struct {
 		CreateSession          func(childComplexity int) int
-		UpdateCurrentlyPlaying func(childComplexity int, session *int, action *model.QueueAction) int
-		UpdateQueue            func(childComplexity int, session *int, song *model.SongUpdate) int
+		UpdateCurrentlyPlaying func(childComplexity int, sessionID *int, action *model.QueueAction) int
+		UpdateQueue            func(childComplexity int, sessionID *int, song *model.SongUpdate) int
 	}
 
 	Query struct {
@@ -70,8 +70,8 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	CreateSession(ctx context.Context) (*model.Session, error)
-	UpdateQueue(ctx context.Context, session *int, song *model.SongUpdate) (*model.Session, error)
-	UpdateCurrentlyPlaying(ctx context.Context, session *int, action *model.QueueAction) (*model.Session, error)
+	UpdateQueue(ctx context.Context, sessionID *int, song *model.SongUpdate) (*model.Session, error)
+	UpdateCurrentlyPlaying(ctx context.Context, sessionID *int, action *model.QueueAction) (*model.Session, error)
 }
 type QueryResolver interface {
 	Session(ctx context.Context, session *int) ([]*model.Session, error)
@@ -109,7 +109,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateCurrentlyPlaying(childComplexity, args["session"].(*int), args["action"].(*model.QueueAction)), true
+		return e.complexity.Mutation.UpdateCurrentlyPlaying(childComplexity, args["sessionID"].(*int), args["action"].(*model.QueueAction)), true
 
 	case "Mutation.updateQueue":
 		if e.complexity.Mutation.UpdateQueue == nil {
@@ -121,7 +121,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateQueue(childComplexity, args["session"].(*int), args["song"].(*model.SongUpdate)), true
+		return e.complexity.Mutation.UpdateQueue(childComplexity, args["sessionID"].(*int), args["song"].(*model.SongUpdate)), true
 
 	case "Query.session":
 		if e.complexity.Query.Session == nil {
@@ -292,14 +292,15 @@ input SongUpdate {
   vote: Int!
 }
 
+# Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
   session(session: Int): [Session]
 }
 
 type Mutation {
   createSession: Session!
-  updateQueue(session: Int, song: SongUpdate): Session!
-  updateCurrentlyPlaying(session: Int, action: QueueAction): Session!
+  updateQueue(sessionID: Int, song: SongUpdate): Session!
+  updateCurrentlyPlaying(sessionID: Int, action: QueueAction): Session!
 }
 
 # Subscription`, BuiltIn: false},
@@ -314,14 +315,14 @@ func (ec *executionContext) field_Mutation_updateCurrentlyPlaying_args(ctx conte
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
-	if tmp, ok := rawArgs["session"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("session"))
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
 		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["session"] = arg0
+	args["sessionID"] = arg0
 	var arg1 *model.QueueAction
 	if tmp, ok := rawArgs["action"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("action"))
@@ -338,14 +339,14 @@ func (ec *executionContext) field_Mutation_updateQueue_args(ctx context.Context,
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
-	if tmp, ok := rawArgs["session"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("session"))
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
 		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["session"] = arg0
+	args["sessionID"] = arg0
 	var arg1 *model.SongUpdate
 	if tmp, ok := rawArgs["song"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("song"))
@@ -492,7 +493,7 @@ func (ec *executionContext) _Mutation_updateQueue(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateQueue(rctx, fc.Args["session"].(*int), fc.Args["song"].(*model.SongUpdate))
+		return ec.resolvers.Mutation().UpdateQueue(rctx, fc.Args["sessionID"].(*int), fc.Args["song"].(*model.SongUpdate))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -555,7 +556,7 @@ func (ec *executionContext) _Mutation_updateCurrentlyPlaying(ctx context.Context
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateCurrentlyPlaying(rctx, fc.Args["session"].(*int), fc.Args["action"].(*model.QueueAction))
+		return ec.resolvers.Mutation().UpdateCurrentlyPlaying(rctx, fc.Args["sessionID"].(*int), fc.Args["action"].(*model.QueueAction))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

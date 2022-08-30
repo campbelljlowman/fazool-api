@@ -7,20 +7,22 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 )
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, error) {
-	if(r.sessions == nil)	{
+	if r.sessions == nil {
 		r.sessions = make(map[int]*model.Session)
 	}
 
 	session := &model.Session{
-		ID: 81,
+		ID:               81,
 		CurrentlyPlaying: nil,
-		Queue: nil,
+		Queue:            nil,
 	}
 
 	r.sessions[session.ID] = session
@@ -28,12 +30,32 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, e
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
-func (r *mutationResolver) UpdateQueue(ctx context.Context, session *int, song *model.SongUpdate) (*model.Session, error) {
-	panic(fmt.Errorf("not implemented: UpdateQueue - updateQueue"))
+func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID *int, song *model.SongUpdate) (*model.Session, error) {
+	session := r.sessions[*sessionID]
+
+
+	idx := slices.IndexFunc(session.Queue, func(s *model.Song) bool { return s.ID == song.ID })
+	if (idx == -1){
+		// add new song to queue
+		newSong := &model.Song{
+			ID: song.ID,
+			Title: *song.Title,
+			Artist: *song.Artist,
+			Image: *song.Image,
+			Votes: song.Vote,
+		}
+		session.Queue = append(session.Queue, newSong)
+	} else{
+		queuedSong := session.Queue[idx]
+		queuedSong.Votes += song.Vote
+	}
+
+	print(session.Queue[idx])
+	return session, nil
 }
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
-func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, session *int, action *model.QueueAction) (*model.Session, error) {
+func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID *int, action *model.QueueAction) (*model.Session, error) {
 	panic(fmt.Errorf("not implemented: UpdateCurrentlyPlaying - updateCurrentlyPlaying"))
 }
 
