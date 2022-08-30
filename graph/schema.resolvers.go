@@ -13,7 +13,18 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, error) {
-	panic(fmt.Errorf("not implemented: CreateSession - createSession"))
+	if(r.sessions == nil)	{
+		r.sessions = make(map[int]*model.Session)
+	}
+
+	session := &model.Session{
+		ID: 81,
+		CurrentlyPlaying: nil,
+		Queue: nil,
+	}
+
+	r.sessions[session.ID] = session
+	return session, nil
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
@@ -29,6 +40,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, session *
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, session *int) ([]*model.Session, error) {
 	panic(fmt.Errorf("not implemented: Session - session"))
+	//Code here
 }
 
 // Mutation returns generated.MutationResolver implementation.
