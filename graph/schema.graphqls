@@ -32,7 +32,7 @@ input SongUpdate {
 
 # Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
-  session(session: Int): [Session]
+  session(sessionID: Int): [Session]
 }
 
 type Mutation {

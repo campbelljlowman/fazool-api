@@ -50,7 +50,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Session func(childComplexity int, session *int) int
+		Session func(childComplexity int, sessionID *int) int
 	}
 
 	Session struct {
@@ -74,7 +74,7 @@ type MutationResolver interface {
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID *int, action *model.QueueAction) (*model.Session, error)
 }
 type QueryResolver interface {
-	Session(ctx context.Context, session *int) ([]*model.Session, error)
+	Session(ctx context.Context, sessionID *int) ([]*model.Session, error)
 }
 
 type executableSchema struct {
@@ -133,7 +133,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Session(childComplexity, args["session"].(*int)), true
+		return e.complexity.Query.Session(childComplexity, args["sessionID"].(*int)), true
 
 	case "Session.currentlyPlaying":
 		if e.complexity.Session.CurrentlyPlaying == nil {
@@ -294,7 +294,7 @@ input SongUpdate {
 
 # Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
-  session(session: Int): [Session]
+  session(sessionID: Int): [Session]
 }
 
 type Mutation {
@@ -378,14 +378,14 @@ func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArg
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
-	if tmp, ok := rawArgs["session"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("session"))
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
 		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["session"] = arg0
+	args["sessionID"] = arg0
 	return args, nil
 }
 
@@ -619,7 +619,7 @@ func (ec *executionContext) _Query_session(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Session(rctx, fc.Args["session"].(*int))
+		return ec.resolvers.Query().Session(rctx, fc.Args["sessionID"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
