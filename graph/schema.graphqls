@@ -37,8 +37,10 @@ type Query {
 
 type Mutation {
   createSession: Session!
-  updateQueue(sessionID: Int, song: SongUpdate): Session!
-  updateCurrentlyPlaying(sessionID: Int, action: QueueAction): Session!
+  updateQueue(sessionID: Int!, song: SongUpdate!): Session!
+  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
 }
 
-# Subscription
+type Subscription {
+  sessionUpdated(sessionID: Int!): Session!
+}

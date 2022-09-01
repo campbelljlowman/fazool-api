@@ -19,6 +19,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, e
 		r.sessions = make(map[int]*model.Session)
 	}
 
+	// Make session ID random
 	session := &model.Session{
 		ID:               81,
 		CurrentlyPlaying: nil,
@@ -30,8 +31,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, e
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
-func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID *int, song *model.SongUpdate) (*model.Session, error) {
-	session := r.sessions[*sessionID]
+func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.Session, error) {
+	session := r.sessions[sessionID]
 
 	idx := slices.IndexFunc(session.Queue, func(s *model.Song) bool { return s.ID == song.ID })
 	if idx == -1 {
@@ -54,18 +55,23 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID *int, song
 }
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
-func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID *int, action *model.QueueAction) (*model.Session, error) {
+func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error) {
 	panic(fmt.Errorf("not implemented: UpdateCurrentlyPlaying - updateCurrentlyPlaying"))
 }
 
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, sessionID *int) ([]*model.Session, error) {
-	if (sessionID != nil){
+	if sessionID != nil {
 		session := r.sessions[*sessionID]
 		return []*model.Session{session}, nil
 	} else {
 		return maps.Values(r.sessions), nil
 	}
+}
+
+// SessionUpdated is the resolver for the sessionUpdated field.
+func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {
+	panic(fmt.Errorf("not implemented: SessionUpdated - sessionUpdated"))
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -74,5 +80,9 @@ func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResol
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// Subscription returns generated.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }
