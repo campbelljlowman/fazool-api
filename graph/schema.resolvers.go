@@ -54,6 +54,11 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	// Sort queue
 	sort.Slice(session.Queue, func(i, j int) bool {return session.Queue[i].Votes > session.Queue[j].Votes})
+
+	// Update subscription
+	// TODO: Check if channel exists! 
+	ch := r.channels[sessionID]
+	ch <- session
 	return session, nil
 }
 
@@ -74,7 +79,21 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) ([]*model.S
 
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {
-	panic(fmt.Errorf("not implemented: SessionUpdated - sessionUpdated"))
+	// Create map on first time - maybe change this to a constructor? 
+	if r.channels == nil {
+		r.channels = make(map[int]chan *model.Session)
+	}
+
+	channel, channelExists := r.channels[sessionID]
+
+	if(channelExists){
+		return channel, nil
+	}else{
+		mc := make(chan *model.Session, 1)
+		r.channels[sessionID] = mc
+		return mc, nil
+	}
+	// TODO: Cleanup channel?
 }
 
 // Mutation returns generated.MutationResolver implementation.
