@@ -8,4 +8,5 @@ import "github.com/campbelljlowman/fazool-api/graph/model"
 
 type Resolver struct{
 	sessions map[int]*model.Session
+	channels map[int]chan *model.Session
 }

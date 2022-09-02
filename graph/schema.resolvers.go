@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
@@ -51,6 +52,8 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		queuedSong.Votes += song.Vote
 	}
 
+	// Sort queue
+	sort.Slice(session.Queue, func(i, j int) bool {return session.Queue[i].Votes > session.Queue[j].Votes})
 	return session, nil
 }
 
