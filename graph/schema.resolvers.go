@@ -16,27 +16,27 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, error) {
+	// TODO: Make session ID random
 	sessionID := 81
+	// TODO: Create map on first time - maybe change this to a constructor? 
+	if r.channels == nil {
+		r.channels = make(map[int]chan *model.Session)
+	}
+	
 	if r.sessions == nil {
 		r.sessions = make(map[int]*model.Session)
 	}
 
-	// Create map on first time - maybe change this to a constructor? 
-	if r.channels == nil {
-		r.channels = make(map[int]chan *model.Session)
-	}
-
-	mc := make(chan *model.Session, 1)
+	mc := make(chan *model.Session, 3)
 	r.channels[sessionID] = mc
 
-	// Make session ID random
 	session := &model.Session{
 		ID:               sessionID,
 		CurrentlyPlaying: nil,
 		Queue:            nil,
 	}
-
 	r.sessions[session.ID] = session
+
 	return session, nil
 }
 
@@ -66,15 +66,15 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	// Update subscription
 	ch := r.channels[sessionID]
-	ch <- session
-
-	select {
-	case ch <- session: // This is the actual send.
-		// Our message went through, do nothing
-	default: // This is run when our send does not work.
-		fmt.Println("Channel closed.")
-		// You can handle any deregistration of the channel here.
-	}
+	go func() {
+		select {
+			case ch <- session: // This is the actual send.
+				// Our message went through, do nothing
+			default: // This is run when our send does not work.
+				fmt.Println("Channel closed in update.")
+				// You can handle any deregistration of the channel here.
+			}
+	}()
 
 	return session, nil
 }
