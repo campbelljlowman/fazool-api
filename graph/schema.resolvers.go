@@ -18,17 +18,14 @@ import (
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, error) {
 	// TODO: Make session ID random
 	sessionID := 81
-	// TODO: Create map on first time - maybe change this to a constructor? 
+	// TODO: Create map on first time - maybe change this to a constructor?
 	if r.channels == nil {
-		r.channels = make(map[int]chan *model.Session)
+		r.channels = make(map[int][]chan *model.Session)
 	}
-	
+
 	if r.sessions == nil {
 		r.sessions = make(map[int]*model.Session)
 	}
-
-	mc := make(chan *model.Session, 3)
-	r.channels[sessionID] = mc
 
 	session := &model.Session{
 		ID:               sessionID,
@@ -62,18 +59,22 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	}
 
 	// Sort queue
-	sort.Slice(session.Queue, func(i, j int) bool {return session.Queue[i].Votes > session.Queue[j].Votes})
+	sort.Slice(session.Queue, func(i, j int) bool { return session.Queue[i].Votes > session.Queue[j].Votes })
 
 	// Update subscription
-	ch := r.channels[sessionID]
 	go func() {
-		select {
+		r.mutex.Lock()
+		channels := r.channels[sessionID]
+		r.mutex.Unlock()
+		for _, ch := range channels {
+			select {
 			case ch <- session: // This is the actual send.
 				// Our message went through, do nothing
 			default: // This is run when our send does not work.
 				fmt.Println("Channel closed in update.")
 				// You can handle any deregistration of the channel here.
 			}
+		}
 	}()
 
 	return session, nil
@@ -82,6 +83,11 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error) {
 	panic(fmt.Errorf("not implemented: UpdateCurrentlyPlaying - updateCurrentlyPlaying"))
+}
+
+// CreateUser is the resolver for the createUser field.
+func (r *mutationResolver) CreateUser(ctx context.Context, user model.NewUser) (*model.User, error) {
+	panic(fmt.Errorf("not implemented: CreateUser - createUser"))
 }
 
 // Session is the resolver for the session field.
@@ -96,7 +102,12 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) ([]*model.S
 
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {
-	channel := r.channels[sessionID]
+	channel := make(chan *model.Session)
+
+	r.mutex.Lock()
+	r.channels[sessionID] = append(r.channels[sessionID], channel)
+	r.mutex.Unlock()
+
 	return channel, nil
 
 	// TODO: Cleanup channel?
