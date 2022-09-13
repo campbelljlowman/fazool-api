@@ -56,7 +56,7 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
 
   # Users
-  createUser(user: NewUser!): User!
+  createUser(newUser: NewUser!): User!
 }
 
 type Subscription {

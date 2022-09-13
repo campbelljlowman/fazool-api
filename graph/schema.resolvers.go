@@ -86,8 +86,15 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 }
 
 // CreateUser is the resolver for the createUser field.
-func (r *mutationResolver) CreateUser(ctx context.Context, user model.NewUser) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: CreateUser - createUser"))
+func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.User, error) {
+	print(newUser.FirstName)
+	user := &model.User{
+		ID:        "1",
+		FirstName: &newUser.FirstName,
+		LastName:  &newUser.LastName,
+		Email:     &newUser.Email,
+	}
+	return user, nil
 }
 
 // Session is the resolver for the session field.

@@ -47,7 +47,7 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Mutation struct {
 		CreateSession          func(childComplexity int) int
-		CreateUser             func(childComplexity int, user model.NewUser) int
+		CreateUser             func(childComplexity int, newUser model.NewUser) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
 	}
@@ -86,7 +86,7 @@ type MutationResolver interface {
 	CreateSession(ctx context.Context) (*model.Session, error)
 	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.Session, error)
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error)
-	CreateUser(ctx context.Context, user model.NewUser) (*model.User, error)
+	CreateUser(ctx context.Context, newUser model.NewUser) (*model.User, error)
 }
 type QueryResolver interface {
 	Session(ctx context.Context, sessionID *int) ([]*model.Session, error)
@@ -127,7 +127,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateUser(childComplexity, args["user"].(model.NewUser)), true
+		return e.complexity.Mutation.CreateUser(childComplexity, args["newUser"].(model.NewUser)), true
 
 	case "Mutation.updateCurrentlyPlaying":
 		if e.complexity.Mutation.UpdateCurrentlyPlaying == nil {
@@ -406,7 +406,7 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
 
   # Users
-  createUser(user: NewUser!): User!
+  createUser(newUser: NewUser!): User!
 }
 
 type Subscription {
@@ -423,14 +423,14 @@ func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, 
 	var err error
 	args := map[string]interface{}{}
 	var arg0 model.NewUser
-	if tmp, ok := rawArgs["user"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user"))
+	if tmp, ok := rawArgs["newUser"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("newUser"))
 		arg0, err = ec.unmarshalNNewUser2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐNewUser(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["user"] = arg0
+	args["newUser"] = arg0
 	return args, nil
 }
 
@@ -757,7 +757,7 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateUser(rctx, fc.Args["user"].(model.NewUser))
+		return ec.resolvers.Mutation().CreateUser(rctx, fc.Args["newUser"].(model.NewUser))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
