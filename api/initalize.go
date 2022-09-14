@@ -20,7 +20,9 @@ func InitializeRoutes(router *gin.Engine){
 	router.GET("/playground", func(c *gin.Context) {
 		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
 	})
-	srv := graph.NewGraphQLServer(&graph.Resolver{})
+
+	r := graph.NewResolver()
+	srv := graph.NewGraphQLServer(r)
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
 	})

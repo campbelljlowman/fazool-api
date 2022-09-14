@@ -10,8 +10,16 @@ import (
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
 
-type Resolver struct{
+type Resolver struct {
 	sessions 	map[int]*model.Session
 	channels 	map[int] []chan *model.Session
 	mutex 		sync.Mutex
+}
+
+func NewResolver () *Resolver {
+	return &Resolver{
+		sessions:	make(map[int]*model.Session),
+		channels:	make(map[int][]chan *model.Session),
+		mutex: 		sync.Mutex{},
+	}
 }

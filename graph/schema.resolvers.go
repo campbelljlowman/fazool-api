@@ -18,14 +18,6 @@ import (
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, error) {
 	// TODO: Make session ID random
 	sessionID := 81
-	// TODO: Create map on first time - maybe change this to a constructor?
-	if r.channels == nil {
-		r.channels = make(map[int][]chan *model.Session)
-	}
-
-	if r.sessions == nil {
-		r.sessions = make(map[int]*model.Session)
-	}
 
 	session := &model.Session{
 		ID:               sessionID,
