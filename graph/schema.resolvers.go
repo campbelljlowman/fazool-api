@@ -43,7 +43,6 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 			Image:  *song.Image,
 			Votes:  song.Vote,
 		}
-		print(newSong.Title)
 		session.Queue = append(session.Queue, newSong)
 	} else {
 		queuedSong := session.Queue[idx]

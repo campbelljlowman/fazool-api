@@ -4,19 +4,21 @@ import(
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/99designs/gqlgen/graphql/playground"
 
 	"github.com/campbelljlowman/fazool-api/graph"
 )
 
-var sessions = make(map[int]*Session)
-var songs = make(map[int]Song)
 
 
-func InitializeRoutes(router *gin.Engine){
+func InitializeRoutes() *gin.Engine {
+	router := gin.Default()
+	router.Use(cors.Default())
+
 	router.GET("/hc", healthCheck)
 
-	// Graphql
+	// Playground - not needed for prod
 	router.GET("/playground", func(c *gin.Context) {
 		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
 	})
@@ -27,12 +29,7 @@ func InitializeRoutes(router *gin.Engine){
 		srv.ServeHTTP(c.Writer, c.Request)
 	})
 
-	// Sessions
-	router.POST("/session", createNewSession)
-	router.GET("/session", getAllSessions)
-	router.GET("/session/:sessionID", getSessionFromID)
-	router.POST("/session/:sessionID", updateQueue)
-	router.PATCH("/session/:sessionID", updateCurrentlyPlaying)
+	return router
 }
 
 
