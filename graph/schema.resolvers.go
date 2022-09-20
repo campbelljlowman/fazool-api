@@ -85,6 +85,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		LastName:  &newUser.LastName,
 		Email:     &newUser.Email,
 	}
+	// For DB, store first name, last name, email, password. Let pg set ID
 	return user, nil
 }
 

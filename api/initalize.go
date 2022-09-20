@@ -8,6 +8,7 @@ import(
 	"github.com/99designs/gqlgen/graphql/playground"
 
 	"github.com/campbelljlowman/fazool-api/graph"
+	"github.com/campbelljlowman/fazool-api/database"
 )
 
 
@@ -23,7 +24,8 @@ func InitializeRoutes() *gin.Engine {
 		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
 	})
 
-	r := graph.NewResolver()
+	pgclient := database.NewPostgresClient()
+	r := graph.NewResolver(pgclient)
 	srv := graph.NewGraphQLServer(r)
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
