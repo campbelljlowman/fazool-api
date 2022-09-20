@@ -10,14 +10,13 @@ import (
 
 func NewPostgresClient() *pgxpool.Pool {
 	// databaseUrl = os.Getenv("DATABASE_URL")
-	databaseUrl := "postgres://clowman:asdf@localhost:5433/postgres"
+	databaseUrl := "postgres://clowman:asdf@localhost:5433/fazool"
 
 	dbPool, err := pgxpool.Connect(context.Background(), databaseUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
-	  }
-	defer dbPool.Close()
-
+	}
+	// TODO: close db connection?
 	return dbPool
 }

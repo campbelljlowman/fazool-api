@@ -78,14 +78,34 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.User, error) {
-	print(newUser.FirstName)
+	passwordHash := newUser.Password
+
+	queryString := fmt.Sprintf(`INSERT INTO public.user(first_name, last_name, email, pass_hash)
+	VALUES ('%v', '%v', '%v', '%v')
+	RETURNING *;`, newUser.FirstName, newUser.LastName, newUser.Email, passwordHash)
+
+	rows, err := r.PostgresClient.Query(context.Background(), queryString)
+	if err != nil {
+		println("error while executing query")
+		println(err.Error())
+	}
+
+	//TODO: Create Return User Here
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+		  println("error while iterating dataset")
+		}
+		print(values)
+	}
+
 	user := &model.User{
 		ID:        "1",
 		FirstName: &newUser.FirstName,
 		LastName:  &newUser.LastName,
 		Email:     &newUser.Email,
 	}
-	// For DB, store first name, last name, email, password. Let pg set ID
+	
 	return user, nil
 }
 
