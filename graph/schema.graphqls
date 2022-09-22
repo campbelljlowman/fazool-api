@@ -21,6 +21,7 @@ type User {
   firstName: String
   lastName: String
   email: String
+  sessionID: Int
 }
 
 enum QueueAction {
@@ -46,12 +47,12 @@ input NewUser {
 
 # Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
-  session(sessionID: Int): [Session]
+  session(sessionID: Int): Session
 }
 
 type Mutation {
   # Sessions
-  createSession: Session!
+  createSession(userID: Int!): Session!
   updateQueue(sessionID: Int!, song: SongUpdate!): Session!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
 

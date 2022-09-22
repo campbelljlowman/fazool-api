@@ -5,17 +5,17 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
 // CreateSession is the resolver for the createSession field.
-func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, error) {
+func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*model.Session, error) {
 	// TODO: Make session ID random
 	sessionID := 81
 
@@ -26,6 +26,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Session, e
 	}
 	r.sessions[session.ID] = session
 
+	//TODO: Add session ID to database
 	return session, nil
 }
 
@@ -78,6 +79,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.User, error) {
+	// Check if email is already in db, if so then user already exists
 	passwordHash := newUser.Password
 
 	queryString := fmt.Sprintf(`INSERT INTO public.user(first_name, last_name, email, pass_hash)
@@ -94,7 +96,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	for rows.Next() {
 		values, err := rows.Values()
 		if err != nil {
-		  println("error while iterating dataset")
+			println("error while iterating dataset")
 		}
 		print(values)
 	}
@@ -105,17 +107,17 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		LastName:  &newUser.LastName,
 		Email:     &newUser.Email,
 	}
-	
+
 	return user, nil
 }
 
 // Session is the resolver for the session field.
-func (r *queryResolver) Session(ctx context.Context, sessionID *int) ([]*model.Session, error) {
-	if sessionID != nil {
-		session := r.sessions[*sessionID]
-		return []*model.Session{session}, nil
+func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Session, error) {
+	session, exists := r.sessions[*sessionID]
+	if exists {
+		return session, nil
 	} else {
-		return maps.Values(r.sessions), nil
+		return nil, errors.New("Session not found!")
 	}
 }
 

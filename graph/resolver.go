@@ -20,6 +20,7 @@ type Resolver struct {
 }
 
 func NewResolver (client *pgxpool.Pool) *Resolver {
+	// TODO: Migrations? Make tables if they don't exist?
 	return &Resolver{
 		sessions:			make(map[int]*model.Session),
 		channels:			make(map[int][]chan *model.Session),

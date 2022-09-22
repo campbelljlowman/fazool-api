@@ -42,6 +42,7 @@ type User struct {
 	FirstName *string `json:"firstName"`
 	LastName  *string `json:"lastName"`
 	Email     *string `json:"email"`
+	SessionID *int    `json:"sessionID"`
 }
 
 type QueueAction string
