@@ -26,7 +26,12 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	}
 	r.sessions[session.ID] = session
 
-	//TODO: Add session ID to database
+	queryString := fmt.Sprintf(`
+		UPDATE public.user
+		SET session_id = %v
+		WHERE user_id = %v;`, sessionID, userID)
+	r.PostgresClient.Query(context.Background(), queryString)
+
 	return session, nil
 }
 
@@ -82,9 +87,11 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	// Check if email is already in db, if so then user already exists
 	passwordHash := newUser.Password
 
-	queryString := fmt.Sprintf(`INSERT INTO public.user(first_name, last_name, email, pass_hash)
-	VALUES ('%v', '%v', '%v', '%v')
-	RETURNING *;`, newUser.FirstName, newUser.LastName, newUser.Email, passwordHash)
+	queryString := fmt.Sprintf(`
+		INSERT INTO public.user(first_name, last_name, email, pass_hash)
+		VALUES ('%v', '%v', '%v', '%v')
+		RETURNING first_name, last_name, email;`, 
+		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash)
 
 	rows, err := r.PostgresClient.Query(context.Background(), queryString)
 	if err != nil {
