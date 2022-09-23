@@ -94,11 +94,21 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.User, error) {
-	// Check if email is already in db, if so then user already exists
+	vaildEmail := utils.ValidateEmail(newUser.Email)
+	if !vaildEmail {
+		return nil, errors.New("Invalid email format")
+	}
+
+	checkEmailQueryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.user WHERE email = '%v' LIMIT 1);", newUser.Email)
+	var emailExists bool
+	r.PostgresClient.QueryRow(context.Background(), checkEmailQueryString).Scan(&emailExists)
+	if emailExists {
+		return nil, errors.New("Email already exists!")
+	}
 	// TODO: Salt password and use Argon2id
 	passwordHash := utils.HashHelper(newUser.Password)
 
-	queryString := fmt.Sprintf(`
+	newUserQueryString := fmt.Sprintf(`
 		INSERT INTO public.user(first_name, last_name, email, pass_hash)
 		VALUES ('%v', '%v', '%v', '%v')
 		RETURNING user_id, first_name, last_name, email;`,
@@ -109,7 +119,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	var firstName string
 	var lastName string
 	var email string
-	err := r.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &firstName, &lastName, &email)
+	err := r.PostgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID, &firstName, &lastName, &email)
 	if err != nil {
 		println("Error adding user to database")
 		println(err.Error())
