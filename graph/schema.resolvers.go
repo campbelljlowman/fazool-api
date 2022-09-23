@@ -30,8 +30,17 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		UPDATE public.user
 		SET session_id = %v
 		WHERE user_id = %v;`, sessionID, userID)
-	r.PostgresClient.Query(context.Background(), queryString)
 
+	commandTag, err := r.PostgresClient.Exec(context.Background(), queryString)
+
+	if err != nil {
+		return nil, errors.New("Error adding new session to database")
+	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, errors.New("No user found to update")
+	}
+
+	//TODO: Return user here?
 	return session, nil
 }
 
@@ -90,29 +99,24 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	queryString := fmt.Sprintf(`
 		INSERT INTO public.user(first_name, last_name, email, pass_hash)
 		VALUES ('%v', '%v', '%v', '%v')
-		RETURNING first_name, last_name, email;`, 
+		RETURNING user_id, first_name, last_name, email;`,
 		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash)
 
-	rows, err := r.PostgresClient.Query(context.Background(), queryString)
+		
+	var userID int
+	var firstName string
+	var lastName string
+	var email string
+	err := r.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &firstName, &lastName, &email)
 	if err != nil {
-		println("error while executing query")
-		println(err.Error())
-	}
-
-	//TODO: Create Return User Here
-	for rows.Next() {
-		values, err := rows.Values()
-		if err != nil {
-			println("error while iterating dataset")
-		}
-		print(values)
+		return nil, errors.New("Error adding user to database")
 	}
 
 	user := &model.User{
-		ID:        "1",
-		FirstName: &newUser.FirstName,
-		LastName:  &newUser.LastName,
-		Email:     &newUser.Email,
+		ID:        userID,
+		FirstName: &firstName,
+		LastName:  &lastName,
+		Email:     &email,
 	}
 
 	return user, nil

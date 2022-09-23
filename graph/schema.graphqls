@@ -17,7 +17,7 @@ type Session {
 }
 
 type User {
-  id: String!
+  id: Int!
   firstName: String
   lastName: String
   email: String
