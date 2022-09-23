@@ -116,9 +116,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 
 
 	var userID int
-	var firstName string
-	var lastName string
-	var email string
+	var firstName, lastName, email string
 	err := r.PostgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID, &firstName, &lastName, &email)
 	if err != nil {
 		println("Error adding user to database")
