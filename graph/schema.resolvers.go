@@ -11,6 +11,7 @@ import (
 
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/utils"
 	"golang.org/x/exp/slices"
 )
 
@@ -94,7 +95,8 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.User, error) {
 	// Check if email is already in db, if so then user already exists
-	passwordHash := newUser.Password
+	// TODO: Salt password and use Argon2id
+	passwordHash := utils.HashHelper(newUser.Password)
 
 	queryString := fmt.Sprintf(`
 		INSERT INTO public.user(first_name, last_name, email, pass_hash)
@@ -102,13 +104,15 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		RETURNING user_id, first_name, last_name, email;`,
 		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash)
 
-		
+
 	var userID int
 	var firstName string
 	var lastName string
 	var email string
 	err := r.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &firstName, &lastName, &email)
 	if err != nil {
+		println("Error adding user to database")
+		println(err.Error())
 		return nil, errors.New("Error adding user to database")
 	}
 
