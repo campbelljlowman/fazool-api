@@ -136,15 +136,19 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.User, error) {
 	getUserQueryString := fmt.Sprintf(`
-	SELECT user_id, first_name, last_name, email, coalesce(session_id,0) FROM public.user WHERE email = '%v'`,
+	SELECT user_id, first_name, last_name, email, pass_hash, coalesce(session_id,0) as session_id FROM public.user WHERE email = '%v'`,
 		userLogin.Email)
 	var userID, sessionID int
-	var firstName, lastName, email string
-	err := r.PostgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
+	var firstName, lastName, email, password string
+	err := r.PostgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &password, &sessionID)
 	if err != nil {
 		println("Error getting user from database")
 		println(err.Error())
 		return nil, errors.New("Error getting user from database")
+	}
+
+	if utils.HashHelper(userLogin.Password) != password {
+		return nil, errors.New("Incorrect Password!")
 	}
 
 	user := &model.User{
