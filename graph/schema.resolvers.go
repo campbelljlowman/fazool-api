@@ -144,11 +144,11 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 	if err != nil {
 		println("Error getting user from database")
 		println(err.Error())
-		return nil, errors.New("Error getting user from database")
+		return nil, errors.New("Invalid Login Credentials!")
 	}
 
 	if utils.HashHelper(userLogin.Password) != password {
-		return nil, errors.New("Incorrect Password!")
+		return nil, errors.New("Invalid Login Credentials!")
 	}
 
 	user := &model.User{
