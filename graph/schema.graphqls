@@ -45,6 +45,11 @@ input NewUser {
   password: String!
 }
 
+input UserLogin {
+  email: String!
+  password: String!
+}
+
 # Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
   session(sessionID: Int): Session
@@ -58,6 +63,7 @@ type Mutation {
 
   # Users
   createUser(newUser: NewUser!): User!
+  login(userLogin: UserLogin!): User!
 }
 
 type Subscription {

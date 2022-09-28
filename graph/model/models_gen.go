@@ -45,6 +45,11 @@ type User struct {
 	SessionID *int    `json:"sessionID"`
 }
 
+type UserLogin struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type QueueAction string
 
 const (

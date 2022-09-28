@@ -114,7 +114,6 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		RETURNING user_id, first_name, last_name, email;`,
 		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash)
 
-
 	var userID int
 	var firstName, lastName, email string
 	err := r.PostgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID, &firstName, &lastName, &email)
@@ -129,6 +128,31 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		FirstName: &firstName,
 		LastName:  &lastName,
 		Email:     &email,
+	}
+
+	return user, nil
+}
+
+// Login is the resolver for the login field.
+func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.User, error) {
+	getUserQueryString := fmt.Sprintf(`
+	SELECT user_id, first_name, last_name, email, coalesce(session_id,0) FROM public.user WHERE email = '%v'`,
+		userLogin.Email)
+	var userID, sessionID int
+	var firstName, lastName, email string
+	err := r.PostgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
+	if err != nil {
+		println("Error getting user from database")
+		println(err.Error())
+		return nil, errors.New("Error getting user from database")
+	}
+
+	user := &model.User{
+		ID:        userID,
+		FirstName: &firstName,
+		LastName:  &lastName,
+		Email:     &email,
+		SessionID: &sessionID,
 	}
 
 	return user, nil
