@@ -135,7 +135,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	newUserQueryString := fmt.Sprintf(`
 		INSERT INTO public.user(first_name, last_name, email, pass_hash, auth_level)
 		VALUES ('%v', '%v', '%v', '%v', '%v')
-		RETURNING user_id, first_name, last_name, email;`,
+		RETURNING user_id;`,
 		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, authLevel)
 
 	var userID int
@@ -148,6 +148,8 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 
 	token, err := auth.GenerateJWT(userID, authLevel)
 	if err != nil {
+		println("Error creating user token")
+		println(err.Error())
 		return nil, errors.New("Error creating user token")
 	}
 

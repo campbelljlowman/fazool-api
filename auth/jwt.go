@@ -13,7 +13,7 @@ func GenerateJWT(id int, authLevel int) (string, error){
 	println("Creating jwt for ID: ")
 	println(id)
 
-	token := jwt.New(jwt.SigningMethodEdDSA)
+	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["iat"] = time.Now()
@@ -21,6 +21,7 @@ func GenerateJWT(id int, authLevel int) (string, error){
 	claims["iss"] = "fazool-api"
 	claims["auth"] = authLevel
 	claims["user"] = id
+
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
@@ -30,4 +31,4 @@ func GenerateJWT(id int, authLevel int) (string, error){
 	return tokenString, nil
 }
 
-func VerifyJWT(token string) ()
+// func VerifyJWT(token string) ()
