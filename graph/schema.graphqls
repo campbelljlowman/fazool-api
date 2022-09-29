@@ -57,7 +57,7 @@ type Query {
 
 type Mutation {
   # Sessions
-  createSession(userID: Int!): Session!
+  createSession(userID: Int!): User!
   updateQueue(sessionID: Int!, song: SongUpdate!): Session!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
 

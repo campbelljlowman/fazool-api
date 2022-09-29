@@ -16,7 +16,7 @@ import (
 )
 
 // CreateSession is the resolver for the createSession field.
-func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*model.Session, error) {
+func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*model.User, error) {
 	// TODO: Make session ID random
 	sessionID := 81
 
@@ -41,8 +41,12 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		return nil, errors.New("No user found to update")
 	}
 
-	//TODO: Return user here?
-	return session, nil
+	user := &model.User{
+		ID: userID,
+		SessionID: &sessionID,
+	}
+	
+	return user, nil
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
