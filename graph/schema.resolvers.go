@@ -98,21 +98,6 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	panic(fmt.Errorf("not implemented: UpdateCurrentlyPlaying - updateCurrentlyPlaying"))
 }
 
-// GetUser is the resolver for the getUser field.
-func (r *mutationResolver) GetUser(ctx context.Context) (*model.User, error) {
-	firstName := "hard"
-	lastName := "coded"
-	email := "hard@coded.com"
-	user := &model.User{
-		ID:        1000,
-		FirstName: &firstName,
-		LastName:  &lastName,
-		Email:     &email,
-	}
-
-	return user, nil
-}
-
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error) {
 	// Get this from new user request!
@@ -193,6 +178,21 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 	}
 }
 
+// GetUser is the resolver for the getUser field.
+func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
+	firstName := "hard"
+	lastName := "coded"
+	email := "hard@coded.com"
+	user := &model.User{
+		ID:        1000,
+		FirstName: &firstName,
+		LastName:  &lastName,
+		Email:     &email,
+	}
+
+	return user, nil
+}
+
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {
 	channel := make(chan *model.Session)
@@ -218,3 +218,23 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *mutationResolver) GetUser(ctx context.Context) (*model.User, error) {
+	firstName := "hard"
+	lastName := "coded"
+	email := "hard@coded.com"
+	user := &model.User{
+		ID:        1000,
+		FirstName: &firstName,
+		LastName:  &lastName,
+		Email:     &email,
+	}
+
+	return user, nil
+}

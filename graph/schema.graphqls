@@ -57,6 +57,9 @@ input UserLogin {
 # Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
   session(sessionID: Int): Session
+
+  # Users
+  getUser: User!
 }
 
 type Mutation {
@@ -68,7 +71,6 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
 
   # Users
-  getUser: User!
   createUser(newUser: NewUser!): Token!
   login(userLogin: UserLogin!): Token!
 }

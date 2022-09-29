@@ -10,9 +10,6 @@ import (
 var secretKey = []byte("EavanRocks!")
 
 func GenerateJWT(id int, authLevel int) (string, error){
-	println("Creating jwt for ID: ")
-	println(id)
-
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
