@@ -55,8 +55,8 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetUser func(childComplexity int) int
 		Session func(childComplexity int, sessionID *int) int
+		User    func(childComplexity int) int
 	}
 
 	Session struct {
@@ -99,7 +99,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Session(ctx context.Context, sessionID *int) (*model.Session, error)
-	GetUser(ctx context.Context) (*model.User, error)
+	User(ctx context.Context) (*model.User, error)
 }
 type SubscriptionResolver interface {
 	SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error)
@@ -180,13 +180,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateQueue(childComplexity, args["sessionID"].(int), args["song"].(model.SongUpdate)), true
 
-	case "Query.getUser":
-		if e.complexity.Query.GetUser == nil {
-			break
-		}
-
-		return e.complexity.Query.GetUser(childComplexity), true
-
 	case "Query.session":
 		if e.complexity.Query.Session == nil {
 			break
@@ -198,6 +191,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Session(childComplexity, args["sessionID"].(*int)), true
+
+	case "Query.user":
+		if e.complexity.Query.User == nil {
+			break
+		}
+
+		return e.complexity.Query.User(childComplexity), true
 
 	case "Session.currentlyPlaying":
 		if e.complexity.Session.CurrentlyPlaying == nil {
@@ -458,7 +458,7 @@ type Query {
   session(sessionID: Int): Session
 
   # Users
-  getUser: User!
+  user: User!
 }
 
 type Mutation {
@@ -1031,8 +1031,8 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_getUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_getUser(ctx, field)
+func (ec *executionContext) _Query_user(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_user(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1045,7 +1045,7 @@ func (ec *executionContext) _Query_getUser(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetUser(rctx)
+		return ec.resolvers.Query().User(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1062,7 +1062,7 @@ func (ec *executionContext) _Query_getUser(ctx context.Context, field graphql.Co
 	return ec.marshalNUser2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_getUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -3958,7 +3958,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "getUser":
+		case "user":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -3967,7 +3967,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_getUser(ctx, field)
+				res = ec._Query_user(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

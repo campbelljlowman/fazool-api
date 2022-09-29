@@ -59,7 +59,7 @@ type Query {
   session(sessionID: Int): Session
 
   # Users
-  getUser: User!
+  user: User!
 }
 
 type Mutation {
