@@ -24,6 +24,10 @@ type User {
   sessionID: Int
 }
 
+type Token {
+  jwt: String!
+}
+
 enum QueueAction {
   PLAY
   PAUSE
@@ -57,13 +61,16 @@ type Query {
 
 type Mutation {
   # Sessions
+
+  # Figure out what this is supposed to return
   createSession(userID: Int!): User!
   updateQueue(sessionID: Int!, song: SongUpdate!): Session!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
 
   # Users
-  createUser(newUser: NewUser!): User!
-  login(userLogin: UserLogin!): User!
+  getUser: User!
+  createUser(newUser: NewUser!): Token!
+  login(userLogin: UserLogin!): Token!
 }
 
 type Subscription {

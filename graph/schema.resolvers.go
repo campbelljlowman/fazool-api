@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/campbelljlowman/fazool-api/auth"
+	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/utils"
@@ -17,7 +19,7 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*model.User, error) {
-	// TODO: Make session ID random
+	// TODO: Make session ID random - use UUID
 	sessionID := 81
 
 	session := &model.Session{
@@ -42,10 +44,10 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	}
 
 	user := &model.User{
-		ID: userID,
+		ID:        userID,
 		SessionID: &sessionID,
 	}
-	
+
 	return user, nil
 }
 
@@ -96,8 +98,25 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	panic(fmt.Errorf("not implemented: UpdateCurrentlyPlaying - updateCurrentlyPlaying"))
 }
 
+// GetUser is the resolver for the getUser field.
+func (r *mutationResolver) GetUser(ctx context.Context) (*model.User, error) {
+	firstName := "hard"
+	lastName := "coded"
+	email := "hard@coded.com"
+	user := &model.User{
+		ID:        1000,
+		FirstName: &firstName,
+		LastName:  &lastName,
+		Email:     &email,
+	}
+
+	return user, nil
+}
+
 // CreateUser is the resolver for the createUser field.
-func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.User, error) {
+func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error) {
+	// Get this from new user request!
+	authLevel := 1
 	vaildEmail := utils.ValidateEmail(newUser.Email)
 	if !vaildEmail {
 		return nil, errors.New("Invalid email format")
@@ -112,58 +131,54 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	// TODO: Salt password and use Argon2id
 	passwordHash := utils.HashHelper(newUser.Password)
 
+	// TODO: Add this to database helpers
 	newUserQueryString := fmt.Sprintf(`
-		INSERT INTO public.user(first_name, last_name, email, pass_hash)
-		VALUES ('%v', '%v', '%v', '%v')
+		INSERT INTO public.user(first_name, last_name, email, pass_hash, auth_level)
+		VALUES ('%v', '%v', '%v', '%v', '%v')
 		RETURNING user_id, first_name, last_name, email;`,
-		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash)
+		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, authLevel)
 
 	var userID int
-	var firstName, lastName, email string
-	err := r.PostgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID, &firstName, &lastName, &email)
+	err := r.PostgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID)
 	if err != nil {
 		println("Error adding user to database")
 		println(err.Error())
 		return nil, errors.New("Error adding user to database")
 	}
 
-	user := &model.User{
-		ID:        userID,
-		FirstName: &firstName,
-		LastName:  &lastName,
-		Email:     &email,
+	token, err := auth.GenerateJWT(userID, authLevel)
+	if err != nil {
+		return nil, errors.New("Error creating user token")
 	}
 
-	return user, nil
+	returnValue := &model.Token{
+		Jwt: token,
+	}
+
+	return returnValue, nil
 }
 
 // Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.User, error) {
-	getUserQueryString := fmt.Sprintf(`
-	SELECT user_id, first_name, last_name, email, pass_hash, coalesce(session_id,0) as session_id FROM public.user WHERE email = '%v'`,
-		userLogin.Email)
-	var userID, sessionID int
-	var firstName, lastName, email, password string
-	err := r.PostgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &password, &sessionID)
+func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error) {
+	userID, authLevel, password, err := database.GetUserLoginValues(r.PostgresClient, userLogin.Email)
 	if err != nil {
-		println("Error getting user from database")
-		println(err.Error())
-		return nil, errors.New("Invalid Login Credentials!")
+		return nil, err
 	}
 
 	if utils.HashHelper(userLogin.Password) != password {
 		return nil, errors.New("Invalid Login Credentials!")
 	}
 
-	user := &model.User{
-		ID:        userID,
-		FirstName: &firstName,
-		LastName:  &lastName,
-		Email:     &email,
-		SessionID: &sessionID,
+	token, err := auth.GenerateJWT(userID, authLevel)
+	if err != nil {
+		return nil, errors.New("Error creating user token")
 	}
 
-	return user, nil
+	returnValue := &model.Token{
+		Jwt: token,
+	}
+
+	return returnValue, nil
 }
 
 // Session is the resolver for the session field.

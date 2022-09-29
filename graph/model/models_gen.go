@@ -37,6 +37,10 @@ type SongUpdate struct {
 	Vote   int     `json:"vote"`
 }
 
+type Token struct {
+	Jwt string `json:"jwt"`
+}
+
 type User struct {
 	ID        int     `json:"id"`
 	FirstName *string `json:"firstName"`
