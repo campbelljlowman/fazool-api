@@ -15,7 +15,11 @@ import(
 
 func InitializeRoutes() *gin.Engine {
 	router := gin.Default()
-	router.Use(cors.Default())
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "authorization")
+	router.Use(cors.New(corsConfig))
+	router.Use(jwtAuthMiddleware())
 
 	router.GET("/hc", healthCheck)
 
