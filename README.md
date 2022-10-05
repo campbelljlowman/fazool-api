@@ -59,11 +59,11 @@ Two revenue streams from users:
     Double votes
     Down votes
 - Bonus votes  
-    Users could purchase bonus votes which they could use on songs
-    Votes cost $0.5-$1
-    Discount for bulk purchases
-    Session could control how many bonus votes can be used per person per song to limit takeovers
-    Could give part of the bonus vote money used back to the establishment to incentivise them to use it
+    Users could purchase bonus votes which they could use on songs 
+    Votes cost $0.5-$1 
+    Discount for bulk purchases 
+    Session could control how many bonus votes can be used per person per song to limit takeovers 
+    Could give part of the bonus vote money used back to the establishment to incentivise them to use it 
 Could pitch by saving money by replacing a DJ
 
 # User story
