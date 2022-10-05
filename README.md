@@ -52,6 +52,7 @@ Three use tiers for facilitators:
     Unlimited users per queue
     No ads, $100 per month? (again, should calculate an estimate. This will probably be expensive)
     Maybe do a DJ mode where songs are only played for 15-30 seconds to go through more songs  
+    
 Two revenue streams from users:
 - Subscription
     Users could sign up to pay a small amount per month ($1-$3) to get perks
