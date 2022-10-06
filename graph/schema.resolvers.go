@@ -180,25 +180,14 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
-	// auth := ctx.Value("auth")
-	// if auth != nil {
-	// 	fmt.Printf("\nUser handler auth: %v\n", auth.(string))
-	// } else {
-	// 	fmt.Printf("\nUser auth: %v\n", auth)
-	// }
+	auth, _ := ctx.Value("auth").(int)
+	fmt.Printf("\nUser handler auth: %v\n", auth)
+	
+	userID, _ := ctx.Value("user").(int)
+	fmt.Printf("\nUser in user resolver: %v\n", userID)
 
-	userIdCtx := ctx.Value("user")
 
-	if userIdCtx != nil{
-		userID := userIdCtx.(int)
-		fmt.Printf("User in user resolver: %v", userID)
-		return nil, nil
-	} else {
-		fmt.Printf("User not on request context!")
-		fmt.Printf("\nHandler context: %v\n", ctx)
-		return nil, errors.New("User not found!")
-	}
-
+	return nil, nil
 	// user, err := database.GetUserByID(db, id)
 	// if err != nil {
 	// 	println(err.Error())
