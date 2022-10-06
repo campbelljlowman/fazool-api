@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"context"
 
 	"github.com/campbelljlowman/fazool-api/auth"
