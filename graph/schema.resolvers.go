@@ -180,17 +180,30 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
-	firstName := "hard"
-	lastName := "coded"
-	email := "hard@coded.com"
-	user := &model.User{
-		ID:        1000,
-		FirstName: &firstName,
-		LastName:  &lastName,
-		Email:     &email,
+	// auth := ctx.Value("auth")
+	// if auth != nil {
+	// 	fmt.Printf("\nUser handler auth: %v\n", auth.(string))
+	// } else {
+	// 	fmt.Printf("\nUser auth: %v\n", auth)
+	// }
+
+	userIdCtx := ctx.Value("user")
+
+	if userIdCtx != nil{
+		userID := userIdCtx.(int)
+		fmt.Printf("User in user resolver: %v", userID)
+		return nil, nil
+	} else {
+		fmt.Printf("User not on request context!")
+		fmt.Printf("\nHandler context: %v\n", ctx)
+		return nil, errors.New("User not found!")
 	}
 
-	return user, nil}
+	// user, err := database.GetUserByID(db, id)
+	// if err != nil {
+	// 	println(err.Error())
+	// }
+}
 
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {

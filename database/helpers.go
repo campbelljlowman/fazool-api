@@ -33,6 +33,30 @@ func GetUserByEmail (db *pgxpool.Pool, userEmail string) (*model.User, error) {
 	return user, nil
 }
 
+func GetUserByID (db *pgxpool.Pool, ID int) (*model.User, error) {
+	getUserQueryString := fmt.Sprintf(`
+	SELECT user_id, first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.user WHERE user_id = '%v'`,
+	ID)
+	var userID, sessionID int
+	var firstName, lastName, email string
+	err := db.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
+	if err != nil {
+		println("Error getting user from database")
+		println(err.Error())
+		return nil, errors.New("Invalid Login Credentials!")
+	}
+
+	user := &model.User{
+		ID:        userID,
+		FirstName: &firstName,
+		LastName:  &lastName,
+		Email:     &email,
+		SessionID: &sessionID,
+	}
+
+	return user, nil
+}
+
 func GetUserLoginValues (db *pgxpool.Pool, userEmail string) (int, int, string, error) {
 	getUserQueryString := fmt.Sprintf(`
 	SELECT user_id, auth_level, pass_hash FROM public.user WHERE email = '%v'`,
