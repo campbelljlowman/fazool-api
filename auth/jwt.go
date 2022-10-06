@@ -61,3 +61,5 @@ func VerifyJWT(bearerToken string) (int, int, error) {
 
 	return int(id) , int(auth), nil
 }
+
+//TODO: Figure out how to refresh tokens
