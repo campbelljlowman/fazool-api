@@ -1,5 +1,5 @@
-# wej-api
-API for WeJ music service
+# Fazool
+API for Fazool music service
 
 # Models
 - Song:
@@ -51,23 +51,24 @@ Three use tiers for facilitators:
     Used at large events (sports games, concerts)
     Unlimited users per queue
     No ads, $100 per month? (again, should calculate an estimate. This will probably be expensive)
-    Maybe do a DJ mode where songs are only played for 15-30 seconds to go through more songs
+    Maybe do a DJ mode where songs are only played for 15-30 seconds to go through more songs  
+    
 Two revenue streams from users:
 - Subscription
     Users could sign up to pay a small amount per month ($1-$3) to get perks
     Double votes
     Down votes
 - Bonus votes  
-    Users could purchase bonus votes which they could use on songs
-    Votes cost $0.5-$1
-    Discount for bulk purchases
-    Session could control how many bonus votes can be used per person per song to limit takeovers
-    Could give part of the bonus vote money used back to the establishment to incentivise them to use it
+    Users could purchase bonus votes which they could use on songs 
+    Votes cost $0.5-$1 
+    Discount for bulk purchases 
+    Session could control how many bonus votes can be used per person per song to limit takeovers 
+    Could give part of the bonus vote money used back to the establishment to incentivise them to use it 
 Could pitch by saving money by replacing a DJ
 
 # User story
-- As a WeJ facilitator, I can create a session of the app to display publicly that contains a currently playing song, a queue of songs that are up next with a number of votes, and a qr and number code for people to join and contribute
-- As a WeJ user, I can join a session and see the queue of songs, add songs to the queue and vote for songs I want to hear
+- As a Fazool facilitator, I can create a session of the app to display publicly that contains a currently playing song, a queue of songs that are up next with a number of votes, and a qr and number code for people to join and contribute
+- As a Fazool user, I can join a session and see the queue of songs, add songs to the queue and vote for songs I want to hear
 
 # Env setup
 
