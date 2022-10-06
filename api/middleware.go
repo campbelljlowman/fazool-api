@@ -21,8 +21,6 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 			println(err.Error())
 		}
 		
-		fmt.Printf("Token variables: user - %v, Auth - %v", userId, authLevel)
-
 		// TODO: Don't use string for key: https://www.howtographql.com/graphql-go/6-authentication/
 		ctx1 := context.WithValue(c.Request.Context(), "user", userId)
 		ctx2 := context.WithValue(ctx1, "auth", authLevel)

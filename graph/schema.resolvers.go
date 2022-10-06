@@ -180,18 +180,15 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
-	auth, _ := ctx.Value("auth").(int)
-	fmt.Printf("\nUser handler auth: %v\n", auth)
-	
 	userID, _ := ctx.Value("user").(int)
-	fmt.Printf("\nUser in user resolver: %v\n", userID)
 
+	user, err := database.GetUserByID(r.PostgresClient, userID)
+	if err != nil {
+		println(err.Error())
+		return nil, err
+	}
 
-	return nil, nil
-	// user, err := database.GetUserByID(db, id)
-	// if err != nil {
-	// 	println(err.Error())
-	// }
+	return user, nil
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
