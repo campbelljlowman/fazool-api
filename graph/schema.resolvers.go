@@ -172,7 +172,15 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 
 // UpdateSpotifyToken is the resolver for the updateSpotifyToken field.
 func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: UpdateSpotifyToken - updateSpotifyToken"))
+	userID, _ := ctx.Value("user").(int)
+
+	err := database.UpdateUserSpotifyCreds(r.PostgresClient, userID, spotifyCreds.AccessToken, spotifyCreds.RefreshToken)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.User{ID: userID}, nil
 }
 
 // Session is the resolver for the session field.
