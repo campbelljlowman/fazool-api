@@ -37,6 +37,11 @@ type SongUpdate struct {
 	Vote   int     `json:"vote"`
 }
 
+type SpotifyCreds struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}
+
 type Token struct {
 	Jwt string `json:"jwt"`
 }

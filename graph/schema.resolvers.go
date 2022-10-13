@@ -19,6 +19,8 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*model.User, error) {
+	// TODO: Get userID from context
+	// 	userID, _ := ctx.Value("user").(int)
 	// TODO: Make session ID random - use UUID
 	sessionID := 81
 
@@ -166,6 +168,11 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 	}
 
 	return returnValue, nil
+}
+
+// UpdateSpotifyToken is the resolver for the updateSpotifyToken field.
+func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
+	panic(fmt.Errorf("not implemented: UpdateSpotifyToken - updateSpotifyToken"))
 }
 
 // Session is the resolver for the session field.

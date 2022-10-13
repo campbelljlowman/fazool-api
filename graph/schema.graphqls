@@ -54,6 +54,11 @@ input UserLogin {
   password: String!
 }
 
+input SpotifyCreds {
+  accessToken: String!
+  refreshToken: String!
+}
+
 # Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
   session(sessionID: Int): Session
@@ -73,6 +78,9 @@ type Mutation {
   # Users
   createUser(newUser: NewUser!): Token!
   login(userLogin: UserLogin!): Token!
+
+  # Spotify
+  updateSpotifyToken(spotifyCreds: SpotifyCreds!): User!
 }
 
 type Subscription {

@@ -52,6 +52,7 @@ type ComplexityRoot struct {
 		Login                  func(childComplexity int, userLogin model.UserLogin) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
+		UpdateSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
 	}
 
 	Query struct {
@@ -96,6 +97,7 @@ type MutationResolver interface {
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error)
 	CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error)
+	UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
 }
 type QueryResolver interface {
 	Session(ctx context.Context, sessionID *int) (*model.Session, error)
@@ -179,6 +181,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UpdateQueue(childComplexity, args["sessionID"].(int), args["song"].(model.SongUpdate)), true
+
+	case "Mutation.updateSpotifyToken":
+		if e.complexity.Mutation.UpdateSpotifyToken == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateSpotifyToken_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateSpotifyToken(childComplexity, args["spotifyCreds"].(model.SpotifyCreds)), true
 
 	case "Query.session":
 		if e.complexity.Query.Session == nil {
@@ -319,6 +333,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputNewUser,
 		ec.unmarshalInputSongUpdate,
+		ec.unmarshalInputSpotifyCreds,
 		ec.unmarshalInputUserLogin,
 	)
 	first := true
@@ -453,6 +468,11 @@ input UserLogin {
   password: String!
 }
 
+input SpotifyCreds {
+  accessToken: String!
+  refreshToken: String!
+}
+
 # Make this return an array of sessions so calling with no session ID returns all sessions
 type Query {
   session(sessionID: Int): Session
@@ -472,6 +492,9 @@ type Mutation {
   # Users
   createUser(newUser: NewUser!): Token!
   login(userLogin: UserLogin!): Token!
+
+  # Spotify
+  updateSpotifyToken(spotifyCreds: SpotifyCreds!): User!
 }
 
 type Subscription {
@@ -574,6 +597,21 @@ func (ec *executionContext) field_Mutation_updateQueue_args(ctx context.Context,
 		}
 	}
 	args["song"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateSpotifyToken_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.SpotifyCreds
+	if tmp, ok := rawArgs["spotifyCreds"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("spotifyCreds"))
+		arg0, err = ec.unmarshalNSpotifyCreds2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSpotifyCreds(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["spotifyCreds"] = arg0
 	return args, nil
 }
 
@@ -965,6 +1003,73 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_login_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateSpotifyToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateSpotifyToken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateSpotifyToken(rctx, fc.Args["spotifyCreds"].(model.SpotifyCreds))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateSpotifyToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "firstName":
+				return ec.fieldContext_User_firstName(ctx, field)
+			case "lastName":
+				return ec.fieldContext_User_lastName(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "sessionID":
+				return ec.fieldContext_User_sessionID(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateSpotifyToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -3800,6 +3905,42 @@ func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj in
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputSpotifyCreds(ctx context.Context, obj interface{}) (model.SpotifyCreds, error) {
+	var it model.SpotifyCreds
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"accessToken", "refreshToken"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "accessToken":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accessToken"))
+			it.AccessToken, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "refreshToken":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("refreshToken"))
+			it.RefreshToken, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUserLogin(ctx context.Context, obj interface{}) (model.UserLogin, error) {
 	var it model.UserLogin
 	asMap := map[string]interface{}{}
@@ -3903,6 +4044,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_login(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateSpotifyToken":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateSpotifyToken(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -4577,6 +4727,11 @@ func (ec *executionContext) marshalNSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfaz
 
 func (ec *executionContext) unmarshalNSongUpdate2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongUpdate(ctx context.Context, v interface{}) (model.SongUpdate, error) {
 	res, err := ec.unmarshalInputSongUpdate(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNSpotifyCreds2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSpotifyCreds(ctx context.Context, v interface{}) (model.SpotifyCreds, error) {
+	res, err := ec.unmarshalInputSpotifyCreds(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
