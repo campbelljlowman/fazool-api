@@ -74,8 +74,6 @@ func GetUserLoginValues (db *pgxpool.Pool, userEmail string) (int, int, string, 
 }
 
 func UpdateUserSpotifyCreds(db *pgxpool.Pool, userID int, AccessToken string, RefreshToken string) error {
-	println(AccessToken)
-	println(RefreshToken)
 	queryString := fmt.Sprintf(`
 	UPDATE public.user
 	SET spotify_access_token = '%v', spotify_refresh_token = '%v'
@@ -91,4 +89,19 @@ func UpdateUserSpotifyCreds(db *pgxpool.Pool, userID int, AccessToken string, Re
 		return errors.New("No user found to update")
 	}
 	return nil
+}
+
+func GetSpotifyRefreshToken(db *pgxpool.Pool, userID int) (string, error) {
+	getUserQueryString := fmt.Sprintf(`
+	SELECT spotify_refresh_token FROM public.user WHERE user_id = '%v'`,
+	userID)
+	var spotifyRefreshToken string
+	err := db.QueryRow(context.Background(), getUserQueryString).Scan(&spotifyRefreshToken)
+	if err != nil {
+		println("Error getting spotify refresh token from database")
+		println(err.Error())
+		return "", errors.New("Spotify refresh token not found!")
+	}
+
+	return spotifyRefreshToken, nil
 }

@@ -18,6 +18,7 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 		userId, authLevel, err := auth.VerifyJWT(bearerToken)
 		if err != nil {
 			println(err.Error())
+			return
 		}
 		
 		// TODO: Don't use string for key: https://www.howtographql.com/graphql-go/6-authentication/

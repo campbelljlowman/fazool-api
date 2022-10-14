@@ -13,6 +13,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/spotify"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"golang.org/x/exp/slices"
 )
@@ -24,6 +25,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	// TODO: Make session ID random - use UUID
 	sessionID := 81
 
+	// Create session
 	session := &model.Session{
 		ID:               sessionID,
 		CurrentlyPlaying: nil,
@@ -44,6 +46,10 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	if commandTag.RowsAffected() != 1 {
 		return nil, errors.New("No user found to update")
 	}
+
+	spotifyToken := spotify.RefreshToken(r.PostgresClient, userID)
+	s := spotify.New(spotifyToken)
+	r.spotifyPlayers[userID] = &s
 
 	user := &model.User{
 		ID:        userID,

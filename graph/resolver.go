@@ -2,11 +2,13 @@ package graph
 
 //go:generate go get github.com/99designs/gqlgen@v0.17.15 && go run github.com/99designs/gqlgen generate
 import (
+	"context"
 	"fmt"
 	"sync"
-	"context"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/musicPlayer"
+	"github.com/campbelljlowman/fazool-api/spotify"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -17,6 +19,10 @@ import (
 type Resolver struct {
 	sessions 			map[int]*model.Session
 	channels 			map[int] []chan *model.Session
+	// TODO: Make this map of interfaces
+	// musicPlayers		map[int] *musicplayer.MusicPlayer 		
+	spotifyPlayers		map[int] *spotify.SpotifyClient	
+	// TODO: Make this lower case
 	PostgresClient 		*pgxpool.Pool
 	mutex 				sync.Mutex
 }
@@ -39,6 +45,7 @@ func NewResolver (client *pgxpool.Pool) *Resolver {
 	return &Resolver{
 		sessions:			make(map[int]*model.Session),
 		channels:			make(map[int][]chan *model.Session),
+		spotifyPlayers:		make(map[int] *spotify.SpotifyClient),	
 		PostgresClient: 	client,
 		mutex: 				sync.Mutex{},
 	}
