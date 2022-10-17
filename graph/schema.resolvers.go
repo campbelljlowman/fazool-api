@@ -47,7 +47,10 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		return nil, errors.New("No user found to update")
 	}
 
-	spotifyToken := spotify.RefreshToken(r.PostgresClient, userID)
+	spotifyToken, err := spotify.RefreshToken(r.PostgresClient, userID)
+	if err != nil {
+		return nil, errors.New("Error adding new session to database")
+	}
 	s := spotify.New(spotifyToken)
 	r.spotifyPlayers[userID] = &s
 
