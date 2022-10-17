@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/musicPlayer"
 	"github.com/campbelljlowman/fazool-api/spotify"
 	"github.com/jackc/pgx/v4/pgxpool"
 )

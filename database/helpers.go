@@ -73,11 +73,29 @@ func GetUserLoginValues (db *pgxpool.Pool, userEmail string) (int, int, string, 
 	return userID, authLevel, password, nil
 }
 
-func UpdateUserSpotifyCreds(db *pgxpool.Pool, userID int, AccessToken string, RefreshToken string) error {
+func SetSpotifyAccessToken(db *pgxpool.Pool, userID int, AccessToken string) error {
 	queryString := fmt.Sprintf(`
 	UPDATE public.user
-	SET spotify_access_token = '%v', spotify_refresh_token = '%v'
-	WHERE user_id = %v;`, AccessToken, RefreshToken, userID)
+	SET spotify_access_token = '%v'
+	WHERE user_id = %v;`, AccessToken, userID)
+
+	commandTag, err := db.Exec(context.Background(), queryString)
+
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+		return errors.New("Error adding spotify access token to database")
+	}
+	if commandTag.RowsAffected() != 1 {
+		return errors.New("No user found to update")
+	}
+	return nil
+}
+
+func SetSpotifyRefreshToken(db *pgxpool.Pool, userID int, RefreshToken string) error {
+	queryString := fmt.Sprintf(`
+	UPDATE public.user
+	SET spotify_refresh_token = '%v'
+	WHERE user_id = %v;`, RefreshToken, userID)
 
 	commandTag, err := db.Exec(context.Background(), queryString)
 

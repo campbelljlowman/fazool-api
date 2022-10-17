@@ -180,7 +180,13 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
 
-	err := database.UpdateUserSpotifyCreds(r.PostgresClient, userID, spotifyCreds.AccessToken, spotifyCreds.RefreshToken)
+	err := database.SetSpotifyAccessToken(r.PostgresClient, userID, spotifyCreds.AccessToken)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = database.SetSpotifyRefreshToken(r.PostgresClient, userID, spotifyCreds.RefreshToken)
 
 	if err != nil {
 		return nil, err
