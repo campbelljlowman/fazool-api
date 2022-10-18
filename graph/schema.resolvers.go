@@ -106,7 +106,17 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error) {
-	panic(fmt.Errorf("not implemented: UpdateCurrentlyPlaying - updateCurrentlyPlaying"))
+	spotifyClient := r.spotifyPlayers[sessionID]
+	switch action {
+	case "PLAY":
+		spotifyClient.Play()
+	case "PAUSE":
+		spotifyClient.Pause()
+	case "ADVANCE":
+		spotifyClient.Advance("Next Song")
+	}
+
+	return r.sessions[sessionID], nil
 }
 
 // CreateUser is the resolver for the createUser field.
