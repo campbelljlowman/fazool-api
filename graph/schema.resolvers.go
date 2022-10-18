@@ -52,7 +52,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		return nil, errors.New("Error adding new session to database")
 	}
 	s := spotify.New(spotifyToken)
-	r.spotifyPlayers[userID] = &s
+	r.spotifyPlayers[sessionID] = &s
 
 	user := &model.User{
 		ID:        userID,
