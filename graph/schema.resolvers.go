@@ -13,9 +13,12 @@ import (
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/spotify"
 	"github.com/campbelljlowman/fazool-api/utils"
+	"github.com/campbelljlowman/fazool-api/spotifyUtil"
+	"github.com/zmb3/spotify/v2"
+	 spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/exp/slices"
+	"golang.org/x/oauth2"
 )
 
 // CreateSession is the resolver for the createSession field.
@@ -47,12 +50,17 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		return nil, errors.New("No user found to update")
 	}
 
-	spotifyToken, err := spotify.RefreshToken(r.PostgresClient, userID)
+	spotifyToken, err := spotifyUtil.RefreshToken(r.PostgresClient, userID)
 	if err != nil {
 		return nil, errors.New("Error adding new session to database")
 	}
-	s := spotify.New(spotifyToken)
-	r.spotifyPlayers[sessionID] = &s
+
+	token := &oauth2.Token{
+		AccessToken: spotifyToken,
+	}
+	httpClient := spotifyauth.New().Client(ctx, token)
+	client := spotify.New(httpClient)
+	r.spotifyPlayers[sessionID] = client
 
 	user := &model.User{
 		ID:        userID,
@@ -109,11 +117,12 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	spotifyClient := r.spotifyPlayers[sessionID]
 	switch action {
 	case "PLAY":
-		spotifyClient.Play()
+		spotifyClient.Play(ctx)
 	case "PAUSE":
-		spotifyClient.Pause()
+		spotifyClient.Pause(ctx)
 	case "ADVANCE":
-		spotifyClient.Advance("Next Song")
+		print("Advance")
+		// spotifyClient.Advance("Next Song")
 	}
 
 	return r.sessions[sessionID], nil

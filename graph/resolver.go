@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/spotify"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/zmb3/spotify/v2"
 )
 
 // This file will not be regenerated automatically.
@@ -20,7 +20,7 @@ type Resolver struct {
 	channels 			map[int] []chan *model.Session
 	// TODO: Make this map of interfaces
 	// musicPlayers		map[int] *musicplayer.MusicPlayer 		
-	spotifyPlayers		map[int] *spotify.SpotifyClient	
+	spotifyPlayers		map[int] *spotify.Client	
 	// TODO: Make this lower case
 	PostgresClient 		*pgxpool.Pool
 	mutex 				sync.Mutex
@@ -44,7 +44,7 @@ func NewResolver (client *pgxpool.Pool) *Resolver {
 	return &Resolver{
 		sessions:			make(map[int]*model.Session),
 		channels:			make(map[int][]chan *model.Session),
-		spotifyPlayers:		make(map[int] *spotify.SpotifyClient),	
+		spotifyPlayers:		make(map[int] *spotify.Client),	
 		PostgresClient: 	client,
 		mutex: 				sync.Mutex{},
 	}
