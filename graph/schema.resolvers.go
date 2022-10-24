@@ -55,6 +55,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		return nil, errors.New("Error adding new session to database")
 	}
 
+	// TODO: Use refresh token as well? https://pkg.go.dev/golang.org/x/oauth2#Token
 	token := &oauth2.Token{
 		AccessToken: spotifyToken,
 	}
