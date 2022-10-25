@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"io"
 	"encoding/json"
-	"sync"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/database"
