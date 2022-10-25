@@ -8,6 +8,14 @@ import (
 	"strconv"
 )
 
+type CurrentlyPlayingSong struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Artist  string `json:"artist"`
+	Image   string `json:"image"`
+	Playing bool   `json:"playing"`
+}
+
 type NewUser struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
@@ -16,9 +24,10 @@ type NewUser struct {
 }
 
 type Session struct {
-	ID               int     `json:"id"`
-	CurrentlyPlaying *Song   `json:"currentlyPlaying"`
-	Queue            []*Song `json:"queue"`
+	ID               int                   `json:"id"`
+	CurrentlyPlaying *CurrentlyPlayingSong `json:"currentlyPlaying"`
+	Queue            []*Song               `json:"queue"`
+	PlaybackDevice   *string               `json:"playbackDevice"`
 }
 
 type Song struct {

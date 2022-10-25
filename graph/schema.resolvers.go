@@ -13,10 +13,10 @@ import (
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/spotifyUtil"
-	"github.com/zmb3/spotify/v2"
-	 spotifyauth "github.com/zmb3/spotify/v2/auth"
+	"github.com/campbelljlowman/fazool-api/utils"
+	spotify "github.com/zmb3/spotify/v2"
+	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/exp/slices"
 	"golang.org/x/oauth2"
 )
@@ -62,6 +62,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	httpClient := spotifyauth.New().Client(ctx, token)
 	client := spotify.New(httpClient)
 	r.spotifyPlayers[sessionID] = client
+
+	r.mutex.Lock()
+	channels := r.channels[sessionID]
+	r.mutex.Unlock()
+	go spotifyUtil.WatchCurrentlyPlaying(session, client, channels)
 
 	user := &model.User{
 		ID:        userID,

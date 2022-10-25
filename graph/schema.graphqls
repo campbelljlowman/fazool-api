@@ -10,10 +10,19 @@ type Song {
   votes: Int!
 }
 
+type CurrentlyPlayingSong {
+  id: String!
+  title: String!
+  artist: String!
+  image: String!
+  playing: Boolean!
+}
+
 type Session {
   id: Int!
-  currentlyPlaying: Song
+  currentlyPlaying: CurrentlyPlayingSong
   queue: [Song!]
+  playbackDevice: String
 }
 
 type User {

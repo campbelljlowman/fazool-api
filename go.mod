@@ -10,7 +10,9 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/vektah/gqlparser/v2 v2.4.8
+	github.com/zmb3/spotify/v2 v2.3.0
 	golang.org/x/exp v0.0.0-20220827204233-334a2380cb91
+	golang.org/x/oauth2 v0.0.0-20210810183815-faf39c7919d5
 )
 
 require (
@@ -38,10 +40,8 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
-	github.com/zmb3/spotify/v2 v2.3.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
-	golang.org/x/oauth2 v0.0.0-20210810183815-faf39c7919d5 // indirect
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

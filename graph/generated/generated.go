@@ -46,6 +46,14 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	CurrentlyPlayingSong struct {
+		Artist  func(childComplexity int) int
+		ID      func(childComplexity int) int
+		Image   func(childComplexity int) int
+		Playing func(childComplexity int) int
+		Title   func(childComplexity int) int
+	}
+
 	Mutation struct {
 		CreateSession          func(childComplexity int, userID int) int
 		CreateUser             func(childComplexity int, newUser model.NewUser) int
@@ -63,6 +71,7 @@ type ComplexityRoot struct {
 	Session struct {
 		CurrentlyPlaying func(childComplexity int) int
 		ID               func(childComplexity int) int
+		PlaybackDevice   func(childComplexity int) int
 		Queue            func(childComplexity int) int
 	}
 
@@ -121,6 +130,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "CurrentlyPlayingSong.artist":
+		if e.complexity.CurrentlyPlayingSong.Artist == nil {
+			break
+		}
+
+		return e.complexity.CurrentlyPlayingSong.Artist(childComplexity), true
+
+	case "CurrentlyPlayingSong.id":
+		if e.complexity.CurrentlyPlayingSong.ID == nil {
+			break
+		}
+
+		return e.complexity.CurrentlyPlayingSong.ID(childComplexity), true
+
+	case "CurrentlyPlayingSong.image":
+		if e.complexity.CurrentlyPlayingSong.Image == nil {
+			break
+		}
+
+		return e.complexity.CurrentlyPlayingSong.Image(childComplexity), true
+
+	case "CurrentlyPlayingSong.playing":
+		if e.complexity.CurrentlyPlayingSong.Playing == nil {
+			break
+		}
+
+		return e.complexity.CurrentlyPlayingSong.Playing(childComplexity), true
+
+	case "CurrentlyPlayingSong.title":
+		if e.complexity.CurrentlyPlayingSong.Title == nil {
+			break
+		}
+
+		return e.complexity.CurrentlyPlayingSong.Title(childComplexity), true
 
 	case "Mutation.createSession":
 		if e.complexity.Mutation.CreateSession == nil {
@@ -226,6 +270,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Session.ID(childComplexity), true
+
+	case "Session.playbackDevice":
+		if e.complexity.Session.PlaybackDevice == nil {
+			break
+		}
+
+		return e.complexity.Session.PlaybackDevice(childComplexity), true
 
 	case "Session.queue":
 		if e.complexity.Session.Queue == nil {
@@ -424,10 +475,19 @@ type Song {
   votes: Int!
 }
 
+type CurrentlyPlayingSong {
+  id: String!
+  title: String!
+  artist: String!
+  image: String!
+  playing: Boolean!
+}
+
 type Session {
   id: Int!
-  currentlyPlaying: Song
+  currentlyPlaying: CurrentlyPlayingSong
   queue: [Song!]
+  playbackDevice: String
 }
 
 type User {
@@ -698,6 +758,226 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
+func (ec *executionContext) _CurrentlyPlayingSong_id(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CurrentlyPlayingSong",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CurrentlyPlayingSong_title(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_title(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Title, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_title(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CurrentlyPlayingSong",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CurrentlyPlayingSong_artist(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_artist(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Artist, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_artist(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CurrentlyPlayingSong",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CurrentlyPlayingSong_image(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_image(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Image, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_image(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CurrentlyPlayingSong",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CurrentlyPlayingSong_playing(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_playing(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Playing, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_playing(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CurrentlyPlayingSong",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_createSession(ctx, field)
 	if err != nil {
@@ -810,6 +1090,8 @@ func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Contex
 				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_Session_queue(ctx, field)
+			case "playbackDevice":
+				return ec.fieldContext_Session_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
 		},
@@ -873,6 +1155,8 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_Session_queue(ctx, field)
+			case "playbackDevice":
+				return ec.fieldContext_Session_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
 		},
@@ -1118,6 +1402,8 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_Session_queue(ctx, field)
+			case "playbackDevice":
+				return ec.fieldContext_Session_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
 		},
@@ -1388,9 +1674,9 @@ func (ec *executionContext) _Session_currentlyPlaying(ctx context.Context, field
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Song)
+	res := resTmp.(*model.CurrentlyPlayingSong)
 	fc.Result = res
-	return ec.marshalOSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSong(ctx, field.Selections, res)
+	return ec.marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Session_currentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1402,17 +1688,17 @@ func (ec *executionContext) fieldContext_Session_currentlyPlaying(ctx context.Co
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Song_id(ctx, field)
+				return ec.fieldContext_CurrentlyPlayingSong_id(ctx, field)
 			case "title":
-				return ec.fieldContext_Song_title(ctx, field)
+				return ec.fieldContext_CurrentlyPlayingSong_title(ctx, field)
 			case "artist":
-				return ec.fieldContext_Song_artist(ctx, field)
+				return ec.fieldContext_CurrentlyPlayingSong_artist(ctx, field)
 			case "image":
-				return ec.fieldContext_Song_image(ctx, field)
-			case "votes":
-				return ec.fieldContext_Song_votes(ctx, field)
+				return ec.fieldContext_CurrentlyPlayingSong_image(ctx, field)
+			case "playing":
+				return ec.fieldContext_CurrentlyPlayingSong_playing(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Song", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type CurrentlyPlayingSong", field.Name)
 		},
 	}
 	return fc, nil
@@ -1466,6 +1752,47 @@ func (ec *executionContext) fieldContext_Session_queue(ctx context.Context, fiel
 				return ec.fieldContext_Song_votes(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Song", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Session_playbackDevice(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Session_playbackDevice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PlaybackDevice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Session_playbackDevice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Session",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1750,6 +2077,8 @@ func (ec *executionContext) fieldContext_Subscription_sessionUpdated(ctx context
 				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_Session_queue(ctx, field)
+			case "playbackDevice":
+				return ec.fieldContext_Session_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
 		},
@@ -3985,6 +4314,62 @@ func (ec *executionContext) unmarshalInputUserLogin(ctx context.Context, obj int
 
 // region    **************************** object.gotpl ****************************
 
+var currentlyPlayingSongImplementors = []string{"CurrentlyPlayingSong"}
+
+func (ec *executionContext) _CurrentlyPlayingSong(ctx context.Context, sel ast.SelectionSet, obj *model.CurrentlyPlayingSong) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, currentlyPlayingSongImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CurrentlyPlayingSong")
+		case "id":
+
+			out.Values[i] = ec._CurrentlyPlayingSong_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "title":
+
+			out.Values[i] = ec._CurrentlyPlayingSong_title(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "artist":
+
+			out.Values[i] = ec._CurrentlyPlayingSong_artist(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "image":
+
+			out.Values[i] = ec._CurrentlyPlayingSong_image(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "playing":
+
+			out.Values[i] = ec._CurrentlyPlayingSong_playing(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -4178,6 +4563,10 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 		case "queue":
 
 			out.Values[i] = ec._Session_queue(ctx, field, obj)
+
+		case "playbackDevice":
+
+			out.Values[i] = ec._Session_playbackDevice(ctx, field, obj)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -5062,6 +5451,13 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx context.Context, sel ast.SelectionSet, v *model.CurrentlyPlayingSong) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._CurrentlyPlayingSong(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
 	if v == nil {
 		return nil, nil
@@ -5130,13 +5526,6 @@ func (ec *executionContext) marshalOSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋ
 	}
 
 	return ret
-}
-
-func (ec *executionContext) marshalOSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSong(ctx context.Context, sel ast.SelectionSet, v *model.Song) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Song(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
