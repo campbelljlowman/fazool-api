@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/database"
@@ -63,10 +64,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	client := spotify.New(httpClient)
 	r.spotifyPlayers[sessionID] = client
 
-	r.mutex.Lock()
-	channels := r.channels[sessionID]
-	r.mutex.Unlock()
-	go spotifyUtil.WatchCurrentlyPlaying(session, client, channels)
+	go watchCurrentlyPlaying(r, sessionID)
 
 	user := &model.User{
 		ID:        userID,
@@ -79,7 +77,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.Session, error) {
 	session := r.sessions[sessionID]
-
+	println("currently playing: ", session.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.Queue, func(s *model.Song) bool { return s.ID == song.ID })
 	if idx == -1 {
 		// add new song to queue
@@ -271,3 +269,41 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
+	// TODO: Try to figure out how to just send a pointer of the channels array?
+	client := r.spotifyPlayers[sessionID]
+	session := r.sessions[sessionID]
+	for {
+		playerState, err := client.PlayerState(context.Background())
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		playing := playerState.CurrentlyPlaying.Playing
+		currentlyPlaying := &model.CurrentlyPlayingSong{
+			ID: "55",
+			Title: "Test Song",
+			Artist: "Test Artist",
+			Playing: playing,
+		}
+		// TODO: Compare currently playing to new currently playing, only send update if they're different
+
+		r.mutex.Lock()
+		channels := r.channels[sessionID]
+		r.mutex.Unlock()
+		session.CurrentlyPlaying = currentlyPlaying
+
+		for _, ch := range channels {
+			select {
+			case ch <- session: // This is the actual send.
+				// Our message went through, do nothing
+			default: // This is run when our send does not work.
+				fmt.Println("Channel closed in update.")
+				// You can handle any deregistration of the channel here.
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+}

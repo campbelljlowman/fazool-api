@@ -1,18 +1,17 @@
 package spotifyUtil
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
-	"encoding/base64"
-	"io"
-	"encoding/json"
 
-	"github.com/campbelljlowman/fazool-api/graph/model"
+
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/zmb3/spotify/v2"
 )
 
 type Request struct {
@@ -66,26 +65,4 @@ func RefreshToken(db *pgxpool.Pool, UserID int) (string, error) {
 	}
 	
 	return tokenData.AccessToken, nil
-}
-
-func WatchCurrentlyPlaying(session *model.Session, client *spotify.Client, channels []chan *model.Session) {
-	println("Watching session: %v", session.ID)
-
-	currentlyPlaying := &model.CurrentlyPlayingSong{
-		ID: "55",
-		Title: "Test Song",
-		Artist: "Test Artist",
-	}
-
-	session.CurrentlyPlaying = currentlyPlaying
-
-	for _, ch := range channels {
-		select {
-		case ch <- session: // This is the actual send.
-			// Our message went through, do nothing
-		default: // This is run when our send does not work.
-			fmt.Println("Channel closed in update.")
-			// You can handle any deregistration of the channel here.
-		}
-	}
 }
