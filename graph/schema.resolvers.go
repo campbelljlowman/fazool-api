@@ -274,25 +274,33 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 	// TODO: Try to figure out how to just send a pointer of the channels array?
 	client := r.spotifyPlayers[sessionID]
 	session := r.sessions[sessionID]
+	var currentlyPlaying model.CurrentlyPlayingSong
+
 	for {
 		playerState, err := client.PlayerState(context.Background())
 		if err != nil {
 			fmt.Println(err)
 		}
 
-		playing := playerState.CurrentlyPlaying.Playing
-		currentlyPlaying := &model.CurrentlyPlayingSong{
-			ID: "55",
-			Title: "Test Song",
-			Artist: "Test Artist",
-			Playing: playing,
+		if playerState.CurrentlyPlaying.Playing == true {
+			currentlyPlaying.ID = string(playerState.CurrentlyPlaying.Item.ID)
+			currentlyPlaying.Title = playerState.CurrentlyPlaying.Item.Name
+			currentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
+			currentlyPlaying.Image = playerState.CurrentlyPlaying.Item.Album.Images[0].URL
+			currentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+		} else {
+			if session.CurrentlyPlaying != nil {
+				currentlyPlaying = *session.CurrentlyPlaying
+			}
+			currentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 		}
+
 		// TODO: Compare currently playing to new currently playing, only send update if they're different
 
 		r.mutex.Lock()
 		channels := r.channels[sessionID]
 		r.mutex.Unlock()
-		session.CurrentlyPlaying = currentlyPlaying
+		session.CurrentlyPlaying = &currentlyPlaying
 
 		for _, ch := range channels {
 			select {
