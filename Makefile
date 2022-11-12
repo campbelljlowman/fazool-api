@@ -2,6 +2,8 @@ GO_VERSION=1.19.3
 # To make it easy to connect from your dev machine, make your postgres username the same as your linux username
 POSTGRES_USERNAME=clowman
 POSTGRES_PASSWORD=asdf
+# Application environment variables
+DATABASE_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
 
 init: go-init postgres-init 
 
@@ -25,7 +27,8 @@ postgres-init:
 
 # Run project locally
 run:
-	go run .
+	go run . \
+	DATABASE_URL=${DATABASE_URL}
 
 # Start local postgres database
 pg:

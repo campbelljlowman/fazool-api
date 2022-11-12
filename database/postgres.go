@@ -9,8 +9,7 @@ import (
 )
 
 func NewPostgresClient() *pgxpool.Pool {
-	// databaseUrl = os.Getenv("DATABASE_URL")
-	databaseUrl := "postgres://clowman:asdf@localhost:5433/fazool"
+	databaseUrl := os.Getenv("DATABASE_URL")
 
 	dbPool, err := pgxpool.Connect(context.Background(), databaseUrl)
 	if err != nil {
