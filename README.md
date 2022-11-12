@@ -71,7 +71,9 @@ Could pitch by saving money by replacing a DJ
 - As a Fazool user, I can join a session and see the queue of songs, add songs to the queue and vote for songs I want to hear
 
 # Env setup
+`make init` runs these commands
 
 1. Install go 
-2. cd to project root
-3. run `go run .`
+2. Setup postgres server (see make target)
+3. cd to project root
+4. run `go run .`
