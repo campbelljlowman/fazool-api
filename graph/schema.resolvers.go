@@ -79,6 +79,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	session := r.sessions[sessionID]
 	println("currently playing: ", session.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.Queue, func(s *model.Song) bool { return s.ID == song.ID })
+	r.queueMutex.Lock()
 	if idx == -1 {
 		// add new song to queue
 		newSong := &model.Song{
@@ -96,12 +97,13 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	// Sort queue
 	sort.Slice(session.Queue, func(i, j int) bool { return session.Queue[i].Votes > session.Queue[j].Votes })
+	r.queueMutex.Unlock()
 
 	// Update subscription
 	go func() {
-		r.mutex.Lock()
+		r.channelMutex.Lock()
 		channels := r.channels[sessionID]
-		r.mutex.Unlock()
+		r.channelMutex.Unlock()
 		for _, ch := range channels {
 			select {
 			case ch <- session: // This is the actual send.
@@ -248,9 +250,9 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {
 	channel := make(chan *model.Session)
 
-	r.mutex.Lock()
+	r.channelMutex.Lock()
 	r.channels[sessionID] = append(r.channels[sessionID], channel)
-	r.mutex.Unlock()
+	r.channelMutex.Unlock()
 
 	return channel, nil
 
@@ -270,6 +272,12 @@ type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
 
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
 func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 	// TODO: Try to figure out how to just send a pointer of the channels array?
 	client := r.spotifyPlayers[sessionID]
@@ -290,8 +298,11 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 			currentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 
 			// TODO: Check if queue is empty before adding
-			// timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
-			// if (timeleft < 5000 && playerState.) 
+			timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
+			fmt.Println("Time left: ", timeLeft)
+			if timeLeft < 5000 {
+				// Pop top song in queue and add to spotify queue, using mutex
+			}
 		} else {
 			if session.CurrentlyPlaying != nil {
 				currentlyPlaying = *session.CurrentlyPlaying
@@ -299,8 +310,8 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 			currentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 		}
 
-		// TODO: Compare currently playing to new currently playing, only send update if they're different. 
-		// Tried and this code below is being weird. This always runs even before a song is started playing. 
+		// TODO: Compare currently playing to new currently playing, only send update if they're different.
+		// Tried and this code below is being weird. This always runs even before a song is started playing.
 		// I suspect "session.CurrentlyPlaying = &currentlyPlaying" points the sessions currently playing to the
 		// Local variable, meaning that every update to it is pushed to the session. Probably need two currently playing variables
 
@@ -309,10 +320,9 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 		// 	fmt.Printf("New currently playing: %v\n", currentlyPlaying.Title)
 		// }
 
-		
-		r.mutex.Lock()
+		r.channelMutex.Lock()
 		channels := r.channels[sessionID]
-		r.mutex.Unlock()
+		r.channelMutex.Unlock()
 		session.CurrentlyPlaying = &currentlyPlaying
 
 		for _, ch := range channels {

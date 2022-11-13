@@ -21,7 +21,8 @@ type Resolver struct {
 	spotifyPlayers		map[int] *spotify.Client	
 	// TODO: Make this lower case
 	PostgresClient 		*pgxpool.Pool
-	mutex 				sync.Mutex
+	channelMutex 		sync.Mutex
+	queueMutex			sync.Mutex
 }
 
 func NewResolver (client *pgxpool.Pool) *Resolver {
@@ -30,6 +31,7 @@ func NewResolver (client *pgxpool.Pool) *Resolver {
 		channels:			make(map[int][]chan *model.Session),
 		spotifyPlayers:		make(map[int] *spotify.Client),	
 		PostgresClient: 	client,
-		mutex: 				sync.Mutex{},
+		channelMutex: 		sync.Mutex{},
+		queueMutex: 		sync.Mutex{},	
 	}
 }
