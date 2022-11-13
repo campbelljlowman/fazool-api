@@ -288,6 +288,10 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 			currentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
 			currentlyPlaying.Image = playerState.CurrentlyPlaying.Item.Album.Images[0].URL
 			currentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+
+			// TODO: Check if queue is empty before adding
+			// timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
+			// if (timeleft < 5000 && playerState.) 
 		} else {
 			if session.CurrentlyPlaying != nil {
 				currentlyPlaying = *session.CurrentlyPlaying
@@ -295,8 +299,17 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 			currentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 		}
 
-		// TODO: Compare currently playing to new currently playing, only send update if they're different
+		// TODO: Compare currently playing to new currently playing, only send update if they're different. 
+		// Tried and this code below is being weird. This always runs even before a song is started playing. 
+		// I suspect "session.CurrentlyPlaying = &currentlyPlaying" points the sessions currently playing to the
+		// Local variable, meaning that every update to it is pushed to the session. Probably need two currently playing variables
 
+		// if (session.CurrentlyPlaying != nil){
+		// 	fmt.Printf("Session currently playing: %v\n", session.CurrentlyPlaying.Title)
+		// 	fmt.Printf("New currently playing: %v\n", currentlyPlaying.Title)
+		// }
+
+		
 		r.mutex.Lock()
 		channels := r.channels[sessionID]
 		r.mutex.Unlock()
