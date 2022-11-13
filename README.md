@@ -76,4 +76,4 @@ Could pitch by saving money by replacing a DJ
 1. Install go 
 2. Setup postgres server (see make target)
 3. cd to project root
-4. run `go run .`
+4. run `make run`

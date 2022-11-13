@@ -27,8 +27,8 @@ postgres-init:
 
 # Run project locally
 run:
-	go run . \
-	DATABASE_URL=${DATABASE_URL}
+	DATABASE_URL=${DATABASE_URL} \
+	go run .
 
 # Start local postgres database
 pg:
