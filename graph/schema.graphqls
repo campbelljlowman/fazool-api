@@ -37,6 +37,16 @@ type Token {
   jwt: String!
 }
 
+type Device {
+  id: String!
+  name: String!
+}
+
+type Playlist {
+  id: String!
+  name: String!
+}
+
 enum QueueAction {
   PLAY
   PAUSE
@@ -68,18 +78,24 @@ input SpotifyCreds {
   refreshToken: String!
 }
 
-# Make this return an array of sessions so calling with no session ID returns all sessions
+input OutputDevice {
+  id: String!
+}
+
+input PlaylistInput {
+  id: String!
+}
+
 type Query {
   session(sessionID: Int): Session
-
-  # Users
   user: User!
+  devices: [Device!]
+  playlists: [Playlist!]
 }
 
 type Mutation {
   # Sessions
 
-  # Figure out what this is supposed to return
   createSession(userID: Int!): User!
   updateQueue(sessionID: Int!, song: SongUpdate!): Session!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
@@ -90,6 +106,8 @@ type Mutation {
 
   # Spotify
   updateSpotifyToken(spotifyCreds: SpotifyCreds!): User!
+  setOutputDevice(outputDevice: OutputDevice!): Device
+  setPlaylist(playlist: PlaylistInput!): Playlist
 }
 
 type Subscription {

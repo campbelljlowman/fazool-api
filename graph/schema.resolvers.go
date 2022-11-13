@@ -223,6 +223,16 @@ func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds 
 	return &model.User{ID: userID}, nil
 }
 
+// SetOutputDevice is the resolver for the setOutputDevice field.
+func (r *mutationResolver) SetOutputDevice(ctx context.Context, outputDevice model.OutputDevice) (*model.Device, error) {
+	panic(fmt.Errorf("not implemented: SetOutputDevice - setOutputDevice"))
+}
+
+// SetPlaylist is the resolver for the setPlaylist field.
+func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error) {
+	panic(fmt.Errorf("not implemented: SetPlaylist - setPlaylist"))
+}
+
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Session, error) {
 	session, exists := r.sessions[*sessionID]
@@ -244,6 +254,16 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	}
 
 	return user, nil
+}
+
+// Devices is the resolver for the devices field.
+func (r *queryResolver) Devices(ctx context.Context) ([]*model.Device, error) {
+	panic(fmt.Errorf("not implemented: Devices - devices"))
+}
+
+// Playlists is the resolver for the playlists field.
+func (r *queryResolver) Playlists(ctx context.Context) ([]*model.Playlist, error) {
+	panic(fmt.Errorf("not implemented: Playlists - playlists"))
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
