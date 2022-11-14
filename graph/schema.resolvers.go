@@ -128,6 +128,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		spotifyClient.Pause(ctx)
 	case "ADVANCE":
 		print("Advance")
+		// TODO: This should use the same advance code as in the queue watcher
 		// spotifyClient.Advance("Next Song")
 	}
 
@@ -292,14 +293,8 @@ type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
 
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+
 func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
-	// TODO: Try to figure out how to just send a pointer of the channels array?
 	client := r.spotifyPlayers[sessionID]
 	session := r.sessions[sessionID]
 	session.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
@@ -317,7 +312,7 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 
 		if playerState.CurrentlyPlaying.Playing == true {
 			if session.CurrentlyPlaying.ID != playerState.CurrentlyPlaying.Item.ID.String() {
-				// If song has changed, update currently playing and send update
+				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
 				session.CurrentlyPlaying.ID = playerState.CurrentlyPlaying.Item.ID.String()
 				session.CurrentlyPlaying.Title = playerState.CurrentlyPlaying.Item.Name
 				session.CurrentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
@@ -331,17 +326,14 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's 
 			// Safe to add song
 			timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
-			fmt.Println("Time left: ", timeLeft)
 			if timeLeft < 5000 && addNextSong{
-				fmt.Println("Checking queue for song to add")
 				r.queueMutex.Lock()
 				if len(session.Queue) != 0{
 					song, session.Queue = session.Queue[0], session.Queue[1:]
 					r.queueMutex.Unlock()
 
-					fmt.Println("Adding top song to spotify queue")
 					client.QueueSong(context.Background(), spotify.ID(song.ID))
-					
+
 					sendUpdate = true
 					addNextSong = false
 				} else {
@@ -357,18 +349,7 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 			}
 		}
 
-		// TODO: Compare currently playing to new currently playing, only send update if they're different.
-		// Tried and this code below is being weird. This always runs even before a song is started playing.
-		// I suspect "session.CurrentlyPlaying = &currentlyPlaying" points the sessions currently playing to the
-		// Local variable, meaning that every update to it is pushed to the session. Probably need two currently playing variables
-
-		// if (session.CurrentlyPlaying != nil){
-		// 	fmt.Printf("Session currently playing: %v\n", session.CurrentlyPlaying.Title)
-		// 	fmt.Printf("New currently playing: %v\n", currentlyPlaying.Title)
-		// }
-
 		if sendUpdate {
-			fmt.Println("Sending update for song: ", session.CurrentlyPlaying.Title)
 			r.channelMutex.Lock()
 			channels := r.channels[sessionID]
 			r.channelMutex.Unlock()
