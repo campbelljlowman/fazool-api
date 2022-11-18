@@ -324,7 +324,9 @@ func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
 
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
 			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's 
-			// Safe to add song. This is a pretty hard requirement for running multiple API instances
+			// Safe to add song. This is a pretty hard requirement for running multiple API instances, although
+			// If spotify API is too slow, might have to make addNextSong flag part of session information stored in Redis
+			// And cache is refreshed before performing this operaiton
 			timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
 			if timeLeft < 5000 && addNextSong{
 				r.queueMutex.Lock()
