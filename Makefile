@@ -3,9 +3,9 @@ GO_VERSION=1.19.3
 POSTGRES_USERNAME=clowman
 POSTGRES_PASSWORD=asdf
 # Application environment variables
-DATABASE_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
-
-init: go-init postgres-init 
+POSTRGRES_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
+REDIS_URL=localhost:6379
+init: go-init postgres-init redis-init
 
 # Install go language
 go-init:
@@ -20,16 +20,29 @@ go-init:
 
 # Setup local postgres database. Set postgres variables before running
 postgres-init:
+	sudo apt update && apt upgrade
 	sudo apt-get -y install postgresql postgresql-contrib
 	sudo service postgresql start
 	sudo -u postgres psql
 	CREATE USER ${POSTGRES_USERNAME} PASSWORD ${POSTGRES_PASSWORD} CREATEDB;
 
+
+redis-init:
+	sudo apt update && apt upgrade
+	sudo apt install redis-server
+# Find supervised no line and change to supervised systemd since Ubuntu uses the systemd init system for WSL
+	sudo vim /etc/redis/redis.conf
+	sudo service redis-server start
+
 # Run project locally
 run:
-	DATABASE_URL=${DATABASE_URL} \
+	POSTRGRES_URL=${POSTRGRES_URL} \
+	REDIS_URL=${REDIS_URL} \
 	go run .
 
 # Start local postgres database
 pg:
 	sudo service postgresql start
+
+redis:
+	sudo service redis-server start

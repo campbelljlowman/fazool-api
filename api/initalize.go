@@ -1,17 +1,16 @@
 package api
 
-import(
+import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/gin-contrib/cors"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 
 	"github.com/campbelljlowman/fazool-api/graph"
 	"github.com/campbelljlowman/fazool-api/database"
+	"github.com/campbelljlowman/fazool-api/cache"
 )
-
-
 
 func InitializeRoutes() *gin.Engine {
 	router := gin.Default()
@@ -28,8 +27,9 @@ func InitializeRoutes() *gin.Engine {
 		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
 	})
 
-	pgclient := database.NewPostgresClient()
-	r := graph.NewResolver(pgclient)
+	pgClient := database.NewPostgresClient()
+	redisClient := cache.GetRedisClient()
+	r := graph.NewResolver(pgClient, redisClient)
 	srv := graph.NewGraphQLServer(r)
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
@@ -38,7 +38,6 @@ func InitializeRoutes() *gin.Engine {
 	return router
 }
 
-
-func healthCheck(c *gin.Context){
+func healthCheck(c *gin.Context) {
 	c.String(http.StatusOK, "API is healthy!")
 }

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/zmb3/spotify/v2"
 )
@@ -21,16 +22,18 @@ type Resolver struct {
 	spotifyPlayers		map[int] *spotify.Client	
 	// TODO: Make this lower case
 	PostgresClient 		*pgxpool.Pool
+	RedisClient 		*redis.Client
 	channelMutex 		sync.Mutex
 	queueMutex			sync.Mutex
 }
 
-func NewResolver (client *pgxpool.Pool) *Resolver {
+func NewResolver (pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
 	return &Resolver{
 		sessions:			make(map[int]*model.Session),
 		channels:			make(map[int][]chan *model.Session),
 		spotifyPlayers:		make(map[int] *spotify.Client),	
-		PostgresClient: 	client,
+		PostgresClient: 	pgClient,
+		RedisClient: 		redisClient,
 		channelMutex: 		sync.Mutex{},
 		queueMutex: 		sync.Mutex{},	
 	}

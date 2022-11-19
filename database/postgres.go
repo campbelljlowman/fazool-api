@@ -9,9 +9,9 @@ import (
 )
 
 func NewPostgresClient() *pgxpool.Pool {
-	databaseUrl := os.Getenv("DATABASE_URL")
+	databaseURL := os.Getenv("POSTRGRES_URL")
 
-	dbPool, err := pgxpool.Connect(context.Background(), databaseUrl)
+	dbPool, err := pgxpool.Connect(context.Background(), databaseURL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
