@@ -20,9 +20,8 @@ type Resolver struct {
 	// TODO: Make this map of interfaces
 	// musicPlayers		map[int] *musicplayer.MusicPlayer 		
 	spotifyPlayers		map[int] *spotify.Client	
-	// TODO: Make this lower case
-	PostgresClient 		*pgxpool.Pool
-	RedisClient 		*redis.Client
+	postgresClient 		*pgxpool.Pool
+	redisClient 		*redis.Client
 	// These need to be per session!
 	channelMutex 		sync.Mutex
 	queueMutex			sync.Mutex
@@ -33,8 +32,8 @@ func NewResolver (pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
 		sessions:			make(map[int]*model.Session),
 		channels:			make(map[int][]chan *model.Session),
 		spotifyPlayers:		make(map[int] *spotify.Client),	
-		PostgresClient: 	pgClient,
-		RedisClient: 		redisClient,
+		postgresClient: 	pgClient,
+		redisClient: 		redisClient,
 		channelMutex: 		sync.Mutex{},
 		queueMutex: 		sync.Mutex{},	
 	}

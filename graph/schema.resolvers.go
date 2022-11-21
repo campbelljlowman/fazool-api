@@ -41,7 +41,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		SET session_id = %v
 		WHERE user_id = %v;`, sessionID, userID)
 
-	commandTag, err := r.PostgresClient.Exec(context.Background(), queryString)
+	commandTag, err := r.postgresClient.Exec(context.Background(), queryString)
 
 	if err != nil {
 		return nil, errors.New("Error adding new session to database")
@@ -50,7 +50,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 		return nil, errors.New("No user found to update")
 	}
 
-	spotifyToken, err := spotifyUtil.RefreshToken(r.PostgresClient, userID)
+	spotifyToken, err := spotifyUtil.RefreshToken(r.postgresClient, userID)
 	if err != nil {
 		return nil, errors.New("Error adding new session to database")
 	}
@@ -133,7 +133,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 
 	checkEmailQueryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.user WHERE email = '%v' LIMIT 1);", newUser.Email)
 	var emailExists bool
-	r.PostgresClient.QueryRow(context.Background(), checkEmailQueryString).Scan(&emailExists)
+	r.postgresClient.QueryRow(context.Background(), checkEmailQueryString).Scan(&emailExists)
 	if emailExists {
 		return nil, errors.New("Email already exists!")
 	}
@@ -148,7 +148,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, authLevel)
 
 	var userID int
-	err := r.PostgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID)
+	err := r.postgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID)
 	if err != nil {
 		println("Error adding user to database")
 		println(err.Error())
@@ -171,7 +171,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error) {
-	userID, authLevel, password, err := database.GetUserLoginValues(r.PostgresClient, userLogin.Email)
+	userID, authLevel, password, err := database.GetUserLoginValues(r.postgresClient, userLogin.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -196,13 +196,13 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
 
-	err := database.SetSpotifyAccessToken(r.PostgresClient, userID, spotifyCreds.AccessToken)
+	err := database.SetSpotifyAccessToken(r.postgresClient, userID, spotifyCreds.AccessToken)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = database.SetSpotifyRefreshToken(r.PostgresClient, userID, spotifyCreds.RefreshToken)
+	err = database.SetSpotifyRefreshToken(r.postgresClient, userID, spotifyCreds.RefreshToken)
 
 	if err != nil {
 		return nil, err
@@ -235,7 +235,7 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
 
-	user, err := database.GetUserByID(r.PostgresClient, userID)
+	user, err := database.GetUserByID(r.postgresClient, userID)
 	if err != nil {
 		println(err.Error())
 		return nil, err
