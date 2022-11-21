@@ -23,6 +23,7 @@ type Resolver struct {
 	// TODO: Make this lower case
 	PostgresClient 		*pgxpool.Pool
 	RedisClient 		*redis.Client
+	// These need to be per session!
 	channelMutex 		sync.Mutex
 	queueMutex			sync.Mutex
 }

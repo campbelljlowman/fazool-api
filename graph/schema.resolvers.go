@@ -99,20 +99,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	r.queueMutex.Unlock()
 
 	// Update subscription
-	go func() {
-		r.channelMutex.Lock()
-		channels := r.channels[sessionID]
-		r.channelMutex.Unlock()
-		for _, ch := range channels {
-			select {
-			case ch <- session: // This is the actual send.
-				// Our message went through, do nothing
-			default: // This is run when our send does not work.
-				fmt.Println("Channel closed in update.")
-				// You can handle any deregistration of the channel here.
-			}
-		}
-	}()
+	sendUpdate(r, sessionID)
 
 	return session, nil
 }
@@ -126,9 +113,10 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	case "PAUSE":
 		spotifyClient.Pause(ctx)
 	case "ADVANCE":
-		print("Advance")
-		// TODO: This should use the same advance code as in the queue watcher
-		// spotifyClient.Advance("Next Song")
+		client := r.spotifyPlayers[sessionID]
+		advanceQueue(&r.queueMutex, r.sessions[sessionID], client)
+		client.Next(context.Background())
+		sendUpdate(r, sessionID)
 	}
 
 	return r.sessions[sessionID], nil
