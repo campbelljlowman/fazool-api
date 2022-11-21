@@ -5,7 +5,9 @@ POSTGRES_PASSWORD=asdf
 # Application environment variables
 POSTRGRES_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
 REDIS_URL=localhost:6379
+
 init: go-init postgres-init redis-init
+
 
 # Install go language
 go-init:
@@ -26,7 +28,7 @@ postgres-init:
 	sudo -u postgres psql
 	CREATE USER ${POSTGRES_USERNAME} PASSWORD ${POSTGRES_PASSWORD} CREATEDB;
 
-
+# Setup local redis
 redis-init:
 	sudo apt update && apt upgrade
 	sudo apt install redis-server
@@ -39,6 +41,8 @@ run:
 	POSTRGRES_URL=${POSTRGRES_URL} \
 	REDIS_URL=${REDIS_URL} \
 	go run .
+
+start: pg redis
 
 # Start local postgres database
 pg:
