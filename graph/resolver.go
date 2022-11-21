@@ -15,26 +15,26 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	sessions 			map[int]*model.Session
-	channels 			map[int] []chan *model.Session
+	sessions map[int]*model.SessionInfo
+	channels map[int][]chan *model.SessionInfo
 	// TODO: Make this map of interfaces
-	// musicPlayers		map[int] *musicplayer.MusicPlayer 		
-	spotifyPlayers		map[int] *spotify.Client	
-	postgresClient 		*pgxpool.Pool
-	redisClient 		*redis.Client
+	// musicPlayers		map[int] *musicplayer.MusicPlayer
+	spotifyPlayers map[int]*spotify.Client
+	postgresClient *pgxpool.Pool
+	redisClient    *redis.Client
 	// These need to be per session!
-	channelMutex 		sync.Mutex
-	queueMutex			sync.Mutex
+	channelMutex sync.Mutex
+	queueMutex   sync.Mutex
 }
 
-func NewResolver (pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
+func NewResolver(pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
 	return &Resolver{
-		sessions:			make(map[int]*model.Session),
-		channels:			make(map[int][]chan *model.Session),
-		spotifyPlayers:		make(map[int] *spotify.Client),	
-		postgresClient: 	pgClient,
-		redisClient: 		redisClient,
-		channelMutex: 		sync.Mutex{},
-		queueMutex: 		sync.Mutex{},	
+		sessions:       make(map[int]*model.SessionInfo),
+		channels:       make(map[int][]chan *model.SessionInfo),
+		spotifyPlayers: make(map[int]*spotify.Client),
+		postgresClient: pgClient,
+		redisClient:    redisClient,
+		channelMutex:   sync.Mutex{},
+		queueMutex:     sync.Mutex{},
 	}
 }

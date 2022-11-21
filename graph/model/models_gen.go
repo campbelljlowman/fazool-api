@@ -41,7 +41,7 @@ type PlaylistInput struct {
 	ID string `json:"id"`
 }
 
-type Session struct {
+type SessionInfo struct {
 	ID               int                   `json:"id"`
 	CurrentlyPlaying *CurrentlyPlayingSong `json:"currentlyPlaying"`
 	Queue            []*Song               `json:"queue"`

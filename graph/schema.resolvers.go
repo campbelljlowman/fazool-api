@@ -29,7 +29,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	sessionID := 81
 
 	// Create session
-	session := &model.Session{
+	session := &model.SessionInfo{
 		ID:               sessionID,
 		CurrentlyPlaying: nil,
 		Queue:            nil,
@@ -74,7 +74,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
-func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.Session, error) {
+func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	session := r.sessions[sessionID]
 	println("currently playing: ", session.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.Queue, func(s *model.Song) bool { return s.ID == song.ID })
@@ -105,7 +105,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 }
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
-func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error) {
+func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
 	spotifyClient := r.spotifyPlayers[sessionID]
 	switch action {
 	case "PLAY":
@@ -115,6 +115,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	case "ADVANCE":
 		client := r.spotifyPlayers[sessionID]
 		advanceQueue(&r.queueMutex, r.sessions[sessionID], client)
+		// Make this an option to advance function
 		client.Next(context.Background())
 		sendUpdate(r, sessionID)
 	}
@@ -222,7 +223,7 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.Playl
 }
 
 // Session is the resolver for the session field.
-func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Session, error) {
+func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error) {
 	session, exists := r.sessions[*sessionID]
 	if exists {
 		return session, nil
@@ -255,8 +256,8 @@ func (r *queryResolver) Playlists(ctx context.Context) ([]*model.Playlist, error
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
-func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {
-	channel := make(chan *model.Session)
+func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
+	channel := make(chan *model.SessionInfo)
 
 	r.channelMutex.Lock()
 	r.channels[sessionID] = append(r.channels[sessionID], channel)

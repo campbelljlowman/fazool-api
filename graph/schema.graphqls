@@ -18,7 +18,7 @@ type CurrentlyPlayingSong {
   playing: Boolean!
 }
 
-type Session {
+type SessionInfo {
   id: Int!
   currentlyPlaying: CurrentlyPlayingSong
   queue: [Song!]
@@ -87,7 +87,7 @@ input PlaylistInput {
 }
 
 type Query {
-  session(sessionID: Int): Session
+  session(sessionID: Int): SessionInfo
   user: User!
   devices: [Device!]
   playlists: [Playlist!]
@@ -97,8 +97,8 @@ type Mutation {
   # Sessions
 
   createSession(userID: Int!): User!
-  updateQueue(sessionID: Int!, song: SongUpdate!): Session!
-  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
+  updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
+  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
   # Users
   createUser(newUser: NewUser!): Token!
@@ -111,5 +111,5 @@ type Mutation {
 }
 
 type Subscription {
-  sessionUpdated(sessionID: Int!): Session!
+  sessionUpdated(sessionID: Int!): SessionInfo!
 }

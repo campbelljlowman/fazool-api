@@ -38,10 +38,10 @@ func watchSpotifyCurrentlyPlaying(r *mutationResolver, sessionID int) {
 			}
 
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
-			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's 
+			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's
 			// Safe to add song
 			timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
-			if timeLeft < 5000 && addNextSong{
+			if timeLeft < 5000 && addNextSong {
 				advanceQueue(&r.queueMutex, session, client)
 
 				sendUpdateFlag = true
@@ -63,16 +63,15 @@ func watchSpotifyCurrentlyPlaying(r *mutationResolver, sessionID int) {
 	}
 }
 
-func advanceQueue(mutex *sync.Mutex, session *model.Session, client *spotify.Client) {
+func advanceQueue(mutex *sync.Mutex, session *model.SessionInfo, client *spotify.Client) {
 	var song *model.Song
 
 	mutex.Lock()
-	if len(session.Queue) != 0{
+	if len(session.Queue) != 0 {
 		song, session.Queue = session.Queue[0], session.Queue[1:]
 		mutex.Unlock()
 
 		client.QueueSong(context.Background(), spotify.ID(song.ID))
-
 
 	} else {
 		// This else block is so we can unlock right after we update the queue in the true condition
@@ -80,7 +79,7 @@ func advanceQueue(mutex *sync.Mutex, session *model.Session, client *spotify.Cli
 	}
 }
 
-func sendUpdate (r *mutationResolver, sessionID int) {
+func sendUpdate(r *mutationResolver, sessionID int) {
 	session := r.sessions[sessionID]
 	go func() {
 		r.channelMutex.Lock()
