@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/database"
@@ -64,7 +63,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	client := spotify.New(httpClient)
 	r.spotifyPlayers[sessionID] = client
 
-	go watchCurrentlyPlaying(r, sessionID)
+	go watchSpotifyCurrentlyPlaying(r, sessionID)
 
 	user := &model.User{
 		ID:        userID,
@@ -292,81 +291,3 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
-
-
-func watchCurrentlyPlaying(r *mutationResolver, sessionID int) {
-	client := r.spotifyPlayers[sessionID]
-	session := r.sessions[sessionID]
-	session.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
-	sendUpdate := false
-	addNextSong := false
-	var song *model.Song
-
-	for {
-		sendUpdate = false
-		playerState, err := client.PlayerState(context.Background())
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		if playerState.CurrentlyPlaying.Playing == true {
-			if session.CurrentlyPlaying.ID != playerState.CurrentlyPlaying.Item.ID.String() {
-				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
-				session.CurrentlyPlaying.ID = playerState.CurrentlyPlaying.Item.ID.String()
-				session.CurrentlyPlaying.Title = playerState.CurrentlyPlaying.Item.Name
-				session.CurrentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
-				session.CurrentlyPlaying.Image = playerState.CurrentlyPlaying.Item.Album.Images[0].URL
-				session.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
-				sendUpdate = true
-				addNextSong = true
-			}
-
-			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
-			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's 
-			// Safe to add song. This is a pretty hard requirement for running multiple API instances, although
-			// If spotify API is too slow, might have to make addNextSong flag part of session information stored in Redis
-			// And cache is refreshed before performing this operaiton
-			timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
-			if timeLeft < 5000 && addNextSong{
-				r.queueMutex.Lock()
-				if len(session.Queue) != 0{
-					song, session.Queue = session.Queue[0], session.Queue[1:]
-					r.queueMutex.Unlock()
-
-					client.QueueSong(context.Background(), spotify.ID(song.ID))
-
-					sendUpdate = true
-					addNextSong = false
-				} else {
-					// This else block is so we can unlock right after we update the queue in the true condition
-					r.queueMutex.Unlock()
-				}
-			}
-		} else {
-			// Change currently playing to false if music gets paused
-			if session.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
-				session.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
-				sendUpdate = true
-			}
-		}
-
-		if sendUpdate {
-			r.channelMutex.Lock()
-			channels := r.channels[sessionID]
-			r.channelMutex.Unlock()
-	
-			for _, ch := range channels {
-				select {
-				case ch <- session: // This is the actual send.
-					// Our message went through, do nothing
-				default: // This is run when our send does not work.
-					fmt.Println("Channel closed in update.")
-					// You can handle any deregistration of the channel here.
-				}
-			}
-		}
-
-		time.Sleep(time.Second)
-	}
-}
