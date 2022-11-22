@@ -23,9 +23,8 @@ import (
 )
 
 // CreateSession is the resolver for the createSession field.
-func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*model.User, error) {
-	// TODO: Get userID from context
-	// 	userID, _ := ctx.Value("user").(int)
+func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
+	userID, _ := ctx.Value("user").(int)
 	// TODO: Make session ID random - use UUID
 	sessionID := 81
 
@@ -80,7 +79,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	session := r.sessions[sessionID]
-	
+
 	println("currently playing: ", session.SessionInfo.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.Song) bool { return s.ID == song.ID })
 	session.QueueMutex.Lock()
@@ -196,8 +195,8 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 	return returnValue, nil
 }
 
-// UpdateSpotifyToken is the resolver for the updateSpotifyToken field.
-func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
+// UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
+func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
 
 	err := database.SetSpotifyAccessToken(r.postgresClient, userID, spotifyCreds.AccessToken)
@@ -284,3 +283,27 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+// func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
+	// userID, _ := ctx.Value("user").(int)
+
+	// err := database.SetSpotifyAccessToken(r.postgresClient, userID, spotifyCreds.AccessToken)
+
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// err = database.SetSpotifyRefreshToken(r.postgresClient, userID, spotifyCreds.RefreshToken)
+
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// return &model.User{ID: userID}, nil
+// }

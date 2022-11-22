@@ -60,14 +60,14 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateSession          func(childComplexity int, userID int) int
+		CreateSession          func(childComplexity int) int
 		CreateUser             func(childComplexity int, newUser model.NewUser) int
 		Login                  func(childComplexity int, userLogin model.UserLogin) int
 		SetOutputDevice        func(childComplexity int, outputDevice model.OutputDevice) int
 		SetPlaylist            func(childComplexity int, playlist model.PlaylistInput) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
-		UpdateSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
+		UpsertSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
 	}
 
 	Playlist struct {
@@ -115,12 +115,12 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	CreateSession(ctx context.Context, userID int) (*model.User, error)
+	CreateSession(ctx context.Context) (*model.User, error)
 	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error)
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error)
 	CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error)
-	UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
+	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
 	SetOutputDevice(ctx context.Context, outputDevice model.OutputDevice) (*model.Device, error)
 	SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error)
 }
@@ -203,12 +203,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Mutation_createSession_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.CreateSession(childComplexity, args["userID"].(int)), true
+		return e.complexity.Mutation.CreateSession(childComplexity), true
 
 	case "Mutation.createUser":
 		if e.complexity.Mutation.CreateUser == nil {
@@ -282,17 +277,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateQueue(childComplexity, args["sessionID"].(int), args["song"].(model.SongUpdate)), true
 
-	case "Mutation.updateSpotifyToken":
-		if e.complexity.Mutation.UpdateSpotifyToken == nil {
+	case "Mutation.upsertSpotifyToken":
+		if e.complexity.Mutation.UpsertSpotifyToken == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_updateSpotifyToken_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_upsertSpotifyToken_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateSpotifyToken(childComplexity, args["spotifyCreds"].(model.SpotifyCreds)), true
+		return e.complexity.Mutation.UpsertSpotifyToken(childComplexity, args["spotifyCreds"].(model.SpotifyCreds)), true
 
 	case "Playlist.id":
 		if e.complexity.Playlist.ID == nil {
@@ -647,7 +642,7 @@ type Query {
 type Mutation {
   # Sessions
 
-  createSession(userID: Int!): User!
+  createSession: User!
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
@@ -656,7 +651,7 @@ type Mutation {
   login(userLogin: UserLogin!): Token!
 
   # Spotify
-  updateSpotifyToken(spotifyCreds: SpotifyCreds!): User!
+  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
   setOutputDevice(outputDevice: OutputDevice!): Device
   setPlaylist(playlist: PlaylistInput!): Playlist
 }
@@ -670,21 +665,6 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
-
-func (ec *executionContext) field_Mutation_createSession_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["userID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userID"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["userID"] = arg0
-	return args, nil
-}
 
 func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -794,7 +774,7 @@ func (ec *executionContext) field_Mutation_updateQueue_args(ctx context.Context,
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_updateSpotifyToken_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_upsertSpotifyToken_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 model.SpotifyCreds
@@ -1214,7 +1194,7 @@ func (ec *executionContext) _Mutation_createSession(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateSession(rctx, fc.Args["userID"].(int))
+		return ec.resolvers.Mutation().CreateSession(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1252,17 +1232,6 @@ func (ec *executionContext) fieldContext_Mutation_createSession(ctx context.Cont
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -1515,8 +1484,8 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_updateSpotifyToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updateSpotifyToken(ctx, field)
+func (ec *executionContext) _Mutation_upsertSpotifyToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_upsertSpotifyToken(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1529,7 +1498,7 @@ func (ec *executionContext) _Mutation_updateSpotifyToken(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateSpotifyToken(rctx, fc.Args["spotifyCreds"].(model.SpotifyCreds))
+		return ec.resolvers.Mutation().UpsertSpotifyToken(rctx, fc.Args["spotifyCreds"].(model.SpotifyCreds))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1546,7 +1515,7 @@ func (ec *executionContext) _Mutation_updateSpotifyToken(ctx context.Context, fi
 	return ec.marshalNUser2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_updateSpotifyToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_upsertSpotifyToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1575,7 +1544,7 @@ func (ec *executionContext) fieldContext_Mutation_updateSpotifyToken(ctx context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateSpotifyToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_upsertSpotifyToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -5045,10 +5014,10 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "updateSpotifyToken":
+		case "upsertSpotifyToken":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateSpotifyToken(ctx, field)
+				return ec._Mutation_upsertSpotifyToken(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {

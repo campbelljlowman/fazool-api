@@ -96,7 +96,7 @@ type Query {
 type Mutation {
   # Sessions
 
-  createSession(userID: Int!): User!
+  createSession: User!
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
@@ -105,7 +105,7 @@ type Mutation {
   login(userLogin: UserLogin!): Token!
 
   # Spotify
-  updateSpotifyToken(spotifyCreds: SpotifyCreds!): User!
+  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
   setOutputDevice(outputDevice: OutputDevice!): Device
   setPlaylist(playlist: PlaylistInput!): Playlist
 }
