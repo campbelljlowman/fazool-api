@@ -55,7 +55,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	spotifyToken, err := spotifyUtil.RefreshToken(r.postgresClient, userID)
 	if err != nil {
-		return nil, errors.New("Error adding new session to database")
+		return nil, fmt.Errorf("Error refreshing Spotify Token for userID: %v", userID)
 	}
 
 	// TODO: Use refresh token as well? https://pkg.go.dev/golang.org/x/oauth2#Token
