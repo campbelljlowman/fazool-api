@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/campbelljlowman/fazool-api/cmd"
+	"github.com/campbelljlowman/fazool-api/api"
 )
 
 func main() {
-	cmd.Execute()
+	
+	router := api.InitializeRoutes()
+	router.Run()
 }
