@@ -19,6 +19,7 @@ import (
 	spotify "github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/exp/slices"
+	"golang.org/x/exp/slog"
 	"golang.org/x/oauth2"
 )
 
@@ -80,7 +81,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	session := r.sessions[sessionID]
 
-	println("currently playing: ", session.SessionInfo.CurrentlyPlaying.Artist)
+	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.Song) bool { return s.ID == song.ID })
 	session.QueueMutex.Lock()
 	if idx == -1 {

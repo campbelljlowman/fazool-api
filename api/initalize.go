@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"golang.org/x/exp/slog"
+
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -13,6 +15,7 @@ import (
 )
 
 func InitializeRoutes() *gin.Engine {
+	slog.Debug("Initializing routes")
 	router := gin.Default()
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
