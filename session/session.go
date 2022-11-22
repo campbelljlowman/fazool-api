@@ -50,6 +50,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying () {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
 				s.SessionInfo.CurrentlyPlaying.ID = playerState.CurrentlyPlaying.Item.ID.String()
 				s.SessionInfo.CurrentlyPlaying.Title = playerState.CurrentlyPlaying.Item.Name
+				// TODO: Loop through all artists and combine
 				s.SessionInfo.CurrentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
 				s.SessionInfo.CurrentlyPlaying.Image = playerState.CurrentlyPlaying.Item.Album.Images[0].URL
 				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing

@@ -30,7 +30,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	sessionID := 81
 
 	session := session.NewSession()
-	r.sessions[sessionID] = session
+	r.sessions[sessionID] = &session
 
 	// Create session info
 	sessionInfo := &model.SessionInfo{

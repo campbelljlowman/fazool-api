@@ -12,14 +12,14 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	sessions 		map[int]session.Session
+	sessions 		map[int]*session.Session
 	postgresClient *pgxpool.Pool
 	redisClient    *redis.Client
 }
 
 func NewResolver(pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
 	return &Resolver{
-		sessions:      	make(map[int]session.Session),
+		sessions:      	make(map[int]*session.Session),
 		postgresClient: pgClient,
 		redisClient:    redisClient,
 	}
