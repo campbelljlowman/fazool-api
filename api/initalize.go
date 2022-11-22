@@ -5,13 +5,13 @@ import (
 
 	"golang.org/x/exp/slog"
 
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-
 	"github.com/campbelljlowman/fazool-api/graph"
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/cache"
+
+	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 func InitializeRoutes() *gin.Engine {

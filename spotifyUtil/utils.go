@@ -1,16 +1,16 @@
 package spotifyUtil
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/url"
-	"strings"
-
 
 	"github.com/campbelljlowman/fazool-api/database"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 

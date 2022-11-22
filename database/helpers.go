@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 

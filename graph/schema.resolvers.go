@@ -9,6 +9,10 @@ import (
 	"fmt"
 	"sort"
 
+	"golang.org/x/exp/slices"
+	"golang.org/x/exp/slog"
+	"golang.org/x/oauth2"
+	
 	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
@@ -16,11 +20,9 @@ import (
 	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
+
 	spotify "github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
-	"golang.org/x/exp/slices"
-	"golang.org/x/exp/slog"
-	"golang.org/x/oauth2"
 )
 
 // CreateSession is the resolver for the createSession field.

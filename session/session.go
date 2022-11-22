@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	
 	"github.com/zmb3/spotify/v2"
 )
 

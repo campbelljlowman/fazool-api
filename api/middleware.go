@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/campbelljlowman/fazool-api/auth"
+	
 	"github.com/gin-gonic/gin"
 )
 
