@@ -67,7 +67,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	client := spotify.New(httpClient)
 	session.SpotifyPlayer = client
 
-	go watchSpotifyCurrentlyPlaying(r, sessionID)
+	go session.WatchSpotifyCurrentlyPlaying()
 
 	user := &model.User{
 		ID:        userID,
@@ -104,7 +104,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	session.QueueMutex.Unlock()
 
 	// Update subscription
-	sendUpdate(r, sessionID)
+	session.SendUpdate()
 
 	return session.SessionInfo, nil
 }
@@ -120,10 +120,8 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	case "PAUSE":
 		spotifyClient.Pause(ctx)
 	case "ADVANCE":
-		advanceQueue(session.QueueMutex, session.SessionInfo, spotifyClient)
-		// Make this an option to advance function
-		spotifyClient.Next(context.Background())
-		sendUpdate(r, sessionID)
+		session.AdvanceQueue(true)
+		session.SendUpdate()
 	}
 
 	return session.SessionInfo, nil

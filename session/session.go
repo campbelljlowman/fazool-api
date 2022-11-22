@@ -32,68 +32,85 @@ func NewSession () Session {
 	return session
 }
 
-func (*Session) WatchSpotifyCurrentlyPlaying () {
-	client := r.spotifyPlayers[sessionID]
-	session := r.sessions[sessionID]
-	session.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
+func (s *Session) WatchSpotifyCurrentlyPlaying () {
+	s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	sendUpdateFlag := false
-	addNextSong := false
+	addNextSongFlag := false
 
 	for {
 		sendUpdateFlag = false
-		playerState, err := client.PlayerState(context.Background())
+		playerState, err := s.SpotifyPlayer.PlayerState(context.Background())
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
 		if playerState.CurrentlyPlaying.Playing == true {
-			if session.CurrentlyPlaying.ID != playerState.CurrentlyPlaying.Item.ID.String() {
+			if s.SessionInfo.CurrentlyPlaying.ID != playerState.CurrentlyPlaying.Item.ID.String() {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
-				session.CurrentlyPlaying.ID = playerState.CurrentlyPlaying.Item.ID.String()
-				session.CurrentlyPlaying.Title = playerState.CurrentlyPlaying.Item.Name
-				session.CurrentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
-				session.CurrentlyPlaying.Image = playerState.CurrentlyPlaying.Item.Album.Images[0].URL
-				session.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+				s.SessionInfo.CurrentlyPlaying.ID = playerState.CurrentlyPlaying.Item.ID.String()
+				s.SessionInfo.CurrentlyPlaying.Title = playerState.CurrentlyPlaying.Item.Name
+				s.SessionInfo.CurrentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
+				s.SessionInfo.CurrentlyPlaying.Image = playerState.CurrentlyPlaying.Item.Album.Images[0].URL
+				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 				sendUpdateFlag = true
-				addNextSong = true
+				addNextSongFlag = true
 			}
 
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
 			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's
 			// Safe to add song
 			timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
-			if timeLeft < 5000 && addNextSong {
-				advanceQueue(&r.queueMutex, session, client)
+			if timeLeft < 5000 && addNextSongFlag {
+				s.AdvanceQueue(false)
 
 				sendUpdateFlag = true
-				addNextSong = false
+				addNextSongFlag = false
 			}
 		} else {
 			// Change currently playing to false if music gets paused
-			if session.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
-				session.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+			if s.SessionInfo.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
+				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 				sendUpdateFlag = true
 			}
 		}
 
 		if sendUpdateFlag {
-			sendUpdate(r, sessionID)
+			s.SendUpdate()
 		}
 
 		time.Sleep(time.Second)
 	}
 }
 
-func (* Session) sendUpdate(r *mutationResolver, sessionID int) {
-	session := r.sessions[sessionID]
+func (s *Session) AdvanceQueue(force bool) {
+	var song *model.Song
+
+	s.QueueMutex.Lock()
+	if len(s.SessionInfo.Queue) != 0 {
+		song, s.SessionInfo.Queue = s.SessionInfo.Queue[0], s.SessionInfo.Queue[1:]
+		s.QueueMutex.Unlock()
+
+		s.SpotifyPlayer.QueueSong(context.Background(), spotify.ID(song.ID))
+
+	} else {
+		// This else block is so we can unlock right after we update the queue in the true condition
+		s.QueueMutex.Unlock()
+	}
+
+	if force {
+		s.SpotifyPlayer.Next(context.Background())
+	}
+}
+
+func (s *Session) SendUpdate() {
 	go func() {
-		r.channelMutex.Lock()
-		channels := r.channels[sessionID]
-		r.channelMutex.Unlock()
+		s.ChannelMutex.Lock()
+		channels := s.Channels
+		s.ChannelMutex.Unlock()
 		for _, ch := range channels {
 			select {
-			case ch <- session: // This is the actual send.
+			case ch <- s.SessionInfo: // This is the actual send.
 				// Our message went through, do nothing
 			default: // This is run when our send does not work.
 				fmt.Println("Channel closed in update.")

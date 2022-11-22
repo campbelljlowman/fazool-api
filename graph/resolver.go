@@ -19,7 +19,7 @@ type Resolver struct {
 
 func NewResolver(pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
 	return &Resolver{
-		sessions:      	make(map[int]*session.Session),
+		sessions:      	make(map[int]session.Session),
 		postgresClient: pgClient,
 		redisClient:    redisClient,
 	}
