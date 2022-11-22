@@ -113,12 +113,11 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
 	session := r.sessions[sessionID]
 
-	spotifyClient := session.SpotifyPlayer
 	switch action {
 	case "PLAY":
-		spotifyClient.Play(ctx)
+		session.SpotifyPlayer.Play(ctx)
 	case "PAUSE":
-		spotifyClient.Pause(ctx)
+		session.SpotifyPlayer.Pause(ctx)
 	case "ADVANCE":
 		session.AdvanceQueue(true)
 		session.SendUpdate()
