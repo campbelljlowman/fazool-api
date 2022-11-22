@@ -2,12 +2,9 @@ package graph
 
 //go:generate go get github.com/99designs/gqlgen@v0.17.15 && go run github.com/99designs/gqlgen generate
 import (
-	"sync"
-
-	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/zmb3/spotify/v2"
 )
 
 // This file will not be regenerated automatically.
@@ -15,26 +12,15 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	sessions 			map[int]*model.Session
-	channels 			map[int] []chan *model.Session
-	// TODO: Make this map of interfaces
-	// musicPlayers		map[int] *musicplayer.MusicPlayer 		
-	spotifyPlayers		map[int] *spotify.Client	
-	postgresClient 		*pgxpool.Pool
-	redisClient 		*redis.Client
-	// These need to be per session!
-	channelMutex 		sync.Mutex
-	queueMutex			sync.Mutex
+	sessions 		map[int]*session.Session
+	postgresClient *pgxpool.Pool
+	redisClient    *redis.Client
 }
 
-func NewResolver (pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
+func NewResolver(pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
 	return &Resolver{
-		sessions:			make(map[int]*model.Session),
-		channels:			make(map[int][]chan *model.Session),
-		spotifyPlayers:		make(map[int] *spotify.Client),	
-		postgresClient: 	pgClient,
-		redisClient: 		redisClient,
-		channelMutex: 		sync.Mutex{},
-		queueMutex: 		sync.Mutex{},	
+		sessions:      	make(map[int]*session.Session),
+		postgresClient: pgClient,
+		redisClient:    redisClient,
 	}
 }

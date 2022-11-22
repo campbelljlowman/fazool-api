@@ -82,7 +82,7 @@ type ComplexityRoot struct {
 		User      func(childComplexity int) int
 	}
 
-	Session struct {
+	SessionInfo struct {
 		CurrentlyPlaying func(childComplexity int) int
 		ID               func(childComplexity int) int
 		PlaybackDevice   func(childComplexity int) int
@@ -116,8 +116,8 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	CreateSession(ctx context.Context, userID int) (*model.User, error)
-	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.Session, error)
-	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error)
+	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error)
+	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error)
 	CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error)
 	UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
@@ -125,13 +125,13 @@ type MutationResolver interface {
 	SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error)
 }
 type QueryResolver interface {
-	Session(ctx context.Context, sessionID *int) (*model.Session, error)
+	Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error)
 	User(ctx context.Context) (*model.User, error)
 	Devices(ctx context.Context) ([]*model.Device, error)
 	Playlists(ctx context.Context) ([]*model.Playlist, error)
 }
 type SubscriptionResolver interface {
-	SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error)
+	SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error)
 }
 
 type executableSchema struct {
@@ -341,33 +341,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.User(childComplexity), true
 
-	case "Session.currentlyPlaying":
-		if e.complexity.Session.CurrentlyPlaying == nil {
+	case "SessionInfo.currentlyPlaying":
+		if e.complexity.SessionInfo.CurrentlyPlaying == nil {
 			break
 		}
 
-		return e.complexity.Session.CurrentlyPlaying(childComplexity), true
+		return e.complexity.SessionInfo.CurrentlyPlaying(childComplexity), true
 
-	case "Session.id":
-		if e.complexity.Session.ID == nil {
+	case "SessionInfo.id":
+		if e.complexity.SessionInfo.ID == nil {
 			break
 		}
 
-		return e.complexity.Session.ID(childComplexity), true
+		return e.complexity.SessionInfo.ID(childComplexity), true
 
-	case "Session.playbackDevice":
-		if e.complexity.Session.PlaybackDevice == nil {
+	case "SessionInfo.playbackDevice":
+		if e.complexity.SessionInfo.PlaybackDevice == nil {
 			break
 		}
 
-		return e.complexity.Session.PlaybackDevice(childComplexity), true
+		return e.complexity.SessionInfo.PlaybackDevice(childComplexity), true
 
-	case "Session.queue":
-		if e.complexity.Session.Queue == nil {
+	case "SessionInfo.queue":
+		if e.complexity.SessionInfo.Queue == nil {
 			break
 		}
 
-		return e.complexity.Session.Queue(childComplexity), true
+		return e.complexity.SessionInfo.Queue(childComplexity), true
 
 	case "Song.artist":
 		if e.complexity.Song.Artist == nil {
@@ -569,7 +569,7 @@ type CurrentlyPlayingSong {
   playing: Boolean!
 }
 
-type Session {
+type SessionInfo {
   id: Int!
   currentlyPlaying: CurrentlyPlayingSong
   queue: [Song!]
@@ -638,7 +638,7 @@ input PlaylistInput {
 }
 
 type Query {
-  session(sessionID: Int): Session
+  session(sessionID: Int): SessionInfo
   user: User!
   devices: [Device!]
   playlists: [Playlist!]
@@ -648,8 +648,8 @@ type Mutation {
   # Sessions
 
   createSession(userID: Int!): User!
-  updateQueue(sessionID: Int!, song: SongUpdate!): Session!
-  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): Session!
+  updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
+  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
   # Users
   createUser(newUser: NewUser!): Token!
@@ -662,7 +662,7 @@ type Mutation {
 }
 
 type Subscription {
-  sessionUpdated(sessionID: Int!): Session!
+  sessionUpdated(sessionID: Int!): SessionInfo!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1293,9 +1293,9 @@ func (ec *executionContext) _Mutation_updateQueue(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Session)
+	res := resTmp.(*model.SessionInfo)
 	fc.Result = res
-	return ec.marshalNSession2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSession(ctx, field.Selections, res)
+	return ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1307,15 +1307,15 @@ func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Contex
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Session_id(ctx, field)
+				return ec.fieldContext_SessionInfo_id(ctx, field)
 			case "currentlyPlaying":
-				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
+				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
-				return ec.fieldContext_Session_queue(ctx, field)
+				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "playbackDevice":
-				return ec.fieldContext_Session_playbackDevice(ctx, field)
+				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
 	}
 	defer func() {
@@ -1358,9 +1358,9 @@ func (ec *executionContext) _Mutation_updateCurrentlyPlaying(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Session)
+	res := resTmp.(*model.SessionInfo)
 	fc.Result = res
-	return ec.marshalNSession2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSession(ctx, field.Selections, res)
+	return ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1372,15 +1372,15 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Session_id(ctx, field)
+				return ec.fieldContext_SessionInfo_id(ctx, field)
 			case "currentlyPlaying":
-				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
+				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
-				return ec.fieldContext_Session_queue(ctx, field)
+				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "playbackDevice":
-				return ec.fieldContext_Session_playbackDevice(ctx, field)
+				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
 	}
 	defer func() {
@@ -1809,9 +1809,9 @@ func (ec *executionContext) _Query_session(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Session)
+	res := resTmp.(*model.SessionInfo)
 	fc.Result = res
-	return ec.marshalOSession2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSession(ctx, field.Selections, res)
+	return ec.marshalOSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_session(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1823,15 +1823,15 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Session_id(ctx, field)
+				return ec.fieldContext_SessionInfo_id(ctx, field)
 			case "currentlyPlaying":
-				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
+				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
-				return ec.fieldContext_Session_queue(ctx, field)
+				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "playbackDevice":
-				return ec.fieldContext_Session_playbackDevice(ctx, field)
+				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
 	}
 	defer func() {
@@ -2127,8 +2127,8 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Session_id(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Session_id(ctx, field)
+func (ec *executionContext) _SessionInfo_id(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_id(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2158,9 +2158,9 @@ func (ec *executionContext) _Session_id(ctx context.Context, field graphql.Colle
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Session_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionInfo_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Session",
+		Object:     "SessionInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -2171,8 +2171,8 @@ func (ec *executionContext) fieldContext_Session_id(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Session_currentlyPlaying(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Session_currentlyPlaying(ctx, field)
+func (ec *executionContext) _SessionInfo_currentlyPlaying(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2199,9 +2199,9 @@ func (ec *executionContext) _Session_currentlyPlaying(ctx context.Context, field
 	return ec.marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Session_currentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionInfo_currentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Session",
+		Object:     "SessionInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -2224,8 +2224,8 @@ func (ec *executionContext) fieldContext_Session_currentlyPlaying(ctx context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _Session_queue(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Session_queue(ctx, field)
+func (ec *executionContext) _SessionInfo_queue(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_queue(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2252,9 +2252,9 @@ func (ec *executionContext) _Session_queue(ctx context.Context, field graphql.Co
 	return ec.marshalOSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Session_queue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionInfo_queue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Session",
+		Object:     "SessionInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -2277,8 +2277,8 @@ func (ec *executionContext) fieldContext_Session_queue(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Session_playbackDevice(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Session_playbackDevice(ctx, field)
+func (ec *executionContext) _SessionInfo_playbackDevice(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2305,9 +2305,9 @@ func (ec *executionContext) _Session_playbackDevice(ctx context.Context, field g
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Session_playbackDevice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionInfo_playbackDevice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Session",
+		Object:     "SessionInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -2566,7 +2566,7 @@ func (ec *executionContext) _Subscription_sessionUpdated(ctx context.Context, fi
 	}
 	return func(ctx context.Context) graphql.Marshaler {
 		select {
-		case res, ok := <-resTmp.(<-chan *model.Session):
+		case res, ok := <-resTmp.(<-chan *model.SessionInfo):
 			if !ok {
 				return nil
 			}
@@ -2574,7 +2574,7 @@ func (ec *executionContext) _Subscription_sessionUpdated(ctx context.Context, fi
 				w.Write([]byte{'{'})
 				graphql.MarshalString(field.Alias).MarshalGQL(w)
 				w.Write([]byte{':'})
-				ec.marshalNSession2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSession(ctx, field.Selections, res).MarshalGQL(w)
+				ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res).MarshalGQL(w)
 				w.Write([]byte{'}'})
 			})
 		case <-ctx.Done():
@@ -2592,15 +2592,15 @@ func (ec *executionContext) fieldContext_Subscription_sessionUpdated(ctx context
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Session_id(ctx, field)
+				return ec.fieldContext_SessionInfo_id(ctx, field)
 			case "currentlyPlaying":
-				return ec.fieldContext_Session_currentlyPlaying(ctx, field)
+				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
-				return ec.fieldContext_Session_queue(ctx, field)
+				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "playbackDevice":
-				return ec.fieldContext_Session_playbackDevice(ctx, field)
+				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Session", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
 	}
 	defer func() {
@@ -5237,34 +5237,34 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
-var sessionImplementors = []string{"Session"}
+var sessionInfoImplementors = []string{"SessionInfo"}
 
-func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, obj *model.Session) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, sessionImplementors)
+func (ec *executionContext) _SessionInfo(ctx context.Context, sel ast.SelectionSet, obj *model.SessionInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, sessionInfoImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Session")
+			out.Values[i] = graphql.MarshalString("SessionInfo")
 		case "id":
 
-			out.Values[i] = ec._Session_id(ctx, field, obj)
+			out.Values[i] = ec._SessionInfo_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "currentlyPlaying":
 
-			out.Values[i] = ec._Session_currentlyPlaying(ctx, field, obj)
+			out.Values[i] = ec._SessionInfo_currentlyPlaying(ctx, field, obj)
 
 		case "queue":
 
-			out.Values[i] = ec._Session_queue(ctx, field, obj)
+			out.Values[i] = ec._SessionInfo_queue(ctx, field, obj)
 
 		case "playbackDevice":
 
-			out.Values[i] = ec._Session_playbackDevice(ctx, field, obj)
+			out.Values[i] = ec._SessionInfo_playbackDevice(ctx, field, obj)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -5818,18 +5818,18 @@ func (ec *executionContext) marshalNQueueAction2githubᚗcomᚋcampbelljlowman�
 	return v
 }
 
-func (ec *executionContext) marshalNSession2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSession(ctx context.Context, sel ast.SelectionSet, v model.Session) graphql.Marshaler {
-	return ec._Session(ctx, sel, &v)
+func (ec *executionContext) marshalNSessionInfo2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v model.SessionInfo) graphql.Marshaler {
+	return ec._SessionInfo(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSession2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSession(ctx context.Context, sel ast.SelectionSet, v *model.Session) graphql.Marshaler {
+func (ec *executionContext) marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v *model.SessionInfo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._Session(ctx, sel, v)
+	return ec._SessionInfo(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSong(ctx context.Context, sel ast.SelectionSet, v *model.Song) graphql.Marshaler {
@@ -6310,11 +6310,11 @@ func (ec *executionContext) marshalOPlaylist2ᚖgithubᚗcomᚋcampbelljlowman�
 	return ec._Playlist(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOSession2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSession(ctx context.Context, sel ast.SelectionSet, v *model.Session) graphql.Marshaler {
+func (ec *executionContext) marshalOSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v *model.SessionInfo) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._Session(ctx, sel, v)
+	return ec._SessionInfo(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Song) graphql.Marshaler {

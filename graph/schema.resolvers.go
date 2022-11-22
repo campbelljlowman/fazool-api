@@ -13,6 +13,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
 	spotify "github.com/zmb3/spotify/v2"
@@ -28,13 +29,16 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	// TODO: Make session ID random - use UUID
 	sessionID := 81
 
-	// Create session
-	session := &model.Session{
+	session := session.NewSession()
+	r.sessions[sessionID] = &session
+
+	// Create session info
+	sessionInfo := &model.SessionInfo{
 		ID:               sessionID,
 		CurrentlyPlaying: nil,
 		Queue:            nil,
 	}
-	r.sessions[session.ID] = session
+	session.SessionInfo = sessionInfo
 
 	queryString := fmt.Sprintf(`
 		UPDATE public.user
@@ -61,9 +65,9 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 	}
 	httpClient := spotifyauth.New().Client(ctx, token)
 	client := spotify.New(httpClient)
-	r.spotifyPlayers[sessionID] = client
+	session.SpotifyPlayer = client
 
-	go watchSpotifyCurrentlyPlaying(r, sessionID)
+	go session.WatchSpotifyCurrentlyPlaying()
 
 	user := &model.User{
 		ID:        userID,
@@ -74,11 +78,12 @@ func (r *mutationResolver) CreateSession(ctx context.Context, userID int) (*mode
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
-func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.Session, error) {
+func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	session := r.sessions[sessionID]
-	println("currently playing: ", session.CurrentlyPlaying.Artist)
-	idx := slices.IndexFunc(session.Queue, func(s *model.Song) bool { return s.ID == song.ID })
-	r.queueMutex.Lock()
+	
+	println("currently playing: ", session.SessionInfo.CurrentlyPlaying.Artist)
+	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.Song) bool { return s.ID == song.ID })
+	session.QueueMutex.Lock()
 	if idx == -1 {
 		// add new song to queue
 		newSong := &model.Song{
@@ -88,38 +93,37 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 			Image:  *song.Image,
 			Votes:  song.Vote,
 		}
-		session.Queue = append(session.Queue, newSong)
+		session.SessionInfo.Queue = append(session.SessionInfo.Queue, newSong)
 	} else {
-		queuedSong := session.Queue[idx]
+		queuedSong := session.SessionInfo.Queue[idx]
 		queuedSong.Votes += song.Vote
 	}
 
 	// Sort queue
-	sort.Slice(session.Queue, func(i, j int) bool { return session.Queue[i].Votes > session.Queue[j].Votes })
-	r.queueMutex.Unlock()
+	sort.Slice(session.SessionInfo.Queue, func(i, j int) bool { return session.SessionInfo.Queue[i].Votes > session.SessionInfo.Queue[j].Votes })
+	session.QueueMutex.Unlock()
 
 	// Update subscription
-	sendUpdate(r, sessionID)
+	session.SendUpdate()
 
-	return session, nil
+	return session.SessionInfo, nil
 }
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
-func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.Session, error) {
-	spotifyClient := r.spotifyPlayers[sessionID]
+func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
+	session := r.sessions[sessionID]
+
 	switch action {
 	case "PLAY":
-		spotifyClient.Play(ctx)
+		session.SpotifyPlayer.Play(ctx)
 	case "PAUSE":
-		spotifyClient.Pause(ctx)
+		session.SpotifyPlayer.Pause(ctx)
 	case "ADVANCE":
-		client := r.spotifyPlayers[sessionID]
-		advanceQueue(&r.queueMutex, r.sessions[sessionID], client)
-		client.Next(context.Background())
-		sendUpdate(r, sessionID)
+		session.AdvanceQueue(true)
+		session.SendUpdate()
 	}
 
-	return r.sessions[sessionID], nil
+	return session.SessionInfo, nil
 }
 
 // CreateUser is the resolver for the createUser field.
@@ -222,10 +226,10 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.Playl
 }
 
 // Session is the resolver for the session field.
-func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Session, error) {
+func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error) {
 	session, exists := r.sessions[*sessionID]
 	if exists {
-		return session, nil
+		return session.SessionInfo, nil
 	} else {
 		return nil, errors.New("Session not found!")
 	}
@@ -255,12 +259,13 @@ func (r *queryResolver) Playlists(ctx context.Context) ([]*model.Playlist, error
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
-func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.Session, error) {
-	channel := make(chan *model.Session)
+func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
+	session := r.sessions[sessionID]
+	channel := make(chan *model.SessionInfo)
 
-	r.channelMutex.Lock()
-	r.channels[sessionID] = append(r.channels[sessionID], channel)
-	r.channelMutex.Unlock()
+	session.ChannelMutex.Lock()
+	session.Channels = append(session.Channels, channel)
+	session.ChannelMutex.Unlock()
 
 	return channel, nil
 
