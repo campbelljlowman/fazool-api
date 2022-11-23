@@ -45,9 +45,6 @@ func RefreshToken(UserID int, refreshToken string) (string, error) {
 	}
 	tokenData := Request{}
 	json.Unmarshal([]byte(body), &tokenData)
-
-	// Add tokens back to database
-
 	
 	return tokenData.AccessToken, nil
 }
