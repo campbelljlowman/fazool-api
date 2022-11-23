@@ -14,7 +14,6 @@ import (
 	"golang.org/x/oauth2"
 	
 	"github.com/campbelljlowman/fazool-api/auth"
-	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/session"
@@ -42,23 +41,21 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	}
 	session.SessionInfo = sessionInfo
 
-	queryString := fmt.Sprintf(`
-		UPDATE public.user
-		SET session_id = %v
-		WHERE user_id = %v;`, sessionID, userID)
+	err := r.database.SetUserSession(userID, sessionID)
 
-	commandTag, err := r.postgresClient.Exec(context.Background(), queryString)
-
+	refreshToken, err := r.database.GetSpotifyRefreshToken(userID)
 	if err != nil {
-		return nil, errors.New("Error adding new session to database")
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, errors.New("No user found to update")
+		return nil, errors.New("Error get Spotify refresh token")
 	}
 
-	spotifyToken, err := spotifyUtil.RefreshToken(r.postgresClient, userID)
+	spotifyToken, err := spotifyUtil.RefreshToken(userID, refreshToken)
 	if err != nil {
 		return nil, errors.New("Error refreshing Spotify Token")
+	}
+
+	err = r.database.SetSpotifyAccessToken(userID, spotifyToken)
+	if err != nil {
+		return nil, errors.New("Error setting new Spotify token")
 	}
 
 	// TODO: Use refresh token as well? https://pkg.go.dev/golang.org/x/oauth2#Token
@@ -137,24 +134,16 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		return nil, errors.New("Invalid email format")
 	}
 
-	checkEmailQueryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.user WHERE email = '%v' LIMIT 1);", newUser.Email)
-	var emailExists bool
-	r.postgresClient.QueryRow(context.Background(), checkEmailQueryString).Scan(&emailExists)
+	emailExists := r.database.CheckIfEmailExists(newUser.Email)
+
 	if emailExists {
-		return nil, errors.New("Email already exists!")
+		return nil, errors.New("User with this email already exists!")
 	}
 	// TODO: Salt password and use Argon2id
 	passwordHash := utils.HashHelper(newUser.Password)
 
-	// TODO: Add this to database helpers
-	newUserQueryString := fmt.Sprintf(`
-		INSERT INTO public.user(first_name, last_name, email, pass_hash, auth_level)
-		VALUES ('%v', '%v', '%v', '%v', '%v')
-		RETURNING user_id;`,
-		newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, authLevel)
+	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, authLevel)
 
-	var userID int
-	err := r.postgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID)
 	if err != nil {
 		println("Error adding user to database")
 		println(err.Error())
@@ -177,7 +166,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error) {
-	userID, authLevel, password, err := database.GetUserLoginValues(r.postgresClient, userLogin.Email)
+	userID, authLevel, password, err := r.database.GetUserLoginValues(userLogin.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -202,13 +191,13 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
 
-	err := database.SetSpotifyAccessToken(r.postgresClient, userID, spotifyCreds.AccessToken)
+	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = database.SetSpotifyRefreshToken(r.postgresClient, userID, spotifyCreds.RefreshToken)
+	err = r.database.SetSpotifyRefreshToken(userID, spotifyCreds.RefreshToken)
 
 	if err != nil {
 		return nil, err
@@ -241,7 +230,7 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
 
-	user, err := database.GetUserByID(r.postgresClient, userID)
+	user, err := r.database.GetUserByID(userID)
 	if err != nil {
 		println(err.Error())
 		return nil, err
@@ -286,27 +275,3 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-// func (r *mutationResolver) UpdateSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
-	// userID, _ := ctx.Value("user").(int)
-
-	// err := database.SetSpotifyAccessToken(r.postgresClient, userID, spotifyCreds.AccessToken)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// err = database.SetSpotifyRefreshToken(r.postgresClient, userID, spotifyCreds.RefreshToken)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// return &model.User{ID: userID}, nil
-// }

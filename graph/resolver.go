@@ -3,9 +3,9 @@ package graph
 //go:generate go get github.com/99designs/gqlgen@v0.17.15 && go run github.com/99designs/gqlgen generate
 import (
 	"github.com/campbelljlowman/fazool-api/session"
-	
+	"github.com/campbelljlowman/fazool-api/database"
+
 	"github.com/go-redis/redis/v8"
-	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // This file will not be regenerated automatically.
@@ -14,14 +14,14 @@ import (
 
 type Resolver struct {
 	sessions 		map[int]*session.Session
-	postgresClient *pgxpool.Pool
+	database 		database.Database
 	redisClient    *redis.Client
 }
 
-func NewResolver(pgClient *pgxpool.Pool, redisClient *redis.Client) *Resolver {
+func NewResolver(database database.Database, redisClient *redis.Client) *Resolver {
 	return &Resolver{
 		sessions:      	make(map[int]*session.Session),
-		postgresClient: pgClient,
+		database: 		database,
 		redisClient:    redisClient,
 	}
 }

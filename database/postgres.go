@@ -117,6 +117,38 @@ func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (int, int, string
 	return userID, authLevel, password, nil
 }
 
+func (p *PostgresWrapper) GetSpotifyRefreshToken(userID int) (string, error) {
+	getUserQueryString := fmt.Sprintf(`
+	SELECT spotify_refresh_token FROM public.user WHERE user_id = '%v'`,
+	userID)
+	var spotifyRefreshToken string
+	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&spotifyRefreshToken)
+	if err != nil {
+		println("Error getting spotify refresh token from database")
+		println(err.Error())
+		return "", errors.New("Spotify refresh token not found!")
+	}
+
+	return spotifyRefreshToken, nil
+}
+
+func (p *PostgresWrapper) SetUserSession(userID int, sessionID int) error {
+	queryString := fmt.Sprintf(`
+	UPDATE public.user
+	SET session_id = %v
+	WHERE user_id = %v;`, sessionID, userID)
+
+	commandTag, err := p.postgresClient.Exec(context.Background(), queryString)
+
+	if err != nil {
+		return errors.New("Error adding new session to database")
+	}
+	if commandTag.RowsAffected() != 1 {
+		return errors.New("No user found to update")
+	}
+	return nil
+}
+
 func (p *PostgresWrapper) SetSpotifyAccessToken(userID int, AccessToken string) error {
 	queryString := fmt.Sprintf(`
 	UPDATE public.user
@@ -153,17 +185,23 @@ func (p *PostgresWrapper) SetSpotifyRefreshToken(userID int, RefreshToken string
 	return nil
 }
 
-func (db *pgxpool.Pool, ) GetSpotifyRefreshToken(userID int) (string, error) {
-	getUserQueryString := fmt.Sprintf(`
-	SELECT spotify_refresh_token FROM public.user WHERE user_id = '%v'`,
-	userID)
-	var spotifyRefreshToken string
-	err := db.QueryRow(context.Background(), getUserQueryString).Scan(&spotifyRefreshToken)
-	if err != nil {
-		println("Error getting spotify refresh token from database")
-		println(err.Error())
-		return "", errors.New("Spotify refresh token not found!")
-	}
+func (p *PostgresWrapper) CheckIfEmailExists(email string) bool {
+	checkEmailQueryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.user WHERE email = '%v' LIMIT 1);", email)
+	var emailExists bool
+	p.postgresClient.QueryRow(context.Background(), checkEmailQueryString).Scan(&emailExists)
 
-	return spotifyRefreshToken, nil
+	return emailExists
+}
+
+func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash string, authLevel int) (int, error) {
+	newUserQueryString := fmt.Sprintf(`
+	INSERT INTO public.user(first_name, last_name, email, pass_hash, auth_level)
+	VALUES ('%v', '%v', '%v', '%v', '%v')
+	RETURNING user_id;`,
+	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, authLevel)
+
+	var userID int
+	err := p.postgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID)
+
+	return userID, err
 }

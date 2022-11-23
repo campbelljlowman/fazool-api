@@ -1,31 +1,20 @@
 package spotifyUtil
 
 import (
-	"fmt"
 	"io"
+	"fmt"
 	"strings"
-	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"net/url"
-
-	"github.com/campbelljlowman/fazool-api/database"
-
-	"github.com/jackc/pgx/v4/pgxpool"
+	"encoding/base64"
+	"encoding/json"
 )
 
 type Request struct {
 	AccessToken string `json:"access_token"`
 }
 
-func RefreshToken(db *pgxpool.Pool, UserID int) (string, error) {
-	// Get refresh Token from DB
-	refreshToken, err := database.GetSpotifyRefreshToken(db, UserID)
-	if err != nil {
-		println("Error getting spotify refresh token!")
-		return "", fmt.Errorf("Got error %s", err.Error())
-	}
-
+func RefreshToken(UserID int, refreshToken string) (string, error) {
 	// Hit spotify endpoint to refresh token
 	// TODO: Get these from env
 	spotifyClientAuth := "a7666d8987c7487b8c8f345126bd1f0c:efa8b45e4d994eaebc25377afc5a9e8d"
@@ -58,11 +47,7 @@ func RefreshToken(db *pgxpool.Pool, UserID int) (string, error) {
 	json.Unmarshal([]byte(body), &tokenData)
 
 	// Add tokens back to database
-	err = database.SetSpotifyAccessToken(db, UserID, tokenData.AccessToken)
 
-	if err != nil {
-		return "", err
-	}
 	
 	return tokenData.AccessToken, nil
 }
