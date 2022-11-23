@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/go-redis/redis/v8"
+	"golang.org/x/exp/slog"
 )
 
 func GetRedisClient() *redis.Client {
@@ -19,7 +20,7 @@ func GetRedisClient() *redis.Client {
 
 	_, err := rdb.Ping(context.Background()).Result()
 	if err != nil {
-		fmt.Printf("Error connecting to Redis: %v\n", err)
+		slog.Error("Error connecting to Redis", err)
 		os.Exit(1)
 	}
 

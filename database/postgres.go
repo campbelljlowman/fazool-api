@@ -1,13 +1,13 @@
 package database
 
 import (
-	"os"
-	"fmt"
-	"errors"
 	"context"
-
+	"errors"
+	"fmt"
+	"os"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"golang.org/x/exp/slog"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -21,7 +21,7 @@ func NewPostgresClient() *PostgresWrapper {
 
 	dbPool, err := pgxpool.Connect(context.Background(), databaseURL)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		slog.Error("Unable to connect to database", err)
 		os.Exit(1)
 	}
 	// TODO: close db connection?
@@ -46,7 +46,7 @@ func NewPostgresClient() *PostgresWrapper {
 
 	_, err = dbPool.Exec(context.Background(), queryString)
 	if err != nil {
-		print("Error initializing database")
+		slog.Error("Error initializing database")
 	}
 
 	pg := PostgresWrapper{dbPool}
@@ -61,9 +61,9 @@ func (p *PostgresWrapper) GetUserByEmail(userEmail string) (*model.User, error) 
 	var firstName, lastName, email string
 	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
 	if err != nil {
-		println("Error getting user from database")
-		println(err.Error())
-		return nil, errors.New("Invalid Login Credentials!")
+		errorMsg := "Error getting user from database" 
+		slog.Warn(errorMsg, "error", err)
+		return nil, errors.New(errorMsg)
 	}
 
 	user := &model.User{

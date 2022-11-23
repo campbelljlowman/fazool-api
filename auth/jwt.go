@@ -3,9 +3,11 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
+
+	"golang.org/x/exp/slog"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -26,7 +28,9 @@ func GenerateJWT(id int, authLevel int) (string, error){
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
-		return "", err
+		errorMsg := "Failed to generate JWT"
+		slog.Warn(errorMsg, "error", err)
+		return "", errors.New(errorMsg)
 	}
 
 	return tokenString, nil
@@ -48,12 +52,14 @@ func VerifyJWT(bearerToken string) (int, int, error) {
 		return secretKey, nil
 	})
 	if err != nil {
-		return 0, 0, fmt.Errorf("Error parsing token: %v", err)
+		errorMsg := "Error parsing token"
+		slog.Warn(errorMsg, "error", err)
+		return 0, 0, errors.New(errorMsg)
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return 0, 0, fmt.Errorf("JWT Token not valid!")
+		return 0, 0, errors.New("JWT Token not valid!")
 	}
 
 	id, err := strconv.ParseInt(fmt.Sprintf("%.0f", claims["user"]), 10, 32)
