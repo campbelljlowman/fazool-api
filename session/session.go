@@ -57,10 +57,8 @@ func (s *Session) WatchSpotifyCurrentlyPlaying () {
 				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 				sendUpdateFlag = true
 				addNextSongFlag = true
-			}
-
-			// If same song is paused and then played, get the new state
-			if s.SessionInfo.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
+			} else if s.SessionInfo.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
+				// If same song is paused and then played, get the new state
 				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 				sendUpdateFlag = true
 			}
