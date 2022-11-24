@@ -46,7 +46,7 @@ func NewPostgresClient() *PostgresWrapper {
 
 	_, err = dbPool.Exec(context.Background(), queryString)
 	if err != nil {
-		slog.Error("Error initializing database")
+		slog.Error("Error initializing database", err)
 	}
 
 	pg := PostgresWrapper{dbPool}
