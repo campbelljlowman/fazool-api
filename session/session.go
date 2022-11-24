@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	
+
 	"github.com/zmb3/spotify/v2"
 )
 
@@ -57,6 +57,12 @@ func (s *Session) WatchSpotifyCurrentlyPlaying () {
 				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
 				sendUpdateFlag = true
 				addNextSongFlag = true
+			}
+
+			// If same song is paused and then played, get the new state
+			if s.SessionInfo.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
+				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+				sendUpdateFlag = true
 			}
 
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
