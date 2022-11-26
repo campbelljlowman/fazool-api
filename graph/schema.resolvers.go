@@ -145,7 +145,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	emailExists, err := r.database.CheckIfEmailExists(newUser.Email)
 
 	if err != nil {
-		errorMsg := "Error checking email in database"
+		errorMsg := "Error searching for email in database"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
 	}
@@ -160,22 +160,16 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, authLevel)
 
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
+		errorMsg := "Error adding user to database"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
-		println("Error adding user to database")
-		println(err.Error())
-		return nil, errors.New("Error adding user to database")
 	}
 
 	token, err := auth.GenerateJWT(userID, authLevel)
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
+		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
-		println("Error creating user token")
-		println(err.Error())
-		return nil, errors.New("Error creating user token")
 	}
 
 	returnValue := &model.Token{
@@ -189,25 +183,22 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error) {
 	userID, authLevel, password, err := r.database.GetUserLoginValues(userLogin.Email)
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
+		errorMsg := "Error getting user login info from database"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
-		return nil, err
 	}
 
 	if utils.HashHelper(userLogin.Password) != password {
-		errorMsg := "Error refreshing Spotify Token"
-		slog.Warn(errorMsg, "error", err)
+		errorMsg := "Invalid Login Credentials!"
+		slog.Warn(errorMsg)
 		return nil, errors.New(errorMsg)
-		return nil, errors.New("Invalid Login Credentials!")
 	}
 
 	token, err := auth.GenerateJWT(userID, authLevel)
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
+		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
-		return nil, errors.New("Error creating user token")
 	}
 
 	returnValue := &model.Token{
@@ -224,19 +215,17 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
+		errorMsg := "Error setting Spotify access token in database"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
-		return nil, err
 	}
 
 	err = r.database.SetSpotifyRefreshToken(userID, spotifyCreds.RefreshToken)
 
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
+		errorMsg := "Error setting Spotify refresh token in database"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
-		return nil, err
 	}
 
 	return &model.User{ID: userID}, nil
@@ -258,7 +247,9 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 	if exists {
 		return session.SessionInfo, nil
 	} else {
-		return nil, errors.New("Session not found!")
+		errorMsg := "Session not found!"
+		slog.Warn(errorMsg)
+		return nil, errors.New(errorMsg)
 	}
 }
 
@@ -268,11 +259,9 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 
 	user, err := r.database.GetUserByID(userID)
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
+		errorMsg := "Error getting user from database"
 		slog.Warn(errorMsg, "error", err)
 		return nil, errors.New(errorMsg)
-		println(err.Error())
-		return nil, err
 	}
 
 	return user, nil
