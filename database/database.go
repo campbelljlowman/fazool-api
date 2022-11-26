@@ -14,7 +14,7 @@ type Database interface {
 	SetSpotifyAccessToken(userID int, AccessToken string) error
 	SetSpotifyRefreshToken(userID int, RefreshToken string) error
 
-	CheckIfEmailExists(email string) bool 
+	CheckIfEmailExists(email string) (bool, error)
 
 	AddUserToDatabase(newUser model.NewUser, passwordHash string, authLevel int) (int, error) 
 }

@@ -1,12 +1,13 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
-	"context"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"golang.org/x/exp/slog"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -42,7 +43,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying () {
 		sendUpdateFlag = false
 		playerState, err := s.SpotifyPlayer.PlayerState(context.Background())
 		if err != nil {
-			fmt.Println(err)
+			slog.Warn("Error getting Spotify player state", "error", err)
 			continue
 		}
 

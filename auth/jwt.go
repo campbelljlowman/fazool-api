@@ -28,9 +28,7 @@ func GenerateJWT(id int, authLevel int) (string, error){
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
-		errorMsg := "Failed to generate JWT"
-		slog.Warn(errorMsg, "error", err)
-		return "", errors.New(errorMsg)
+		return "", err
 	}
 
 	return tokenString, nil
@@ -41,7 +39,7 @@ func VerifyJWT(bearerToken string) (int, int, error) {
 	if len(strings.Split(bearerToken, " ")) == 2 {
 		tokenString = strings.Split(bearerToken, " ")[1]
 	} else {
-		return 0, 0, errors.New("No token passed")
+		return 0, 0, fmt.Errorf("No JWT token passed, token value: %v", bearerToken)
 	}
 
 
@@ -52,14 +50,12 @@ func VerifyJWT(bearerToken string) (int, int, error) {
 		return secretKey, nil
 	})
 	if err != nil {
-		errorMsg := "Error parsing token"
-		slog.Warn(errorMsg, "error", err)
-		return 0, 0, errors.New(errorMsg)
+		return 0, 0, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return 0, 0, errors.New("JWT Token not valid!")
+		return 0, 0, fmt.Errorf("JWT Token not valid! Token: %v", token.Raw)
 	}
 
 	id, err := strconv.ParseInt(fmt.Sprintf("%.0f", claims["user"]), 10, 32)

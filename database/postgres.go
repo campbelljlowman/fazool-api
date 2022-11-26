@@ -47,6 +47,7 @@ func NewPostgresClient() *PostgresWrapper {
 	_, err = dbPool.Exec(context.Background(), queryString)
 	if err != nil {
 		slog.Error("Error initializing database", err)
+		os.Exit(1)
 	}
 
 	pg := PostgresWrapper{dbPool}
@@ -61,9 +62,7 @@ func (p *PostgresWrapper) GetUserByEmail(userEmail string) (*model.User, error) 
 	var firstName, lastName, email string
 	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
 	if err != nil {
-		errorMsg := "Error getting user from database" 
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, err
 	}
 
 	user := &model.User{
@@ -85,9 +84,7 @@ func (p *PostgresWrapper) GetUserByID(ID int) (*model.User, error) {
 	var firstName, lastName, email string
 	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
 	if err != nil {
-		println("Error getting user from database")
-		println(err.Error())
-		return nil, errors.New("Invalid Login Credentials!")
+		return nil, err
 	}
 
 	user := &model.User{
@@ -109,9 +106,7 @@ func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (int, int, string
 	var userID, authLevel int
 	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &authLevel, &password)
 	if err != nil {
-		println("Error getting user from database")
-		println(err.Error())
-		return 0, 0, "", errors.New("Invalid Login Credentials!")
+		return 0, 0, "", err
 	}
 
 	return userID, authLevel, password, nil
@@ -124,9 +119,7 @@ func (p *PostgresWrapper) GetSpotifyRefreshToken(userID int) (string, error) {
 	var spotifyRefreshToken string
 	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&spotifyRefreshToken)
 	if err != nil {
-		println("Error getting spotify refresh token from database")
-		println(err.Error())
-		return "", errors.New("Spotify refresh token not found!")
+		return "", err
 	}
 
 	return spotifyRefreshToken, nil
@@ -141,10 +134,10 @@ func (p *PostgresWrapper) SetUserSession(userID int, sessionID int) error {
 	commandTag, err := p.postgresClient.Exec(context.Background(), queryString)
 
 	if err != nil {
-		return errors.New("Error adding new session to database")
+		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return errors.New("No user found to update")
+		return fmt.Errorf("User %v not found to update", userID)
 	}
 	return nil
 }
@@ -158,11 +151,10 @@ func (p *PostgresWrapper) SetSpotifyAccessToken(userID int, AccessToken string) 
 	commandTag, err := p.postgresClient.Exec(context.Background(), queryString)
 
 	if err != nil {
-		fmt.Printf("Error: %v", err)
-		return errors.New("Error adding spotify access token to database")
+		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return errors.New("No user found to update")
+		return fmt.Errorf("User %v not found to update", userID)
 	}
 	return nil
 }
@@ -176,21 +168,23 @@ func (p *PostgresWrapper) SetSpotifyRefreshToken(userID int, RefreshToken string
 	commandTag, err := p.postgresClient.Exec(context.Background(), queryString)
 
 	if err != nil {
-		fmt.Printf("Error: %v", err)
-		return errors.New("Error adding spotify credentials to database")
+		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return errors.New("No user found to update")
+		return fmt.Errorf("User %v not found to update", userID)
 	}
 	return nil
 }
 
-func (p *PostgresWrapper) CheckIfEmailExists(email string) bool {
+func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 	checkEmailQueryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.user WHERE email = '%v' LIMIT 1);", email)
 	var emailExists bool
-	p.postgresClient.QueryRow(context.Background(), checkEmailQueryString).Scan(&emailExists)
+	err := p.postgresClient.QueryRow(context.Background(), checkEmailQueryString).Scan(&emailExists)
+	if err != nil {
+		return true, err
+	}
 
-	return emailExists
+	return emailExists, nil
 }
 
 func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash string, authLevel int) (int, error) {
@@ -202,6 +196,9 @@ func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash 
 
 	var userID int
 	err := p.postgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID)
+	if err != nil {
+		return 0, err
+	}
 
-	return userID, err
+	return userID, nil
 }

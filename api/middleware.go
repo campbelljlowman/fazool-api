@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 
-	"github.com/campbelljlowman/fazool-api/auth"
+	"golang.org/x/exp/slog"
 	
+	"github.com/campbelljlowman/fazool-api/auth"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +20,7 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 
 		userId, authLevel, err := auth.VerifyJWT(bearerToken)
 		if err != nil {
-			println(err.Error())
+			slog.Warn("Couldn't verify JWT token", "error", err.Error())
 			return
 		}
 		

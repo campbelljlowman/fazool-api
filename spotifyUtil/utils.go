@@ -28,20 +28,20 @@ func RefreshToken(UserID int, refreshToken string) (string, error) {
 	encodedData := data.Encode()
 	req, err := http.NewRequest("POST", urlPath, strings.NewReader(encodedData))
 	if err != nil {
-		return "", fmt.Errorf("Got error %s", err.Error())
+		return "", err
 	}
 
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Authorization", authString)
 	response, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Got error %s", err.Error())
+		return "", err
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", fmt.Errorf("Got error %s", err.Error())
+		return "", err
 	}
 	tokenData := Request{}
 	json.Unmarshal([]byte(body), &tokenData)
