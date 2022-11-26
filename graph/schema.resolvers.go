@@ -287,8 +287,6 @@ func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int
 	session.ChannelMutex.Unlock()
 
 	return channel, nil
-
-	// TODO: Cleanup channel?
 }
 
 // Mutation returns generated.MutationResolver implementation.
