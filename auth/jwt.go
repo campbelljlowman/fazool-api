@@ -1,13 +1,11 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
+	"time"
 	"strconv"
 	"strings"
-	"time"
 
-	"golang.org/x/exp/slog"
 
 	"github.com/golang-jwt/jwt/v4"
 )

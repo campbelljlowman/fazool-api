@@ -5,6 +5,8 @@ POSTGRES_PASSWORD=asdf
 # Application environment variables
 POSTRGRES_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
 REDIS_URL=localhost:6379
+SPOTIFY_CLIENT_ID=a7666d8987c7487b8c8f345126bd1f0c
+SPOTIFY_CLIENT_SECRET=efa8b45e4d994eaebc25377afc5a9e8d
 
 init: go-init postgres-init redis-init
 
@@ -40,6 +42,8 @@ redis-init:
 run:
 	POSTRGRES_URL=${POSTRGRES_URL} \
 	REDIS_URL=${REDIS_URL} \
+	SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID} \
+	SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET} \
 	go run .
 
 start: pg redis

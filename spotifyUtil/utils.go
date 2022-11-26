@@ -1,13 +1,14 @@
 package spotifyUtil
 
 import (
-	"io"
-	"fmt"
-	"strings"
-	"net/http"
-	"net/url"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
 )
 
 type Request struct {
@@ -16,8 +17,10 @@ type Request struct {
 
 func RefreshToken(UserID int, refreshToken string) (string, error) {
 	// Hit spotify endpoint to refresh token
-	// TODO: Get these from env
-	spotifyClientAuth := "a7666d8987c7487b8c8f345126bd1f0c:efa8b45e4d994eaebc25377afc5a9e8d"
+	spotifyClientID := os.Getenv("SPOTIFY_CLIENT_ID")
+	spotifyClientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
+	spotifyClientAuth := fmt.Sprintf("%v:%v", spotifyClientID, spotifyClientSecret)
+	
 	authString := fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte(spotifyClientAuth)))
 	urlPath := "https://accounts.spotify.com/api/token"
 	
