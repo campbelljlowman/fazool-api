@@ -23,7 +23,6 @@ func NewPostgresClient() *PostgresWrapper {
 		slog.Error("Unable to connect to database", err)
 		os.Exit(1)
 	}
-	// TODO: close db connection?
 
 	queryString := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS public.user

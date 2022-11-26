@@ -154,7 +154,6 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		errorMsg := "User with this email already exists!"
 		return nil, errors.New(errorMsg)
 	}
-	// TODO: Salt password and use Argon2id
 	passwordHash := utils.HashHelper(newUser.Password)
 
 	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, authLevel)

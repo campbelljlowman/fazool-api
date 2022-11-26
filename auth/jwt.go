@@ -10,8 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-// TODO: Get this from env and make it secure!
-// var secretKey = []byte("EavanRocks!")
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func GenerateJWT(id int, authLevel int) (string, error){
