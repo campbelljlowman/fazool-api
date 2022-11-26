@@ -27,8 +27,13 @@ import (
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
-	// TODO: Make session ID random - use UUID
-	sessionID := 81
+	
+	sessionID, err := utils.GenerateSessionID()
+	if err != nil {
+		errorMsg := "Error generating session ID"
+		slog.Warn(errorMsg, "error", err)
+		return nil, errors.New(errorMsg)
+	}
 
 	session := session.NewSession()
 	r.sessions[sessionID] = &session
@@ -41,7 +46,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	}
 	session.SessionInfo = sessionInfo
 
-	err := r.database.SetUserSession(userID, sessionID)
+	err = r.database.SetUserSession(userID, sessionID)
 
 	refreshToken, err := r.database.GetSpotifyRefreshToken(userID)
 	if err != nil {

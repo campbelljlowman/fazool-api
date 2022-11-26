@@ -1,9 +1,11 @@
 package utils
 
 import (
-	"net/mail"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"math/big"
+	"net/mail"
 )
 
 func HashHelper(s string) string {
@@ -14,4 +16,17 @@ func HashHelper(s string) string {
 func ValidateEmail(email string) bool {
 	_, err := mail.ParseAddress(email)
     return err == nil
+}
+
+func GenerateSessionID() (int, error) {
+	// Want random 6 digit int, so generate number between 0 and 899999 and then add 100000
+	bigNumber, err := rand.Int(rand.Reader, big.NewInt(899999))
+	if err != nil {
+		return 0, err
+	}
+
+    n := bigNumber.Int64()
+	number := n + 100000
+
+	return int(number), nil
 }
