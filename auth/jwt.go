@@ -14,6 +14,7 @@ import (
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func GenerateJWT(userID, sessionID int, accountLevel, voterLevel string) (string, error){
+	// TODO: Add login in here for the different claims possibilties
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
