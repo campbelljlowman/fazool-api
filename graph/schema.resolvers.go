@@ -137,7 +137,8 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error) {
 	// Get this from new user request!
-	authLevel := 1
+	accountLevel := "free"
+	voterLevel := "regular-voter"
 	vaildEmail := utils.ValidateEmail(newUser.Email)
 	if !vaildEmail {
 		errorMsg := "Invalid email format"
@@ -159,7 +160,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	}
 	passwordHash := utils.HashHelper(newUser.Password)
 
-	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, authLevel)
+	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, voterLevel, 0)
 
 	if err != nil {
 		errorMsg := "Error adding user to database"
@@ -167,7 +168,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		return nil, errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(userID, authLevel)
+	token, err := auth.GenerateJWT(userID, 0, accountLevel, "")
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
@@ -183,7 +184,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error) {
-	userID, authLevel, password, err := r.database.GetUserLoginValues(userLogin.Email)
+	userID, accountLevel, password, err := r.database.GetUserLoginValues(userLogin.Email)
 	if err != nil {
 		errorMsg := "Error getting user login info from database"
 		slog.Warn(errorMsg, "error", err)
@@ -196,7 +197,7 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 		return nil, errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(userID, authLevel)
+	token, err := auth.GenerateJWT(userID, 0, accountLevel, "")
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)

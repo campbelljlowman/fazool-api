@@ -1,26 +1,28 @@
 package auth
 
 import (
-	"fmt"
 	"os"
+	"fmt"
+	"time"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
+
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
-func GenerateJWT(id int, authLevel int) (string, error){
+func GenerateJWT(userID, sessionID int, accountLevel, voterLevel string) (string, error){
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["iat"] = time.Now().Unix()
 	claims["exp"] = time.Now().Add(10 * time.Hour).Unix()
 	claims["iss"] = "fazool-api"
-	claims["auth"] = authLevel
-	claims["user"] = id
+	claims["account-level"] = accountLevel
+	claims[strconv.Itoa(sessionID)] = voterLevel
+	claims["user"] = userID
 
 
 	tokenString, err := token.SignedString(secretKey)

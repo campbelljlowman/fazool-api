@@ -27,15 +27,17 @@ func NewPostgresClient() *PostgresWrapper {
 	queryString := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS public.user
 	(
-		user_id       int GENERATED ALWAYS AS IDENTITY primary key,
-		first_name    varchar(100) not null,
-		last_name     varchar(100) not null,
-		email 		  varchar(100) not null,
-		pass_hash 	  varchar(100) not null,
-		auth_level 	  int not null,
-		session_id 	  int,
-		spotify_access_token varchar(200),
-		spotify_refresh_token varchar (150)
+		user_id       			int GENERATED ALWAYS AS IDENTITY primary key,
+		first_name    			varchar(100) not null,
+		last_name     			varchar(100) not null,
+		email 		 			varchar(100) not null,
+		pass_hash 	  			varchar(100) not null,
+		account_level 	  		varchar(20) not null,
+		voter_level 			varchar(20) not null,
+		bonus_votes				int not null,
+		session_id 	  			int,
+		spotify_access_token 	varchar(200),
+		spotify_refresh_token 	varchar (150)
 	);
 
 	UPDATE public.user
@@ -96,18 +98,18 @@ func (p *PostgresWrapper) GetUserByID(ID int) (*model.User, error) {
 	return user, nil
 }
 
-func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (int, int, string, error) {
+func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (int, string, string, error) {
 	getUserQueryString := fmt.Sprintf(`
-	SELECT user_id, auth_level, pass_hash FROM public.user WHERE email = '%v'`,
+	SELECT user_id, account_level, pass_hash FROM public.user WHERE email = '%v'`,
 	userEmail)
-	var password string
-	var userID, authLevel int
-	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &authLevel, &password)
+	var password, account_level string
+	var userID int
+	err := p.postgresClient.QueryRow(context.Background(), getUserQueryString).Scan(&userID, &account_level, &password)
 	if err != nil {
-		return 0, 0, "", err
+		return 0, "", "", err
 	}
 
-	return userID, authLevel, password, nil
+	return userID, account_level, password, nil
 }
 
 func (p *PostgresWrapper) GetSpotifyRefreshToken(userID int) (string, error) {
@@ -185,12 +187,12 @@ func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 	return emailExists, nil
 }
 
-func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash string, authLevel int) (int, error) {
+func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (int, error) {
 	newUserQueryString := fmt.Sprintf(`
-	INSERT INTO public.user(first_name, last_name, email, pass_hash, auth_level)
-	VALUES ('%v', '%v', '%v', '%v', '%v')
+	INSERT INTO public.user(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
+	VALUES ('%v', '%v', '%v', '%v', '%v', '%v', '%v')
 	RETURNING user_id;`,
-	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, authLevel)
+	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, voter_level, bonusVotes)
 
 	var userID int
 	err := p.postgresClient.QueryRow(context.Background(), newUserQueryString).Scan(&userID)
