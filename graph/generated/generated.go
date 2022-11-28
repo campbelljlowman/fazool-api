@@ -62,6 +62,7 @@ type ComplexityRoot struct {
 	Mutation struct {
 		CreateSession          func(childComplexity int) int
 		CreateUser             func(childComplexity int, newUser model.NewUser) int
+		GetSessionToken        func(childComplexity int) int
 		Login                  func(childComplexity int, userLogin model.UserLogin) int
 		SetOutputDevice        func(childComplexity int, outputDevice model.OutputDevice) int
 		SetPlaylist            func(childComplexity int, playlist model.PlaylistInput) int
@@ -120,6 +121,7 @@ type MutationResolver interface {
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error)
 	CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error)
+	GetSessionToken(ctx context.Context) (*model.Token, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
 	SetOutputDevice(ctx context.Context, outputDevice model.OutputDevice) (*model.Device, error)
 	SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error)
@@ -216,6 +218,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateUser(childComplexity, args["newUser"].(model.NewUser)), true
+
+	case "Mutation.getSessionToken":
+		if e.complexity.Mutation.GetSessionToken == nil {
+			break
+		}
+
+		return e.complexity.Mutation.GetSessionToken(childComplexity), true
 
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
@@ -641,7 +650,6 @@ type Query {
 
 type Mutation {
   # Sessions
-
   createSession: User!
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
@@ -649,6 +657,7 @@ type Mutation {
   # Users
   createUser(newUser: NewUser!): Token!
   login(userLogin: UserLogin!): Token!
+  getSessionToken: Token!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
@@ -1480,6 +1489,54 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 	if fc.Args, err = ec.field_Mutation_login_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_getSessionToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_getSessionToken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().GetSessionToken(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Token)
+	fc.Result = res
+	return ec.marshalNToken2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐToken(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_getSessionToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "jwt":
+				return ec.fieldContext_Token_jwt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Token", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -5009,6 +5066,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_login(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "getSessionToken":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_getSessionToken(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {

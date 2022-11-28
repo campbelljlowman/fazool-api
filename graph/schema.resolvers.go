@@ -9,25 +9,23 @@ import (
 	"fmt"
 	"sort"
 
-	"golang.org/x/exp/slices"
-	"golang.org/x/exp/slog"
-	"golang.org/x/oauth2"
-	
 	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
-
 	spotify "github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
+	"golang.org/x/exp/slices"
+	"golang.org/x/exp/slog"
+	"golang.org/x/oauth2"
 )
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
 	userID, _ := ctx.Value("user").(int)
-	
+
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
 		errorMsg := "Error generating session ID"
@@ -210,6 +208,11 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 	}
 
 	return returnValue, nil
+}
+
+// GetSessionToken is the resolver for the getSessionToken field.
+func (r *mutationResolver) GetSessionToken(ctx context.Context) (*model.Token, error) {
+	panic(fmt.Errorf("not implemented: GetSessionToken - getSessionToken"))
 }
 
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
