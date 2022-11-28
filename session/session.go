@@ -86,7 +86,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying () {
 			s.SendUpdate()
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(250 * time.Millisecond)
 	}
 }
 
