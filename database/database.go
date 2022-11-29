@@ -6,15 +6,15 @@ import (
 
 type Database interface {
 	GetUserByEmail(userEmail string) (*model.User, error)
-	GetUserByID(ID int) (*model.User, error)
-	GetUserLoginValues(userEmail string) (int, string, string, error)
-	GetSpotifyRefreshToken(userID int) (string, error)
+	GetUserByID(userID string) (*model.User, error)
+	GetUserLoginValues(userEmail string) (string, string, string, error)
+	GetSpotifyRefreshToken(userID string) (string, error)
 
-	SetUserSession(userID int, sessionID int) error
-	SetSpotifyAccessToken(userID int, AccessToken string) error
-	SetSpotifyRefreshToken(userID int, RefreshToken string) error
+	SetUserSession(userID string, sessionID int) error
+	SetSpotifyAccessToken(userID string, AccessToken string) error
+	SetSpotifyRefreshToken(userID string, RefreshToken string) error
 
 	CheckIfEmailExists(email string) (bool, error)
 
-	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (int, error) 
+	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) 
 }

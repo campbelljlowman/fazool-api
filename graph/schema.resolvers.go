@@ -24,7 +24,7 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
-	userID, _ := ctx.Value("user").(int)
+	userID, _ := ctx.Value("user").(string)
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
@@ -53,7 +53,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 		return nil, errors.New(errorMsg)
 	}
 
-	spotifyToken, err := spotifyUtil.RefreshToken(userID, refreshToken)
+	spotifyToken, err := spotifyUtil.RefreshToken(refreshToken)
 	if err != nil {
 		errorMsg := "Error refreshing Spotify Token"
 		slog.Warn(errorMsg, "error", err)
@@ -169,7 +169,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		return nil, errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(userID, 0, accountLevel, "")
+	token, err := auth.GenerateJWT(0, userID, accountLevel, "")
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
@@ -186,6 +186,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error) {
 	userID, accountLevel, password, err := r.database.GetUserLoginValues(userLogin.Email)
+	slog.Info("User ID in login mutation:", "user-id", userID)
 	if err != nil {
 		errorMsg := "Error getting user login info from database"
 		slog.Warn(errorMsg, "error", err)
@@ -198,7 +199,7 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 		return nil, errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(userID, 0, accountLevel, "")
+	token, err := auth.GenerateJWT(0, userID, accountLevel, "")
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
@@ -219,7 +220,7 @@ func (r *mutationResolver) GetSessionToken(ctx context.Context) (*model.Token, e
 
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
-	userID, _ := ctx.Value("user").(int)
+	userID, _ := ctx.Value("user").(string)
 
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
@@ -264,7 +265,10 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
-	userID, _ := ctx.Value("user").(int)
+	userID, _ := ctx.Value("user").(string)
+
+	slog.Info("User ID in mutation:", "user-id", userID)
+
 
 	user, err := r.database.GetUserByID(userID)
 	if err != nil {

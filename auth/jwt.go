@@ -13,7 +13,7 @@ import (
 
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
-func GenerateJWT(userID, sessionID int, accountLevel, voterLevel string) (string, error){
+func GenerateJWT(sessionID int, userID, accountLevel, voterLevel string) (string, error){
 	// TODO: Add login in here for the different claims possibilties
 	token := jwt.New(jwt.SigningMethodHS256)
 
@@ -34,12 +34,12 @@ func GenerateJWT(userID, sessionID int, accountLevel, voterLevel string) (string
 	return tokenString, nil
 }
 
-func VerifyJWT(bearerToken string) (int, int, error) {
+func VerifyJWT(bearerToken string) (string, int, error) {
 	var tokenString string
 	if len(strings.Split(bearerToken, " ")) == 2 {
 		tokenString = strings.Split(bearerToken, " ")[1]
 	} else {
-		return 0, 0, fmt.Errorf("No JWT token passed, token value: %v", bearerToken)
+		return "", 0, fmt.Errorf("No JWT token passed, token value: %v", bearerToken)
 	}
 
 
@@ -50,18 +50,18 @@ func VerifyJWT(bearerToken string) (int, int, error) {
 		return secretKey, nil
 	})
 	if err != nil {
-		return 0, 0, err
+		return "", 0, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return 0, 0, fmt.Errorf("JWT Token not valid! Token: %v", token.Raw)
+		return "", 0, fmt.Errorf("JWT Token not valid! Token: %v", token.Raw)
 	}
 
-	id, err := strconv.ParseInt(fmt.Sprintf("%.0f", claims["user"]), 10, 32)
+	id := fmt.Sprintf("%v", claims["user"])
 	auth, err := strconv.ParseInt(fmt.Sprintf("%.0f", claims["auth"]), 10, 32)
 
-	return int(id) , int(auth), nil
+	return id, int(auth), nil
 }
 
 //TODO: Figure out how to refresh tokens
