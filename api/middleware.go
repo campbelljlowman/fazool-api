@@ -18,15 +18,16 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		userId, authLevel, err := auth.VerifyJWT(bearerToken)
+		userId, accountLevel, voterLevel, err := auth.VerifyJWT(bearerToken)
 		if err != nil {
 			slog.Warn("Couldn't verify JWT token", "error", err.Error())
 			return
 		}
 		
 		ctx1 := context.WithValue(c.Request.Context(), "user", userId)
-		ctx2 := context.WithValue(ctx1, "auth", authLevel)
-        c.Request = c.Request.WithContext(ctx2)
+		ctx2 := context.WithValue(ctx1, "account-level", accountLevel)
+		ctx3 := context.WithValue(ctx2, "voter-level", voterLevel)
+        c.Request = c.Request.WithContext(ctx3)
         c.Next()
 	}
 }

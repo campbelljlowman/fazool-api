@@ -87,6 +87,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
+	// TODO: Check for voter auth on context and make sure sessionIDs match
 	slog.Debug("Updating queue", "sessionID", sessionID, "song", song.Title)
 	session := r.sessions[sessionID]
 
