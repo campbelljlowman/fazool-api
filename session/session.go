@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/campbelljlowman/fazool-api/graph/model"
 	"golang.org/x/exp/slog"
+	
+	"github.com/campbelljlowman/fazool-api/graph/model"
 
 	"github.com/zmb3/spotify/v2"
 )

@@ -22,6 +22,8 @@ type SessionInfo {
   id: Int!
   currentlyPlaying: CurrentlyPlayingSong
   queue: [Song!]
+  admin: String!
+  size: Int!
   playbackDevice: String
 }
 
@@ -33,8 +35,12 @@ type User {
   sessionID: Int
 }
 
-type Token {
-  jwt: String!
+type Voter {
+  id: String!
+  type: String!
+  expires: Int!
+  songsVotedFor: [String!]
+  bonusVotes: Int
 }
 
 type Device {
@@ -100,9 +106,12 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
   # Users
-  createUser(newUser: NewUser!): Token!
-  login(userLogin: UserLogin!): Token!
-  getSessionToken: Token!
+  createUser(newUser: NewUser!): String!
+  login(userLogin: UserLogin!): String!
+
+  # Voters
+  getVoterToken: String!
+  joinVoters(sessionID: Int!): Voter!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!

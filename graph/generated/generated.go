@@ -62,7 +62,8 @@ type ComplexityRoot struct {
 	Mutation struct {
 		CreateSession          func(childComplexity int) int
 		CreateUser             func(childComplexity int, newUser model.NewUser) int
-		GetSessionToken        func(childComplexity int) int
+		GetVoterToken          func(childComplexity int) int
+		JoinVoters             func(childComplexity int, sessionID int) int
 		Login                  func(childComplexity int, userLogin model.UserLogin) int
 		SetOutputDevice        func(childComplexity int, outputDevice model.OutputDevice) int
 		SetPlaylist            func(childComplexity int, playlist model.PlaylistInput) int
@@ -84,10 +85,12 @@ type ComplexityRoot struct {
 	}
 
 	SessionInfo struct {
+		Admin            func(childComplexity int) int
 		CurrentlyPlaying func(childComplexity int) int
 		ID               func(childComplexity int) int
 		PlaybackDevice   func(childComplexity int) int
 		Queue            func(childComplexity int) int
+		Size             func(childComplexity int) int
 	}
 
 	Song struct {
@@ -102,10 +105,6 @@ type ComplexityRoot struct {
 		SessionUpdated func(childComplexity int, sessionID int) int
 	}
 
-	Token struct {
-		Jwt func(childComplexity int) int
-	}
-
 	User struct {
 		Email     func(childComplexity int) int
 		FirstName func(childComplexity int) int
@@ -113,15 +112,24 @@ type ComplexityRoot struct {
 		LastName  func(childComplexity int) int
 		SessionID func(childComplexity int) int
 	}
+
+	Voter struct {
+		BonusVotes    func(childComplexity int) int
+		Expires       func(childComplexity int) int
+		ID            func(childComplexity int) int
+		SongsVotedFor func(childComplexity int) int
+		Type          func(childComplexity int) int
+	}
 }
 
 type MutationResolver interface {
 	CreateSession(ctx context.Context) (*model.User, error)
 	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error)
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error)
-	CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error)
-	Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error)
-	GetSessionToken(ctx context.Context) (*model.Token, error)
+	CreateUser(ctx context.Context, newUser model.NewUser) (string, error)
+	Login(ctx context.Context, userLogin model.UserLogin) (string, error)
+	GetVoterToken(ctx context.Context) (string, error)
+	JoinVoters(ctx context.Context, sessionID int) (*model.Voter, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
 	SetOutputDevice(ctx context.Context, outputDevice model.OutputDevice) (*model.Device, error)
 	SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error)
@@ -219,12 +227,24 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateUser(childComplexity, args["newUser"].(model.NewUser)), true
 
-	case "Mutation.getSessionToken":
-		if e.complexity.Mutation.GetSessionToken == nil {
+	case "Mutation.getVoterToken":
+		if e.complexity.Mutation.GetVoterToken == nil {
 			break
 		}
 
-		return e.complexity.Mutation.GetSessionToken(childComplexity), true
+		return e.complexity.Mutation.GetVoterToken(childComplexity), true
+
+	case "Mutation.joinVoters":
+		if e.complexity.Mutation.JoinVoters == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_joinVoters_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.JoinVoters(childComplexity, args["sessionID"].(int)), true
 
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
@@ -345,6 +365,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.User(childComplexity), true
 
+	case "SessionInfo.admin":
+		if e.complexity.SessionInfo.Admin == nil {
+			break
+		}
+
+		return e.complexity.SessionInfo.Admin(childComplexity), true
+
 	case "SessionInfo.currentlyPlaying":
 		if e.complexity.SessionInfo.CurrentlyPlaying == nil {
 			break
@@ -372,6 +399,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SessionInfo.Queue(childComplexity), true
+
+	case "SessionInfo.size":
+		if e.complexity.SessionInfo.Size == nil {
+			break
+		}
+
+		return e.complexity.SessionInfo.Size(childComplexity), true
 
 	case "Song.artist":
 		if e.complexity.Song.Artist == nil {
@@ -420,13 +454,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Subscription.SessionUpdated(childComplexity, args["sessionID"].(int)), true
 
-	case "Token.jwt":
-		if e.complexity.Token.Jwt == nil {
-			break
-		}
-
-		return e.complexity.Token.Jwt(childComplexity), true
-
 	case "User.email":
 		if e.complexity.User.Email == nil {
 			break
@@ -461,6 +488,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.SessionID(childComplexity), true
+
+	case "Voter.bonusVotes":
+		if e.complexity.Voter.BonusVotes == nil {
+			break
+		}
+
+		return e.complexity.Voter.BonusVotes(childComplexity), true
+
+	case "Voter.expires":
+		if e.complexity.Voter.Expires == nil {
+			break
+		}
+
+		return e.complexity.Voter.Expires(childComplexity), true
+
+	case "Voter.id":
+		if e.complexity.Voter.ID == nil {
+			break
+		}
+
+		return e.complexity.Voter.ID(childComplexity), true
+
+	case "Voter.songsVotedFor":
+		if e.complexity.Voter.SongsVotedFor == nil {
+			break
+		}
+
+		return e.complexity.Voter.SongsVotedFor(childComplexity), true
+
+	case "Voter.type":
+		if e.complexity.Voter.Type == nil {
+			break
+		}
+
+		return e.complexity.Voter.Type(childComplexity), true
 
 	}
 	return 0, false
@@ -577,6 +639,8 @@ type SessionInfo {
   id: Int!
   currentlyPlaying: CurrentlyPlayingSong
   queue: [Song!]
+  admin: String!
+  size: Int!
   playbackDevice: String
 }
 
@@ -588,9 +652,17 @@ type User {
   sessionID: Int
 }
 
-type Token {
-  jwt: String!
+type Voter {
+  id: String!
+  type: String!
+  expires: Int!
+  songsVotedFor: [String!]
+  bonusVotes: Int
 }
+
+# type Token {
+#   token: String!
+# }
 
 type Device {
   id: String!
@@ -655,9 +727,12 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
   # Users
-  createUser(newUser: NewUser!): Token!
-  login(userLogin: UserLogin!): Token!
-  getSessionToken: Token!
+  createUser(newUser: NewUser!): String!
+  login(userLogin: UserLogin!): String!
+
+  # Voters
+  getVoterToken: String!
+  joinVoters(sessionID: Int!): Voter!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
@@ -687,6 +762,21 @@ func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, 
 		}
 	}
 	args["newUser"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_joinVoters_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg0
 	return args, nil
 }
 
@@ -1290,6 +1380,10 @@ func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Contex
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
+			case "admin":
+				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "size":
+				return ec.fieldContext_SessionInfo_size(ctx, field)
 			case "playbackDevice":
 				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
@@ -1355,6 +1449,10 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
+			case "admin":
+				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "size":
+				return ec.fieldContext_SessionInfo_size(ctx, field)
 			case "playbackDevice":
 				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
@@ -1401,9 +1499,9 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Token)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNToken2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐToken(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_createUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1413,11 +1511,7 @@ func (ec *executionContext) fieldContext_Mutation_createUser(ctx context.Context
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "jwt":
-				return ec.fieldContext_Token_jwt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Token", field.Name)
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	defer func() {
@@ -1460,9 +1554,9 @@ func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Token)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNToken2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐToken(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1472,11 +1566,7 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "jwt":
-				return ec.fieldContext_Token_jwt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Token", field.Name)
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	defer func() {
@@ -1493,8 +1583,8 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_getSessionToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_getSessionToken(ctx, field)
+func (ec *executionContext) _Mutation_getVoterToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_getVoterToken(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1507,7 +1597,7 @@ func (ec *executionContext) _Mutation_getSessionToken(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().GetSessionToken(rctx)
+		return ec.resolvers.Mutation().GetVoterToken(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1519,12 +1609,56 @@ func (ec *executionContext) _Mutation_getSessionToken(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Token)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNToken2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐToken(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_getSessionToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_getVoterToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_joinVoters(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_joinVoters(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().JoinVoters(rctx, fc.Args["sessionID"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Voter)
+	fc.Result = res
+	return ec.marshalNVoter2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_joinVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1532,11 +1666,30 @@ func (ec *executionContext) fieldContext_Mutation_getSessionToken(ctx context.Co
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "jwt":
-				return ec.fieldContext_Token_jwt(ctx, field)
+			case "id":
+				return ec.fieldContext_Voter_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Voter_type(ctx, field)
+			case "expires":
+				return ec.fieldContext_Voter_expires(ctx, field)
+			case "songsVotedFor":
+				return ec.fieldContext_Voter_songsVotedFor(ctx, field)
+			case "bonusVotes":
+				return ec.fieldContext_Voter_bonusVotes(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Token", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Voter", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_joinVoters_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -1854,6 +2007,10 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
+			case "admin":
+				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "size":
+				return ec.fieldContext_SessionInfo_size(ctx, field)
 			case "playbackDevice":
 				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
@@ -2303,6 +2460,94 @@ func (ec *executionContext) fieldContext_SessionInfo_queue(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _SessionInfo_admin(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_admin(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Admin, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SessionInfo_admin(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SessionInfo_size(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_size(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Size, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SessionInfo_size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _SessionInfo_playbackDevice(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 	if err != nil {
@@ -2623,6 +2868,10 @@ func (ec *executionContext) fieldContext_Subscription_sessionUpdated(ctx context
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
+			case "admin":
+				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "size":
+				return ec.fieldContext_SessionInfo_size(ctx, field)
 			case "playbackDevice":
 				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
@@ -2639,50 +2888,6 @@ func (ec *executionContext) fieldContext_Subscription_sessionUpdated(ctx context
 	if fc.Args, err = ec.field_Subscription_sessionUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Token_jwt(ctx context.Context, field graphql.CollectedField, obj *model.Token) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Token_jwt(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Jwt, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Token_jwt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Token",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
 	}
 	return fc, nil
 }
@@ -2885,6 +3090,220 @@ func (ec *executionContext) _User_sessionID(ctx context.Context, field graphql.C
 func (ec *executionContext) fieldContext_User_sessionID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voter_id(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voter_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voter_type(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voter_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voter_expires(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_expires(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Expires, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voter_expires(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voter_songsVotedFor(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_songsVotedFor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SongsVotedFor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voter_songsVotedFor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voter_bonusVotes(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_bonusVotes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BonusVotes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voter_bonusVotes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voter",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -5071,10 +5490,19 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "getSessionToken":
+		case "getVoterToken":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_getSessionToken(ctx, field)
+				return ec._Mutation_getVoterToken(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "joinVoters":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_joinVoters(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -5297,6 +5725,20 @@ func (ec *executionContext) _SessionInfo(ctx context.Context, sel ast.SelectionS
 
 			out.Values[i] = ec._SessionInfo_queue(ctx, field, obj)
 
+		case "admin":
+
+			out.Values[i] = ec._SessionInfo_admin(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "size":
+
+			out.Values[i] = ec._SessionInfo_size(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "playbackDevice":
 
 			out.Values[i] = ec._SessionInfo_playbackDevice(ctx, field, obj)
@@ -5388,34 +5830,6 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	}
 }
 
-var tokenImplementors = []string{"Token"}
-
-func (ec *executionContext) _Token(ctx context.Context, sel ast.SelectionSet, obj *model.Token) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, tokenImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Token")
-		case "jwt":
-
-			out.Values[i] = ec._Token_jwt(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var userImplementors = []string{"User"}
 
 func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
@@ -5448,6 +5862,56 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "sessionID":
 
 			out.Values[i] = ec._User_sessionID(ctx, field, obj)
+
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var voterImplementors = []string{"Voter"}
+
+func (ec *executionContext) _Voter(ctx context.Context, sel ast.SelectionSet, obj *model.Voter) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, voterImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Voter")
+		case "id":
+
+			out.Values[i] = ec._Voter_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "type":
+
+			out.Values[i] = ec._Voter_type(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "expires":
+
+			out.Values[i] = ec._Voter_expires(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "songsVotedFor":
+
+			out.Values[i] = ec._Voter_songsVotedFor(ctx, field, obj)
+
+		case "bonusVotes":
+
+			out.Values[i] = ec._Voter_bonusVotes(ctx, field, obj)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -5902,20 +6366,6 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNToken2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐToken(ctx context.Context, sel ast.SelectionSet, v model.Token) graphql.Marshaler {
-	return ec._Token(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNToken2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐToken(ctx context.Context, sel ast.SelectionSet, v *model.Token) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Token(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalNUser2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v model.User) graphql.Marshaler {
 	return ec._User(ctx, sel, &v)
 }
@@ -5933,6 +6383,20 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋcampbelljlowmanᚋfaz
 func (ec *executionContext) unmarshalNUserLogin2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐUserLogin(ctx context.Context, v interface{}) (model.UserLogin, error) {
 	res, err := ec.unmarshalInputUserLogin(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNVoter2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx context.Context, sel ast.SelectionSet, v model.Voter) graphql.Marshaler {
+	return ec._Voter(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNVoter2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx context.Context, sel ast.SelectionSet, v *model.Voter) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Voter(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -6389,6 +6853,44 @@ func (ec *executionContext) marshalOSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋ
 
 	}
 	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
 
 	for _, e := range ret {
 		if e == graphql.Null {
