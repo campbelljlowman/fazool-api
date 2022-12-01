@@ -24,7 +24,11 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
+	// TODO: Check users account level from db and set session size accordingly
 	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, fmt.Errorf("No userID found on token for creating session")
+	}
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
@@ -87,6 +91,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
+	// TODO: Check for voter auth on context and make sure sessionIDs match
 	slog.Debug("Updating queue", "sessionID", sessionID, "song", song.Title)
 	session := r.sessions[sessionID]
 
@@ -136,15 +141,14 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 }
 
 // CreateUser is the resolver for the createUser field.
-func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (*model.Token, error) {
+func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (string, error) {
 	// Get this from new user request!
 	accountLevel := "free"
-	voterLevel := "regular-voter"
 	vaildEmail := utils.ValidateEmail(newUser.Email)
 	if !vaildEmail {
 		errorMsg := "Invalid email format"
 		slog.Warn(errorMsg)
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
 
 	emailExists, err := r.database.CheckIfEmailExists(newUser.Email)
@@ -152,75 +156,75 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	if err != nil {
 		errorMsg := "Error searching for email in database"
 		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
-
 	if emailExists {
 		errorMsg := "User with this email already exists!"
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
+
 	passwordHash := utils.HashHelper(newUser.Password)
 
-	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, voterLevel, 0)
-
+	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, 0)
 	if err != nil {
 		errorMsg := "Error adding user to database"
 		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(0, userID, accountLevel, "")
+	token, err := auth.GenerateJWT(userID)
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
 
-	returnValue := &model.Token{
-		Jwt: token,
-	}
-
-	return returnValue, nil
+	slog.Info("Returning JWT:", "token", token)
+	return token, nil
 }
 
 // Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (*model.Token, error) {
-	userID, accountLevel, password, err := r.database.GetUserLoginValues(userLogin.Email)
+func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (string, error) {
+	userID, password, err := r.database.GetUserLoginValues(userLogin.Email)
 	slog.Info("User ID in login mutation:", "user-id", userID)
 	if err != nil {
 		errorMsg := "Error getting user login info from database"
 		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
 
 	if utils.HashHelper(userLogin.Password) != password {
 		errorMsg := "Invalid Login Credentials!"
 		slog.Warn(errorMsg)
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(0, userID, accountLevel, "")
+	token, err := auth.GenerateJWT(userID)
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return "", errors.New(errorMsg)
 	}
 
-	returnValue := &model.Token{
-		Jwt: token,
-	}
-
-	return returnValue, nil
+	return token, nil
 }
 
-// GetSessionToken is the resolver for the getSessionToken field.
-func (r *mutationResolver) GetSessionToken(ctx context.Context) (*model.Token, error) {
-	panic(fmt.Errorf("not implemented: GetSessionToken - getSessionToken"))
+// GetVoterToken is the resolver for the getVoterToken field.
+func (r *mutationResolver) GetVoterToken(ctx context.Context) (string, error) {
+	panic(fmt.Errorf("not implemented: GetVoterToken - getVoterToken"))
+}
+
+// JoinVoters is the resolver for the joinVoters field.
+func (r *mutationResolver) JoinVoters(ctx context.Context, sessionID int) (*model.Voter, error) {
+	panic(fmt.Errorf("not implemented: JoinVoters - joinVoters"))
 }
 
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, fmt.Errorf("No userID found on token for adding Spotify token")
+	}
 
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
@@ -265,10 +269,13 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
+	// TODO: Validate tis input
 	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, fmt.Errorf("No userID found on token for getting user")
+	}
 
 	slog.Info("User ID in mutation:", "user-id", userID)
-
 
 	user, err := r.database.GetUserByID(userID)
 	if err != nil {

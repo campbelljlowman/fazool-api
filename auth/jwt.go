@@ -4,27 +4,28 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
+var accountTokenDuration time.Duration = 300 // Minutes
 
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
-func GenerateJWT(sessionID int, userID, accountLevel, voterLevel string) (string, error){
-	// TODO: Add login in here for the different claims possibilties
+func GenerateJWT(userID string) (string, error){
+	// Validate inputs
+	if (userID == "") {
+		return "", fmt.Errorf("User ID is a required field for generating JWT Token!")
+	}
+
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["iat"] = time.Now().Unix()
-	claims["exp"] = time.Now().Add(10 * time.Hour).Unix()
+	claims["exp"] = time.Now().Add(accountTokenDuration * time.Minute).Unix()
 	claims["iss"] = "fazool-api"
-	claims["account-level"] = accountLevel
-	claims[strconv.Itoa(sessionID)] = voterLevel
 	claims["user"] = userID
-
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
@@ -34,12 +35,12 @@ func GenerateJWT(sessionID int, userID, accountLevel, voterLevel string) (string
 	return tokenString, nil
 }
 
-func VerifyJWT(bearerToken string) (string, int, error) {
+func VerifyJWT(bearerToken string) (string, error) {
 	var tokenString string
 	if len(strings.Split(bearerToken, " ")) == 2 {
 		tokenString = strings.Split(bearerToken, " ")[1]
 	} else {
-		return "", 0, fmt.Errorf("No JWT token passed, token value: %v", bearerToken)
+		return "", fmt.Errorf("No JWT token passed, token value: %v", bearerToken)
 	}
 
 
@@ -50,18 +51,17 @@ func VerifyJWT(bearerToken string) (string, int, error) {
 		return secretKey, nil
 	})
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return "", 0, fmt.Errorf("JWT Token not valid! Token: %v", token.Raw)
+		return "", fmt.Errorf("JWT Token not valid! Token: %v", token.Raw)
 	}
 
 	id := fmt.Sprintf("%v", claims["user"])
-	auth, err := strconv.ParseInt(fmt.Sprintf("%.0f", claims["auth"]), 10, 32)
 
-	return id, int(auth), nil
+	return id, nil
 }
 
 //TODO: Figure out how to refresh tokens

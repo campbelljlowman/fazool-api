@@ -45,6 +45,8 @@ type SessionInfo struct {
 	ID               int                   `json:"id"`
 	CurrentlyPlaying *CurrentlyPlayingSong `json:"currentlyPlaying"`
 	Queue            []*Song               `json:"queue"`
+	Admin            string                `json:"admin"`
+	Size             int                   `json:"size"`
 	PlaybackDevice   *string               `json:"playbackDevice"`
 }
 
@@ -69,10 +71,6 @@ type SpotifyCreds struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-type Token struct {
-	Jwt string `json:"jwt"`
-}
-
 type User struct {
 	ID        string  `json:"id"`
 	FirstName *string `json:"firstName"`
@@ -84,6 +82,14 @@ type User struct {
 type UserLogin struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type Voter struct {
+	ID            string   `json:"id"`
+	Type          string   `json:"type"`
+	Expires       int      `json:"expires"`
+	SongsVotedFor []string `json:"songsVotedFor"`
+	BonusVotes    *int     `json:"bonusVotes"`
 }
 
 type QueueAction string
