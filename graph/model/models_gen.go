@@ -84,10 +84,8 @@ type UserLogin struct {
 	Password string `json:"password"`
 }
 
-type Voter struct {
-	ID            string   `json:"id"`
+type VoterInfo struct {
 	Type          string   `json:"type"`
-	Expires       int      `json:"expires"`
 	SongsVotedFor []string `json:"songsVotedFor"`
 	BonusVotes    *int     `json:"bonusVotes"`
 }

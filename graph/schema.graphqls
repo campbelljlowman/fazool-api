@@ -35,10 +35,8 @@ type User {
   sessionID: Int
 }
 
-type Voter {
-  id: String!
+type VoterInfo {
   type: String!
-  expires: Int!
   songsVotedFor: [String!]
   bonusVotes: Int
 }
@@ -111,7 +109,7 @@ type Mutation {
 
   # Voters
   getVoterToken: String!
-  joinVoters(sessionID: Int!): Voter!
+  joinVoters(sessionID: Int!): VoterInfo!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!

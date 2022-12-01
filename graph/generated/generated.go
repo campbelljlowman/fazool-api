@@ -113,10 +113,8 @@ type ComplexityRoot struct {
 		SessionID func(childComplexity int) int
 	}
 
-	Voter struct {
+	VoterInfo struct {
 		BonusVotes    func(childComplexity int) int
-		Expires       func(childComplexity int) int
-		ID            func(childComplexity int) int
 		SongsVotedFor func(childComplexity int) int
 		Type          func(childComplexity int) int
 	}
@@ -129,7 +127,7 @@ type MutationResolver interface {
 	CreateUser(ctx context.Context, newUser model.NewUser) (string, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (string, error)
 	GetVoterToken(ctx context.Context) (string, error)
-	JoinVoters(ctx context.Context, sessionID int) (*model.Voter, error)
+	JoinVoters(ctx context.Context, sessionID int) (*model.VoterInfo, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
 	SetOutputDevice(ctx context.Context, outputDevice model.OutputDevice) (*model.Device, error)
 	SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error)
@@ -489,40 +487,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.SessionID(childComplexity), true
 
-	case "Voter.bonusVotes":
-		if e.complexity.Voter.BonusVotes == nil {
+	case "VoterInfo.bonusVotes":
+		if e.complexity.VoterInfo.BonusVotes == nil {
 			break
 		}
 
-		return e.complexity.Voter.BonusVotes(childComplexity), true
+		return e.complexity.VoterInfo.BonusVotes(childComplexity), true
 
-	case "Voter.expires":
-		if e.complexity.Voter.Expires == nil {
+	case "VoterInfo.songsVotedFor":
+		if e.complexity.VoterInfo.SongsVotedFor == nil {
 			break
 		}
 
-		return e.complexity.Voter.Expires(childComplexity), true
+		return e.complexity.VoterInfo.SongsVotedFor(childComplexity), true
 
-	case "Voter.id":
-		if e.complexity.Voter.ID == nil {
+	case "VoterInfo.type":
+		if e.complexity.VoterInfo.Type == nil {
 			break
 		}
 
-		return e.complexity.Voter.ID(childComplexity), true
-
-	case "Voter.songsVotedFor":
-		if e.complexity.Voter.SongsVotedFor == nil {
-			break
-		}
-
-		return e.complexity.Voter.SongsVotedFor(childComplexity), true
-
-	case "Voter.type":
-		if e.complexity.Voter.Type == nil {
-			break
-		}
-
-		return e.complexity.Voter.Type(childComplexity), true
+		return e.complexity.VoterInfo.Type(childComplexity), true
 
 	}
 	return 0, false
@@ -652,17 +636,11 @@ type User {
   sessionID: Int
 }
 
-type Voter {
-  id: String!
+type VoterInfo {
   type: String!
-  expires: Int!
   songsVotedFor: [String!]
   bonusVotes: Int
 }
-
-# type Token {
-#   token: String!
-# }
 
 type Device {
   id: String!
@@ -732,7 +710,7 @@ type Mutation {
 
   # Voters
   getVoterToken: String!
-  joinVoters(sessionID: Int!): Voter!
+  joinVoters(sessionID: Int!): VoterInfo!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
@@ -1653,9 +1631,9 @@ func (ec *executionContext) _Mutation_joinVoters(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Voter)
+	res := resTmp.(*model.VoterInfo)
 	fc.Result = res
-	return ec.marshalNVoter2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx, field.Selections, res)
+	return ec.marshalNVoterInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_joinVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1666,18 +1644,14 @@ func (ec *executionContext) fieldContext_Mutation_joinVoters(ctx context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Voter_id(ctx, field)
 			case "type":
-				return ec.fieldContext_Voter_type(ctx, field)
-			case "expires":
-				return ec.fieldContext_Voter_expires(ctx, field)
+				return ec.fieldContext_VoterInfo_type(ctx, field)
 			case "songsVotedFor":
-				return ec.fieldContext_Voter_songsVotedFor(ctx, field)
+				return ec.fieldContext_VoterInfo_songsVotedFor(ctx, field)
 			case "bonusVotes":
-				return ec.fieldContext_Voter_bonusVotes(ctx, field)
+				return ec.fieldContext_VoterInfo_bonusVotes(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Voter", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type VoterInfo", field.Name)
 		},
 	}
 	defer func() {
@@ -3100,52 +3074,8 @@ func (ec *executionContext) fieldContext_User_sessionID(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Voter_id(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Voter_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Voter_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Voter",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Voter_type(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Voter_type(ctx, field)
+func (ec *executionContext) _VoterInfo_type(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoterInfo_type(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3175,9 +3105,9 @@ func (ec *executionContext) _Voter_type(ctx context.Context, field graphql.Colle
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Voter_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_VoterInfo_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Voter",
+		Object:     "VoterInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3188,52 +3118,8 @@ func (ec *executionContext) fieldContext_Voter_type(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Voter_expires(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Voter_expires(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Expires, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Voter_expires(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Voter",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Voter_songsVotedFor(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Voter_songsVotedFor(ctx, field)
+func (ec *executionContext) _VoterInfo_songsVotedFor(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoterInfo_songsVotedFor(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3260,9 +3146,9 @@ func (ec *executionContext) _Voter_songsVotedFor(ctx context.Context, field grap
 	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Voter_songsVotedFor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_VoterInfo_songsVotedFor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Voter",
+		Object:     "VoterInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3273,8 +3159,8 @@ func (ec *executionContext) fieldContext_Voter_songsVotedFor(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Voter_bonusVotes(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Voter_bonusVotes(ctx, field)
+func (ec *executionContext) _VoterInfo_bonusVotes(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoterInfo_bonusVotes(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3301,9 +3187,9 @@ func (ec *executionContext) _Voter_bonusVotes(ctx context.Context, field graphql
 	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Voter_bonusVotes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_VoterInfo_bonusVotes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Voter",
+		Object:     "VoterInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -5874,44 +5760,30 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 	return out
 }
 
-var voterImplementors = []string{"Voter"}
+var voterInfoImplementors = []string{"VoterInfo"}
 
-func (ec *executionContext) _Voter(ctx context.Context, sel ast.SelectionSet, obj *model.Voter) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, voterImplementors)
+func (ec *executionContext) _VoterInfo(ctx context.Context, sel ast.SelectionSet, obj *model.VoterInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, voterInfoImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Voter")
-		case "id":
-
-			out.Values[i] = ec._Voter_id(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			out.Values[i] = graphql.MarshalString("VoterInfo")
 		case "type":
 
-			out.Values[i] = ec._Voter_type(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "expires":
-
-			out.Values[i] = ec._Voter_expires(ctx, field, obj)
+			out.Values[i] = ec._VoterInfo_type(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "songsVotedFor":
 
-			out.Values[i] = ec._Voter_songsVotedFor(ctx, field, obj)
+			out.Values[i] = ec._VoterInfo_songsVotedFor(ctx, field, obj)
 
 		case "bonusVotes":
 
-			out.Values[i] = ec._Voter_bonusVotes(ctx, field, obj)
+			out.Values[i] = ec._VoterInfo_bonusVotes(ctx, field, obj)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -6385,18 +6257,18 @@ func (ec *executionContext) unmarshalNUserLogin2githubᚗcomᚋcampbelljlowman�
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNVoter2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx context.Context, sel ast.SelectionSet, v model.Voter) graphql.Marshaler {
-	return ec._Voter(ctx, sel, &v)
+func (ec *executionContext) marshalNVoterInfo2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterInfo(ctx context.Context, sel ast.SelectionSet, v model.VoterInfo) graphql.Marshaler {
+	return ec._VoterInfo(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNVoter2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx context.Context, sel ast.SelectionSet, v *model.Voter) graphql.Marshaler {
+func (ec *executionContext) marshalNVoterInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterInfo(ctx context.Context, sel ast.SelectionSet, v *model.VoterInfo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._Voter(ctx, sel, v)
+	return ec._VoterInfo(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

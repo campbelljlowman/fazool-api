@@ -215,7 +215,7 @@ func (r *mutationResolver) GetVoterToken(ctx context.Context) (string, error) {
 }
 
 // JoinVoters is the resolver for the joinVoters field.
-func (r *mutationResolver) JoinVoters(ctx context.Context, sessionID int) (*model.Voter, error) {
+func (r *mutationResolver) JoinVoters(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
 	panic(fmt.Errorf("not implemented: JoinVoters - joinVoters"))
 }
 
