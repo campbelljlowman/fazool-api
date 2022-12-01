@@ -186,7 +186,6 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (string, error) {
 	userID, password, err := r.database.GetUserLoginValues(userLogin.Email)
-	slog.Info("User ID in login mutation:", "user-id", userID)
 	if err != nil {
 		errorMsg := "Error getting user login info from database"
 		slog.Warn(errorMsg, "error", err)
@@ -274,8 +273,6 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	if userID == "" {
 		return nil, fmt.Errorf("No userID found on token for getting user")
 	}
-
-	slog.Info("User ID in mutation:", "user-id", userID)
 
 	user, err := r.database.GetUserByID(userID)
 	if err != nil {

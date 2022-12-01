@@ -76,11 +76,10 @@ func (p *PostgresWrapper) GetUserByEmail(userEmail string) (*model.User, error) 
 }
 
 func (p *PostgresWrapper) GetUserByID(userID string) (*model.User, error) {
-	slog.Info("User ID in database:", "user-id", userID)
 	queryString := fmt.Sprintf(
 	`SELECT first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.user WHERE user_id = '%v'`,
 	userID)
-	slog.Info("Query string:", "query-string", queryString)
+	slog.Debug("Query string:", "query-string", queryString)
 
 	var sessionID int
 	var firstName, lastName, email string
