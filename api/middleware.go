@@ -12,9 +12,10 @@ import (
 
 func jwtAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		bearerToken := c.Request.Header.Get("Authorization")
+		bearerToken := c.Request.Header.Get("Authentication")
 
 		if bearerToken == "" {
+			slog.Info("No Authentication header passed on request!")
 			return
 		}
 

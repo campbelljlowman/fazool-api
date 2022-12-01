@@ -19,7 +19,7 @@ func InitializeRoutes() *gin.Engine {
 	router := gin.Default()
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
-	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "authorization")
+	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "authentication")
 	router.Use(cors.New(corsConfig))
 	router.Use(jwtAuthMiddleware())
 
