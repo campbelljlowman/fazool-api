@@ -5,24 +5,24 @@ import (
 )
 
 type Voter struct {
-	id string
-	voterType string
-	expires time.Time
-	songsVotedFor []string
-	bonusVotes int
+	Id string
+	VoterType string
+	Expires time.Time
+	SongsVotedFor []string
+	BonusVotes int
 }
 
 func NewVoter(id string, bonusVotes int) Voter {
 	v := Voter{
-		id: id,
-		voterType: "regular-voter",
-		expires: time.Now().Add(5 * time.Minute),
-		songsVotedFor: nil,
-		bonusVotes: bonusVotes,
+		Id: id,
+		VoterType: "regular-voter",
+		Expires: time.Now().Add(5 * time.Minute),
+		SongsVotedFor: nil,
+		BonusVotes: bonusVotes,
 	}
 	return v
 }
 
 func (v *Voter) refresh() {
-	v.expires = time.Now().Add(5 * time.Minute)
+	v.Expires = time.Now().Add(5 * time.Minute)
 }
