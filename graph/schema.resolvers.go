@@ -24,6 +24,7 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
+	// TODO: Check users account level from db and set session size accordingly
 	userID, _ := ctx.Value("user").(string)
 
 	sessionID, err := utils.GenerateSessionID()
@@ -263,6 +264,7 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
+	// TODO: Validate tis input
 	userID, _ := ctx.Value("user").(string)
 
 	slog.Info("User ID in mutation:", "user-id", userID)

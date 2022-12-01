@@ -11,7 +11,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-// TODO: Figure out how long these should be - prob like 15 minutes but need to figure out how to refresh
 var accountTokenDuration time.Duration = 30 // Minutes
 
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
