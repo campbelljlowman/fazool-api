@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-var accountTokenDuration time.Duration = 300 // Minutes
+var accountTokenDuration time.Duration = 30 // Minutes
 
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
