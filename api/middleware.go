@@ -15,7 +15,7 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 		bearerToken := c.Request.Header.Get("Authentication")
 
 		if bearerToken == "" {
-			slog.Info("No Authentication header passed on request!")
+			slog.Debug("No Authentication header passed on request!")
 			return
 		}
 

@@ -95,6 +95,7 @@ type Query {
   user: User!
   devices: [Device!]
   playlists: [Playlist!]
+  voterToken: String!
 }
 
 type Mutation {
@@ -108,7 +109,6 @@ type Mutation {
   login(userLogin: UserLogin!): String!
 
   # Voters
-  getVoterToken: String!
   joinVoters(sessionID: Int!): VoterInfo!
 
   # Spotify

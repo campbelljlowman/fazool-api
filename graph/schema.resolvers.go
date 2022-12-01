@@ -15,6 +15,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
+	"github.com/google/uuid"
 	spotify "github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/exp/slices"
@@ -208,11 +209,6 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 	return token, nil
 }
 
-// GetVoterToken is the resolver for the getVoterToken field.
-func (r *mutationResolver) GetVoterToken(ctx context.Context) (string, error) {
-	panic(fmt.Errorf("not implemented: GetVoterToken - getVoterToken"))
-}
-
 // JoinVoters is the resolver for the joinVoters field.
 func (r *mutationResolver) JoinVoters(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
 	panic(fmt.Errorf("not implemented: JoinVoters - joinVoters"))
@@ -292,6 +288,12 @@ func (r *queryResolver) Devices(ctx context.Context) ([]*model.Device, error) {
 // Playlists is the resolver for the playlists field.
 func (r *queryResolver) Playlists(ctx context.Context) ([]*model.Playlist, error) {
 	panic(fmt.Errorf("not implemented: Playlists - playlists"))
+}
+
+// VoterToken is the resolver for the voterToken field.
+func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
+	id := uuid.New()
+	return id.String(), nil
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
