@@ -100,6 +100,19 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	slog.Debug("Updating queue", "sessionID", sessionID, "song", song.Title)
 	session := r.sessions[sessionID]
 
+	// TODO: add song to voters list and refresh voter
+	userID := ctx.Value("user").(string)
+	session.VotersMutex.Lock()
+	existingVoter, exists := session.Voters[userID]
+	session.VotersMutex.Unlock()
+
+	if !exists {
+		return nil, fmt.Errorf("User not in active voters! User: %v", userID)
+	}
+
+	// TODO: Probably is more efficient to make this a map of pointers
+	existingVoter.SongsVotedFor = append(existingVoter.SongsVotedFor, song.ID)
+
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.Song) bool { return s.ID == song.ID })
 	session.QueueMutex.Lock()
@@ -124,8 +137,6 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	// Update subscription
 	session.SendUpdate()
-
-	// TODO: add song to voters list and refresh voter
 
 	return session.SessionInfo, nil
 }
