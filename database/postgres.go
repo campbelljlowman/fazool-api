@@ -33,7 +33,6 @@ func NewPostgresClient() *PostgresWrapper {
 		email 		 			varchar(100) not null,
 		pass_hash 	  			varchar(100) not null,
 		account_level 	  		varchar(20) not null,
-		voter_level 			varchar(20) not null,
 		bonus_votes				int not null,
 		session_id 	  			int,
 		spotify_access_token 	varchar(200),
@@ -101,19 +100,19 @@ func (p *PostgresWrapper) GetUserByID(userID string) (*model.User, error) {
 	return user, nil
 }
 
-func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (string, string, string, error) {
+func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (string, string, error) {
 	queryString := fmt.Sprintf(
-	`SELECT user_id::VARCHAR, account_level, pass_hash FROM public.user WHERE email = '%v'`,
+	`SELECT user_id::VARCHAR, pass_hash FROM public.user WHERE email = '%v'`,
 	userEmail)
 	slog.Debug("Query string:", "query-string", queryString)
 
-	var userID, password, account_level string
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &account_level, &password)
+	var userID, password string
+	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &password)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
-	return userID, account_level, password, nil
+	return userID, password, nil
 }
 
 func (p *PostgresWrapper) GetSpotifyRefreshToken(userID string) (string, error) {
@@ -191,12 +190,12 @@ func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 	return emailExists, nil
 }
 
-func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) {
+func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash, account_level string, bonusVotes int) (string, error) {
 	queryString := fmt.Sprintf(
-	`INSERT INTO public.user(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
-	VALUES ('%v', '%v', '%v', '%v', '%v', '%v', '%v')
+	`INSERT INTO public.user(first_name, last_name, email, pass_hash, account_level, bonus_votes)
+	VALUES ('%v', '%v', '%v', '%v', '%v', '%v')
 	RETURNING user_id::VARCHAR;`,
-	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, voter_level, bonusVotes)
+	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, bonusVotes)
 
 	var userID string
 	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&userID)

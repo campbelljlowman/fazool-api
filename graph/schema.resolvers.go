@@ -26,6 +26,9 @@ import (
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
 	// TODO: Check users account level from db and set session size accordingly
 	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, fmt.Errorf("No userID found on token for creating session")
+	}
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
@@ -141,7 +144,6 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (string, error) {
 	// Get this from new user request!
 	accountLevel := "free"
-	voterLevel := "regular-voter"
 	vaildEmail := utils.ValidateEmail(newUser.Email)
 	if !vaildEmail {
 		errorMsg := "Invalid email format"
@@ -156,34 +158,34 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 		slog.Warn(errorMsg, "error", err)
 		return "", errors.New(errorMsg)
 	}
-
 	if emailExists {
 		errorMsg := "User with this email already exists!"
 		return "", errors.New(errorMsg)
 	}
+
 	passwordHash := utils.HashHelper(newUser.Password)
 
-	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, voterLevel, 0)
-
+	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, 0)
 	if err != nil {
 		errorMsg := "Error adding user to database"
 		slog.Warn(errorMsg, "error", err)
 		return "", errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(userID, accountLevel)
+	token, err := auth.GenerateJWT(userID)
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
 		return "", errors.New(errorMsg)
 	}
 
+	slog.Info("Returning JWT:", "token", token)
 	return token, nil
 }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (string, error) {
-	userID, accountLevel, password, err := r.database.GetUserLoginValues(userLogin.Email)
+	userID, password, err := r.database.GetUserLoginValues(userLogin.Email)
 	slog.Info("User ID in login mutation:", "user-id", userID)
 	if err != nil {
 		errorMsg := "Error getting user login info from database"
@@ -197,7 +199,7 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 		return "", errors.New(errorMsg)
 	}
 
-	token, err := auth.GenerateJWT(userID, accountLevel)
+	token, err := auth.GenerateJWT(userID)
 	if err != nil {
 		errorMsg := "Error creating user token"
 		slog.Warn(errorMsg, "error", err)
@@ -220,6 +222,9 @@ func (r *mutationResolver) JoinVoters(ctx context.Context, sessionID int) (*mode
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, fmt.Errorf("No userID found on token for adding Spotify token")
+	}
 
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
@@ -266,6 +271,9 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	// TODO: Validate tis input
 	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, fmt.Errorf("No userID found on token for getting user")
+	}
 
 	slog.Info("User ID in mutation:", "user-id", userID)
 

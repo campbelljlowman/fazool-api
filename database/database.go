@@ -7,7 +7,7 @@ import (
 type Database interface {
 	GetUserByEmail(userEmail string) (*model.User, error)
 	GetUserByID(userID string) (*model.User, error)
-	GetUserLoginValues(userEmail string) (string, string, string, error)
+	GetUserLoginValues(userEmail string) (string, string, error)
 	GetSpotifyRefreshToken(userID string) (string, error)
 
 	SetUserSession(userID string, sessionID int) error
@@ -16,5 +16,5 @@ type Database interface {
 
 	CheckIfEmailExists(email string) (bool, error)
 
-	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) 
+	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level string, bonusVotes int) (string, error) 
 }
