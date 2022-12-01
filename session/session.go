@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"golang.org/x/exp/slog"
-	
+
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/voter"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -16,20 +17,24 @@ import (
 type Session struct {
 	SessionInfo 	*model.SessionInfo
 	Channels 		[]chan *model.SessionInfo
+	Voters 			map[string] *voter.Voter
 	// TODO: Make this map of interfaces
 	// musicPlayers		map[int] *musicplayer.MusicPlayer
 	SpotifyPlayer 	*spotify.Client
 	ChannelMutex 	*sync.Mutex
 	QueueMutex   	*sync.Mutex
+	VotersMutex 	*sync.Mutex
 }
 
 func NewSession() Session {
 	session := Session{
 		SessionInfo: 		nil,
 		Channels: 			nil,
-		SpotifyPlayer: 	nil,
+		Voters: 			make(map[string]*voter.Voter),	
+		SpotifyPlayer: 		nil,
 		ChannelMutex: 		&sync.Mutex{},
 		QueueMutex: 		&sync.Mutex{},		
+		VotersMutex: 		&sync.Mutex{},		
 	}
 
 	return session
@@ -127,3 +132,5 @@ func (s *Session) SendUpdate() {
 		}
 	}()
 }
+
+// TODO: Write function that watches voters and removes any inactive ones

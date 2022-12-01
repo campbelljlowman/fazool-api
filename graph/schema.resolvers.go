@@ -15,6 +15,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
+	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
 	spotify "github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -26,6 +27,7 @@ import (
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
 	// TODO: Check users account level from db and set session size accordingly
+	sessionSize := 100
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
 		return nil, fmt.Errorf("No userID found on token for creating session")
@@ -43,9 +45,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	// Create session info
 	sessionInfo := &model.SessionInfo{
-		ID:               sessionID,
-		CurrentlyPlaying: nil,
-		Queue:            nil,
+		ID:               	sessionID,
+		CurrentlyPlaying: 	nil,
+		Queue:            	nil,
+		Admin: 				userID,
+		Size: 				sessionSize,
 	}
 	session.SessionInfo = sessionInfo
 
@@ -120,6 +124,8 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	// Update subscription
 	session.SendUpdate()
+
+	// TODO: add song to voters list and refresh voter
 
 	return session.SessionInfo, nil
 }
@@ -209,11 +215,6 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 	return token, nil
 }
 
-// JoinVoters is the resolver for the joinVoters field.
-func (r *mutationResolver) JoinVoters(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
-	panic(fmt.Errorf("not implemented: JoinVoters - joinVoters"))
-}
-
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(string)
@@ -253,13 +254,45 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.Playl
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error) {
 	session, exists := r.sessions[*sessionID]
-	if exists {
-		return session.SessionInfo, nil
-	} else {
+	if !exists {
 		errorMsg := "Session not found!"
 		slog.Warn(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
+
+	return session.SessionInfo, nil
+}
+
+// Voter is the resolver for the voter field.
+func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
+	userID := ctx.Value("user").(string)
+
+	if userID == "" {
+		return nil, fmt.Errorf("No userID found on token for adding Spotify token")
+	}
+
+	session := r.sessions[sessionID]
+
+	session.VotersMutex.Lock()
+	existingVoter, exists := session.Voters[userID]
+	session.VotersMutex.Unlock()
+
+	if !exists {
+		if len(session.Voters) < session.SessionInfo.Size {
+			// TODO: Check db for bonus votes
+			newVoter := voter.NewVoter(userID, 0)
+
+			session.VotersMutex.Lock()
+			session.Voters[userID] = &newVoter
+			session.VotersMutex.Unlock()
+
+			return newVoter.GetVoterInfo(), nil
+		} else {
+			return nil, fmt.Errorf("Session is full of voters!")
+		}
+	}
+
+	return existingVoter.GetVoterInfo(), nil
 }
 
 // User is the resolver for the user field.

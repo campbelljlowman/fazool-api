@@ -92,6 +92,7 @@ input PlaylistInput {
 
 type Query {
   session(sessionID: Int): SessionInfo
+  voter(sessionID: Int!): VoterInfo!
   user: User!
   devices: [Device!]
   playlists: [Playlist!]
@@ -107,9 +108,6 @@ type Mutation {
   # Users
   createUser(newUser: NewUser!): String!
   login(userLogin: UserLogin!): String!
-
-  # Voters
-  joinVoters(sessionID: Int!): VoterInfo!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
