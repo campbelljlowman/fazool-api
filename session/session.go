@@ -23,7 +23,7 @@ type Session struct {
 	QueueMutex   	*sync.Mutex
 }
 
-func NewSession () Session {
+func NewSession() Session {
 	session := Session{
 		SessionInfo: 		nil,
 		Channels: 			nil,
@@ -35,7 +35,7 @@ func NewSession () Session {
 	return session
 }
 
-func (s *Session) WatchSpotifyCurrentlyPlaying () {
+func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	sendUpdateFlag := false
 	addNextSongFlag := false
