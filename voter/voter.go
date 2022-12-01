@@ -23,6 +23,6 @@ func NewVoter(id string, bonusVotes int) Voter {
 	return v
 }
 
-func (v *Voter) refresh() {
+func (v *Voter) Refresh() {
 	v.Expires = time.Now().Add(5 * time.Minute)
 }
