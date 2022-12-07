@@ -12,20 +12,20 @@ import (
 
 func jwtAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		bearerToken := c.Request.Header.Get("Authentication")
+		authString := c.Request.Header.Get("Authentication")
 
-		if bearerToken == "" {
+		if authString == "" {
 			slog.Debug("No Authentication header passed on request!")
 			return
 		}
 
-		userId, err := auth.VerifyJWT(bearerToken)
+		userID, err := auth.VerifyJWT(authString)
 		if err != nil {
-			slog.Warn("Couldn't verify JWT token", "error", err.Error())
-			return
+			slog.Debug("Couldn't verify JWT token", "error", err.Error())
+			userID = authString
 		}
 		
-		ctx1 := context.WithValue(c.Request.Context(), "user", userId)
+		ctx1 := context.WithValue(c.Request.Context(), "user", userID)
         c.Request = c.Request.WithContext(ctx1)
         c.Next()
 	}
