@@ -6,6 +6,10 @@ import (
 	"encoding/base64"
 	"math/big"
 	"net/mail"
+	"errors"
+
+	"golang.org/x/exp/slog"
+
 )
 
 func HashHelper(s string) string {
@@ -29,4 +33,14 @@ func GenerateSessionID() (int, error) {
 	number := n + 100000
 
 	return int(number), nil
+}
+
+func LogErrorMessage(msg string) error {
+	slog.Warn(msg)
+	return errors.New(msg)
+}
+
+func LogErrorObject(msg string, err error) error {
+	slog.Warn(msg, "error", err)
+	return errors.New(msg)
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"strings"
 	"context"
 
 	"golang.org/x/exp/slog"
@@ -22,7 +23,7 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 		userID, err := auth.VerifyJWT(authString)
 		if err != nil {
 			slog.Debug("Couldn't verify JWT token", "error", err.Error())
-			userID = authString
+			userID = strings.Split(authString, " ")[1]
 		}
 		
 		ctx1 := context.WithValue(c.Request.Context(), "user", userID)

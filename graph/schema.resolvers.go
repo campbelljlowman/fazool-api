@@ -30,14 +30,12 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	sessionSize := 100
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, fmt.Errorf("No userID found on token for creating session")
+		return nil, utils.LogErrorMessage("No userID found on token for creating session")
 	}
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
-		errorMsg := "Error generating session ID"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error generating session ID", err)
 	}
 
 	session := session.NewSession()
@@ -57,23 +55,17 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	refreshToken, err := r.database.GetSpotifyRefreshToken(userID)
 	if err != nil {
-		errorMsg := "Error getting Spotify refresh token"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error getting Spotify refresh token", err)
 	}
 
 	spotifyToken, err := spotifyUtil.RefreshToken(refreshToken)
 	if err != nil {
-		errorMsg := "Error refreshing Spotify Token"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error refreshing Spotify Token", err)
 	}
 
 	err = r.database.SetSpotifyAccessToken(userID, spotifyToken)
 	if err != nil {
-		errorMsg := "Error setting new Spotify token"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error setting new Spotify token", err)
 	}
 
 	// TODO: Use refresh token as well? https://pkg.go.dev/golang.org/x/oauth2#Token
@@ -97,7 +89,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	// TODO: Check for voter auth on context and make sure sessionIDs match
-	slog.Debug("Updating queue", "sessionID", sessionID, "song", song.Title)
+	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
 	session := r.sessions[sessionID]
 
 	userID := ctx.Value("user").(string)
@@ -281,9 +273,10 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 // Voter is the resolver for the voter field.
 func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
 	userID := ctx.Value("user").(string)
+	slog.Info("Getting voter", "sessionID", sessionID, "user", userID)
 
 	if userID == "" {
-		return nil, fmt.Errorf("No userID found on token for adding Spotify token")
+		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
 	}
 
 	session := r.sessions[sessionID]
@@ -292,22 +285,36 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	existingVoter, exists := session.Voters[userID]
 	session.VotersMutex.Unlock()
 
-	if !exists {
-		if len(session.Voters) < session.SessionInfo.Size {
-			// TODO: Check db for bonus votes
-			newVoter := voter.NewVoter(userID, 0)
-
-			session.VotersMutex.Lock()
-			session.Voters[userID] = &newVoter
-			session.VotersMutex.Unlock()
-
-			return newVoter.GetVoterInfo(), nil
-		} else {
-			return nil, fmt.Errorf("Session is full of voters!")
-		}
+	if exists {
+		slog.Info("Returning existing voter")
+		return existingVoter.GetVoterInfo(), nil
 	}
 
-	return existingVoter.GetVoterInfo(), nil
+	if len(session.Voters) >= session.SessionInfo.Size {
+		return nil, utils.LogErrorMessage("Session is full of voters!")
+	}
+
+	voterType := voter.RegularVoterType
+	priviledged := true
+	if priviledged {
+		voterType = voter.PrivilegedVoterType
+	}
+	if session.SessionInfo.Admin == userID {
+		voterType = voter.AdminVoterType
+	}
+
+
+	// TODO: Check db for bonus votes
+	newVoter, err := voter.NewVoter(userID, voterType, 0)
+	if err != nil {
+		return nil, utils.LogErrorMessage("Error generating new voter")
+	}
+
+	session.VotersMutex.Lock()
+	session.Voters[userID] = newVoter
+	session.VotersMutex.Unlock()
+
+	return newVoter.GetVoterInfo(), nil
 }
 
 // User is the resolver for the user field.

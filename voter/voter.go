@@ -1,6 +1,7 @@
 package voter
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -16,20 +17,29 @@ type Voter struct {
 	BonusVotes int
 }
 
+var empty struct{}
 // TODO: Making this long for testing, should be 5
 const regularVoterDuration time.Duration = 15
-var empty struct{}
+const AdminVoterType = "admin"
+const PrivilegedVoterType = "privileged-voter"
+const RegularVoterType = "regular-voter"
+var validVoterTypes = []string{AdminVoterType, PrivilegedVoterType, RegularVoterType}
 
-func NewVoter(id string, bonusVotes int) Voter {
+
+func NewVoter(id, voterType string, bonusVotes int) (*Voter, error) {
+	if !contains(validVoterTypes, voterType) {
+		return nil, fmt.Errorf("Invalid voter type passed!")
+	}
+
 	v := Voter{
 		Id: id,
-		VoterType: "regular-voter",
+		VoterType: voterType,
 		Expires: time.Now().Add(regularVoterDuration * time.Minute),
 		SongsUpVoted: make(map[string]struct{}),
 		SongsDownVoted: make(map[string]struct{}),
 		BonusVotes: bonusVotes,
 	}
-	return v
+	return &v, nil
 }
 
 func (v *Voter) GetVoterInfo() *model.VoterInfo {
@@ -62,8 +72,9 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 	if direction.String() == "UP" {
 		if action.String() == "ADD" {
 			voteMultiplier := 1
-			if _, exists := v.SongsUpVoted[song]; exists {
-				return 0, nil
+			_, exists := v.SongsUpVoted[song]
+			if v.VoterType != AdminVoterType && exists {
+				return 0, errors.New("You've already voted for this song!")
 			}
 
 			if _, exists := v.SongsDownVoted[song]; exists {
@@ -82,8 +93,9 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 	} else if direction.String() == "DOWN"{
 		if action.String() == "ADD" {
 			voteMultiplier := 1
-			if _, exists := v.SongsDownVoted[song]; exists {
-				return 0, nil
+			_, exists := v.SongsDownVoted[song]
+			if v.VoterType != AdminVoterType && exists {
+				return 0, errors.New("You've already voted for this song!")
 			}
 
 			if _, exists := v.SongsUpVoted[song]; exists {
@@ -110,4 +122,13 @@ func (v *Voter) Refresh() {
 
 func (v *Voter) getVoteValue () int {
 	return 1
+}
+
+func contains(elems []string, v string) bool {
+    for _, s := range elems {
+        if v == s {
+            return true
+        }
+    }
+    return false
 }
