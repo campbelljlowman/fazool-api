@@ -114,9 +114,10 @@ type ComplexityRoot struct {
 	}
 
 	VoterInfo struct {
-		BonusVotes    func(childComplexity int) int
-		SongsVotedFor func(childComplexity int) int
-		Type          func(childComplexity int) int
+		BonusVotes     func(childComplexity int) int
+		SongsDownVoted func(childComplexity int) int
+		SongsUpVoted   func(childComplexity int) int
+		Type           func(childComplexity int) int
 	}
 }
 
@@ -494,12 +495,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.VoterInfo.BonusVotes(childComplexity), true
 
-	case "VoterInfo.songsVotedFor":
-		if e.complexity.VoterInfo.SongsVotedFor == nil {
+	case "VoterInfo.songsDownVoted":
+		if e.complexity.VoterInfo.SongsDownVoted == nil {
 			break
 		}
 
-		return e.complexity.VoterInfo.SongsVotedFor(childComplexity), true
+		return e.complexity.VoterInfo.SongsDownVoted(childComplexity), true
+
+	case "VoterInfo.songsUpVoted":
+		if e.complexity.VoterInfo.SongsUpVoted == nil {
+			break
+		}
+
+		return e.complexity.VoterInfo.SongsUpVoted(childComplexity), true
 
 	case "VoterInfo.type":
 		if e.complexity.VoterInfo.Type == nil {
@@ -638,7 +646,8 @@ type User {
 
 type VoterInfo {
   type: String!
-  songsVotedFor: [String!]
+  songsUpVoted: [String!]
+  songsDownVoted: [String!]
   bonusVotes: Int
 }
 
@@ -658,12 +667,23 @@ enum QueueAction {
   ADVANCE
 }
 
+enum SongVoteDirection {
+  UP
+  DOWN
+}
+
+enum SongVoteAction {
+  ADD
+  REMOVE
+}
+
 input SongUpdate {
   id: String!
   title: String
   artist: String
   image: String
-  vote: Int!
+  vote: SongVoteDirection!
+  action: SongVoteAction!
 }
 
 input NewUser {
@@ -1937,8 +1957,10 @@ func (ec *executionContext) fieldContext_Query_voter(ctx context.Context, field 
 			switch field.Name {
 			case "type":
 				return ec.fieldContext_VoterInfo_type(ctx, field)
-			case "songsVotedFor":
-				return ec.fieldContext_VoterInfo_songsVotedFor(ctx, field)
+			case "songsUpVoted":
+				return ec.fieldContext_VoterInfo_songsUpVoted(ctx, field)
+			case "songsDownVoted":
+				return ec.fieldContext_VoterInfo_songsDownVoted(ctx, field)
 			case "bonusVotes":
 				return ec.fieldContext_VoterInfo_bonusVotes(ctx, field)
 			}
@@ -3116,8 +3138,8 @@ func (ec *executionContext) fieldContext_VoterInfo_type(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _VoterInfo_songsVotedFor(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_VoterInfo_songsVotedFor(ctx, field)
+func (ec *executionContext) _VoterInfo_songsUpVoted(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoterInfo_songsUpVoted(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3130,7 +3152,7 @@ func (ec *executionContext) _VoterInfo_songsVotedFor(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SongsVotedFor, nil
+		return obj.SongsUpVoted, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3144,7 +3166,48 @@ func (ec *executionContext) _VoterInfo_songsVotedFor(ctx context.Context, field 
 	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_VoterInfo_songsVotedFor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_VoterInfo_songsUpVoted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoterInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoterInfo_songsDownVoted(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoterInfo_songsDownVoted(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SongsDownVoted, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoterInfo_songsDownVoted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "VoterInfo",
 		Field:      field,
@@ -5086,7 +5149,7 @@ func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj in
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "title", "artist", "image", "vote"}
+	fieldsInOrder := [...]string{"id", "title", "artist", "image", "vote", "action"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -5129,7 +5192,15 @@ func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj in
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("vote"))
-			it.Vote, err = ec.unmarshalNInt2int(ctx, v)
+			it.Vote, err = ec.unmarshalNSongVoteDirection2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongVoteDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "action":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("action"))
+			it.Action, err = ec.unmarshalNSongVoteAction2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongVoteAction(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -5803,9 +5874,13 @@ func (ec *executionContext) _VoterInfo(ctx context.Context, sel ast.SelectionSet
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "songsVotedFor":
+		case "songsUpVoted":
 
-			out.Values[i] = ec._VoterInfo_songsVotedFor(ctx, field, obj)
+			out.Values[i] = ec._VoterInfo_songsUpVoted(ctx, field, obj)
+
+		case "songsDownVoted":
+
+			out.Values[i] = ec._VoterInfo_songsDownVoted(ctx, field, obj)
 
 		case "bonusVotes":
 
@@ -6242,6 +6317,26 @@ func (ec *executionContext) marshalNSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfaz
 func (ec *executionContext) unmarshalNSongUpdate2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongUpdate(ctx context.Context, v interface{}) (model.SongUpdate, error) {
 	res, err := ec.unmarshalInputSongUpdate(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNSongVoteAction2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongVoteAction(ctx context.Context, v interface{}) (model.SongVoteAction, error) {
+	var res model.SongVoteAction
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSongVoteAction2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongVoteAction(ctx context.Context, sel ast.SelectionSet, v model.SongVoteAction) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNSongVoteDirection2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongVoteDirection(ctx context.Context, v interface{}) (model.SongVoteDirection, error) {
+	var res model.SongVoteDirection
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSongVoteDirection2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongVoteDirection(ctx context.Context, sel ast.SelectionSet, v model.SongVoteDirection) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNSpotifyCreds2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSpotifyCreds(ctx context.Context, v interface{}) (model.SpotifyCreds, error) {

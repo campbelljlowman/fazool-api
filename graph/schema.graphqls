@@ -37,7 +37,8 @@ type User {
 
 type VoterInfo {
   type: String!
-  songsVotedFor: [String!]
+  songsUpVoted: [String!]
+  songsDownVoted: [String!]
   bonusVotes: Int
 }
 
@@ -57,12 +58,23 @@ enum QueueAction {
   ADVANCE
 }
 
+enum SongVoteDirection {
+  UP
+  DOWN
+}
+
+enum SongVoteAction {
+  ADD
+  REMOVE
+}
+
 input SongUpdate {
   id: String!
   title: String
   artist: String
   image: String
-  vote: Int!
+  vote: SongVoteDirection!
+  action: SongVoteAction!
 }
 
 input NewUser {

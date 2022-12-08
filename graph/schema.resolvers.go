@@ -45,11 +45,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	// Create session info
 	sessionInfo := &model.SessionInfo{
-		ID:               	sessionID,
-		CurrentlyPlaying: 	nil,
-		Queue:            	nil,
-		Admin: 				userID,
-		Size: 				sessionSize,
+		ID:               sessionID,
+		CurrentlyPlaying: nil,
+		Queue:            nil,
+		Admin:            userID,
+		Size:             sessionSize,
 	}
 	session.SessionInfo = sessionInfo
 
@@ -100,18 +100,22 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	slog.Debug("Updating queue", "sessionID", sessionID, "song", song.Title)
 	session := r.sessions[sessionID]
 
-	// TODO: add song to voters list and refresh voter
 	userID := ctx.Value("user").(string)
 	session.VotersMutex.Lock()
-	existingVoter, exists := session.Voters[userID]
+	existingVoter, voterExists := session.Voters[userID]
 	session.VotersMutex.Unlock()
 
-	if !exists {
+	if !voterExists {
 		return nil, fmt.Errorf("User not in active voters! User: %v", userID)
 	}
 
-	// TODO: Probably is more efficient to make this a map of pointers
-	existingVoter.SongsVotedFor = append(existingVoter.SongsVotedFor, song.ID)
+	vote, err := existingVoter.ProcessVote(song.ID, &song.Vote, &song.Action)
+	if err != nil {
+		errorMsg := "Error processing Vote"
+		slog.Warn(errorMsg, "error", err)
+		return nil, errors.New(errorMsg)
+	}
+	existingVoter.Refresh()
 
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.Song) bool { return s.ID == song.ID })
@@ -123,12 +127,12 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 			Title:  *song.Title,
 			Artist: *song.Artist,
 			Image:  *song.Image,
-			Votes:  song.Vote,
+			Votes:  vote,
 		}
 		session.SessionInfo.Queue = append(session.SessionInfo.Queue, newSong)
 	} else {
 		queuedSong := session.SessionInfo.Queue[idx]
-		queuedSong.Votes += song.Vote
+		queuedSong.Votes += vote
 	}
 
 	// Sort queue

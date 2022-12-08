@@ -59,11 +59,12 @@ type Song struct {
 }
 
 type SongUpdate struct {
-	ID     string  `json:"id"`
-	Title  *string `json:"title"`
-	Artist *string `json:"artist"`
-	Image  *string `json:"image"`
-	Vote   int     `json:"vote"`
+	ID     string            `json:"id"`
+	Title  *string           `json:"title"`
+	Artist *string           `json:"artist"`
+	Image  *string           `json:"image"`
+	Vote   SongVoteDirection `json:"vote"`
+	Action SongVoteAction    `json:"action"`
 }
 
 type SpotifyCreds struct {
@@ -85,9 +86,10 @@ type UserLogin struct {
 }
 
 type VoterInfo struct {
-	Type          string   `json:"type"`
-	SongsVotedFor []string `json:"songsVotedFor"`
-	BonusVotes    *int     `json:"bonusVotes"`
+	Type           string   `json:"type"`
+	SongsUpVoted   []string `json:"songsUpVoted"`
+	SongsDownVoted []string `json:"songsDownVoted"`
+	BonusVotes     *int     `json:"bonusVotes"`
 }
 
 type QueueAction string
@@ -130,5 +132,87 @@ func (e *QueueAction) UnmarshalGQL(v interface{}) error {
 }
 
 func (e QueueAction) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type SongVoteAction string
+
+const (
+	SongVoteActionAdd    SongVoteAction = "ADD"
+	SongVoteActionRemove SongVoteAction = "REMOVE"
+)
+
+var AllSongVoteAction = []SongVoteAction{
+	SongVoteActionAdd,
+	SongVoteActionRemove,
+}
+
+func (e SongVoteAction) IsValid() bool {
+	switch e {
+	case SongVoteActionAdd, SongVoteActionRemove:
+		return true
+	}
+	return false
+}
+
+func (e SongVoteAction) String() string {
+	return string(e)
+}
+
+func (e *SongVoteAction) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SongVoteAction(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SongVoteAction", str)
+	}
+	return nil
+}
+
+func (e SongVoteAction) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type SongVoteDirection string
+
+const (
+	SongVoteDirectionUp   SongVoteDirection = "UP"
+	SongVoteDirectionDown SongVoteDirection = "DOWN"
+)
+
+var AllSongVoteDirection = []SongVoteDirection{
+	SongVoteDirectionUp,
+	SongVoteDirectionDown,
+}
+
+func (e SongVoteDirection) IsValid() bool {
+	switch e {
+	case SongVoteDirectionUp, SongVoteDirectionDown:
+		return true
+	}
+	return false
+}
+
+func (e SongVoteDirection) String() string {
+	return string(e)
+}
+
+func (e *SongVoteDirection) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SongVoteDirection(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SongVoteDirection", str)
+	}
+	return nil
+}
+
+func (e SongVoteDirection) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
