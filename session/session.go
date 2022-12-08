@@ -41,6 +41,7 @@ func NewSession() Session {
 }
 
 func (s *Session) WatchSpotifyCurrentlyPlaying() {
+	// TODO: Add logic to adjust the refresh frequency based on where in the song it is
 	s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	sendUpdateFlag := false
 	addNextSongFlag := false
