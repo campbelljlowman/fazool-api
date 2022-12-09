@@ -119,11 +119,10 @@ func (s *Session) AdvanceQueue(force bool) {
 
 func (s *Session) SendUpdate() {
 	go func() {
+		var activeChannels []chan *model.SessionInfo
+
 		s.ChannelMutex.Lock()
 		channels := s.Channels
-		s.ChannelMutex.Unlock()
-
-		var activeChannels []chan *model.SessionInfo
 
 		for _, ch := range channels {
 			select {
@@ -136,7 +135,6 @@ func (s *Session) SendUpdate() {
 			}
 		}
 
-		s.ChannelMutex.Lock()
 		s.Channels = activeChannels
 		s.ChannelMutex.Unlock()
 	}()
