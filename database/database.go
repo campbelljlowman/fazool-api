@@ -9,6 +9,8 @@ type Database interface {
 	GetUserByID(userID string) (*model.User, error)
 	GetUserLoginValues(userEmail string) (string, string, error)
 	GetSpotifyRefreshToken(userID string) (string, error)
+	GetAccountLevel(userID string) (string, error)
+	GetVoterValues(userID string) (string, int, error)
 
 	SetUserSession(userID string, sessionID int) error
 	SetSpotifyAccessToken(userID string, AccessToken string) error

@@ -121,6 +121,9 @@ func (v *Voter) Refresh() {
 }
 
 func (v *Voter) getVoteValue () int {
+	if v.VoterType == constants.PrivilegedVoterType {
+		return 2
+	}
 	return 1
 }
 

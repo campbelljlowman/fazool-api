@@ -26,11 +26,19 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
-	// TODO: Check users account level from db and set session size accordingly
-	sessionSize := 100
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
 		return nil, utils.LogErrorMessage("No userID found on token for creating session")
+	}
+
+	accountLevel, err := r.database.GetAccountLevel(userID)
+	if userID == "" {
+		return nil, utils.LogErrorMessage("Error getting account level from database")
+	}
+
+	sessionSize := 0
+	if accountLevel == constants.RegularAccountLevel {
+		sessionSize = 50
 	}
 
 	sessionID, err := utils.GenerateSessionID()
@@ -273,17 +281,27 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	}
 
 	voterType := constants.RegularVoterType
-	priviledged := true
-	if priviledged {
-		voterType = constants.PrivilegedVoterType
-	}
-	if session.SessionInfo.Admin == userID {
-		voterType = constants.AdminVoterType
+	bonusVotes := 0
+	// If userID parses as a UUID, it's a guest voter
+	_, err := uuid.Parse(userID)
+	if err != nil {
+		voterLevel, bonusVotesValue, err := r.database.GetVoterValues(userID)
+		bonusVotes = bonusVotesValue
+		if err != nil {
+			return nil, utils.LogErrorObject("Error getting voter from database", err)
+		}
+
+		if voterLevel == constants.PrivilegedVoterType {
+			voterType = constants.PrivilegedVoterType
+		}
+		if session.SessionInfo.Admin == userID {
+			voterType = constants.AdminVoterType
+		}
 	}
 
 
 	// TODO: Check db for bonus votes
-	newVoter, err := voter.NewVoter(userID, voterType, 0)
+	newVoter, err := voter.NewVoter(userID, voterType, bonusVotes)
 	if err != nil {
 		return nil, utils.LogErrorMessage("Error generating new voter")
 	}

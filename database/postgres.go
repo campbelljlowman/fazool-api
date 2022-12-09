@@ -129,6 +129,33 @@ func (p *PostgresWrapper) GetSpotifyRefreshToken(userID string) (string, error) 
 	return spotifyRefreshToken, nil
 }
 
+func (p *PostgresWrapper) GetAccountLevel(userID string) (string, error){
+	queryString := fmt.Sprintf(
+		`SELECT account_level FROM public.user WHERE user_id = '%v'`,
+	userID)
+	var accountLevel string
+	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&accountLevel)
+	if err != nil {
+		return "", err
+	}
+
+	return accountLevel, nil
+}
+
+func (p *PostgresWrapper) GetVoterValues(userID string) (string, int, error){
+	queryString := fmt.Sprintf(
+		`SELECT voter_level, bonus_votes FROM public.user WHERE user_id = '%v'`,
+	userID)
+	var voterLevel string
+	var bonusVotes int
+	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&voterLevel, &bonusVotes)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return voterLevel, bonusVotes, nil	
+}
+
 func (p *PostgresWrapper) SetUserSession(userID string, sessionID int) error {
 	queryString := fmt.Sprintf(
 	`UPDATE public.user
@@ -194,7 +221,7 @@ func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) {
 	queryString := fmt.Sprintf(
 	`INSERT INTO public.user(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
-	VALUES ('%v', '%v', '%v', '%v', '%v', '%v', %v')
+	VALUES ('%v', '%v', '%v', '%v', '%v', '%v', '%v')
 	RETURNING user_id::VARCHAR;`,
 	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, voter_level, bonusVotes)
 
