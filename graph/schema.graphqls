@@ -24,7 +24,6 @@ type SessionInfo {
   queue: [Song!]
   admin: String!
   size: Int!
-  playbackDevice: String
 }
 
 type User {
@@ -40,11 +39,6 @@ type VoterInfo {
   songsUpVoted: [String!]
   songsDownVoted: [String!]
   bonusVotes: Int
-}
-
-type Device {
-  id: String!
-  name: String!
 }
 
 type Playlist {
@@ -94,9 +88,6 @@ input SpotifyCreds {
   refreshToken: String!
 }
 
-input OutputDevice {
-  id: String!
-}
 
 input PlaylistInput {
   id: String!
@@ -106,7 +97,6 @@ type Query {
   session(sessionID: Int): SessionInfo
   voter(sessionID: Int!): VoterInfo!
   user: User!
-  devices: [Device!]
   playlists: [Playlist!]
   voterToken: String!
 }
@@ -123,7 +113,6 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
-  setOutputDevice(outputDevice: OutputDevice!): Device
   setPlaylist(playlist: PlaylistInput!): Playlist
 }
 

@@ -16,20 +16,11 @@ type CurrentlyPlayingSong struct {
 	Playing bool   `json:"playing"`
 }
 
-type Device struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
 type NewUser struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
-}
-
-type OutputDevice struct {
-	ID string `json:"id"`
 }
 
 type Playlist struct {
@@ -47,7 +38,6 @@ type SessionInfo struct {
 	Queue            []*Song               `json:"queue"`
 	Admin            string                `json:"admin"`
 	Size             int                   `json:"size"`
-	PlaybackDevice   *string               `json:"playbackDevice"`
 }
 
 type Song struct {

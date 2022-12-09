@@ -54,16 +54,10 @@ type ComplexityRoot struct {
 		Title   func(childComplexity int) int
 	}
 
-	Device struct {
-		ID   func(childComplexity int) int
-		Name func(childComplexity int) int
-	}
-
 	Mutation struct {
 		CreateSession          func(childComplexity int) int
 		CreateUser             func(childComplexity int, newUser model.NewUser) int
 		Login                  func(childComplexity int, userLogin model.UserLogin) int
-		SetOutputDevice        func(childComplexity int, outputDevice model.OutputDevice) int
 		SetPlaylist            func(childComplexity int, playlist model.PlaylistInput) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
@@ -76,7 +70,6 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Devices    func(childComplexity int) int
 		Playlists  func(childComplexity int) int
 		Session    func(childComplexity int, sessionID *int) int
 		User       func(childComplexity int) int
@@ -88,7 +81,6 @@ type ComplexityRoot struct {
 		Admin            func(childComplexity int) int
 		CurrentlyPlaying func(childComplexity int) int
 		ID               func(childComplexity int) int
-		PlaybackDevice   func(childComplexity int) int
 		Queue            func(childComplexity int) int
 		Size             func(childComplexity int) int
 	}
@@ -128,14 +120,12 @@ type MutationResolver interface {
 	CreateUser(ctx context.Context, newUser model.NewUser) (string, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (string, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
-	SetOutputDevice(ctx context.Context, outputDevice model.OutputDevice) (*model.Device, error)
 	SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error)
 }
 type QueryResolver interface {
 	Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error)
 	Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error)
 	User(ctx context.Context) (*model.User, error)
-	Devices(ctx context.Context) ([]*model.Device, error)
 	Playlists(ctx context.Context) ([]*model.Playlist, error)
 	VoterToken(ctx context.Context) (string, error)
 }
@@ -193,20 +183,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.CurrentlyPlayingSong.Title(childComplexity), true
 
-	case "Device.id":
-		if e.complexity.Device.ID == nil {
-			break
-		}
-
-		return e.complexity.Device.ID(childComplexity), true
-
-	case "Device.name":
-		if e.complexity.Device.Name == nil {
-			break
-		}
-
-		return e.complexity.Device.Name(childComplexity), true
-
 	case "Mutation.createSession":
 		if e.complexity.Mutation.CreateSession == nil {
 			break
@@ -237,18 +213,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Login(childComplexity, args["userLogin"].(model.UserLogin)), true
-
-	case "Mutation.setOutputDevice":
-		if e.complexity.Mutation.SetOutputDevice == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_setOutputDevice_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.SetOutputDevice(childComplexity, args["outputDevice"].(model.OutputDevice)), true
 
 	case "Mutation.setPlaylist":
 		if e.complexity.Mutation.SetPlaylist == nil {
@@ -311,13 +275,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Playlist.Name(childComplexity), true
-
-	case "Query.devices":
-		if e.complexity.Query.Devices == nil {
-			break
-		}
-
-		return e.complexity.Query.Devices(childComplexity), true
 
 	case "Query.playlists":
 		if e.complexity.Query.Playlists == nil {
@@ -384,13 +341,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SessionInfo.ID(childComplexity), true
-
-	case "SessionInfo.playbackDevice":
-		if e.complexity.SessionInfo.PlaybackDevice == nil {
-			break
-		}
-
-		return e.complexity.SessionInfo.PlaybackDevice(childComplexity), true
 
 	case "SessionInfo.queue":
 		if e.complexity.SessionInfo.Queue == nil {
@@ -525,7 +475,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputNewUser,
-		ec.unmarshalInputOutputDevice,
 		ec.unmarshalInputPlaylistInput,
 		ec.unmarshalInputSongUpdate,
 		ec.unmarshalInputSpotifyCreds,
@@ -633,7 +582,6 @@ type SessionInfo {
   queue: [Song!]
   admin: String!
   size: Int!
-  playbackDevice: String
 }
 
 type User {
@@ -649,11 +597,6 @@ type VoterInfo {
   songsUpVoted: [String!]
   songsDownVoted: [String!]
   bonusVotes: Int
-}
-
-type Device {
-  id: String!
-  name: String!
 }
 
 type Playlist {
@@ -703,9 +646,6 @@ input SpotifyCreds {
   refreshToken: String!
 }
 
-input OutputDevice {
-  id: String!
-}
 
 input PlaylistInput {
   id: String!
@@ -715,7 +655,6 @@ type Query {
   session(sessionID: Int): SessionInfo
   voter(sessionID: Int!): VoterInfo!
   user: User!
-  devices: [Device!]
   playlists: [Playlist!]
   voterToken: String!
 }
@@ -732,7 +671,6 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
-  setOutputDevice(outputDevice: OutputDevice!): Device
   setPlaylist(playlist: PlaylistInput!): Playlist
 }
 
@@ -773,21 +711,6 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		}
 	}
 	args["userLogin"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_setOutputDevice_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.OutputDevice
-	if tmp, ok := rawArgs["outputDevice"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("outputDevice"))
-		arg0, err = ec.unmarshalNOutputDevice2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐOutputDevice(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["outputDevice"] = arg0
 	return args, nil
 }
 
@@ -1187,94 +1110,6 @@ func (ec *executionContext) fieldContext_CurrentlyPlayingSong_playing(ctx contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Device_id(ctx context.Context, field graphql.CollectedField, obj *model.Device) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Device_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Device_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Device",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Device_name(ctx context.Context, field graphql.CollectedField, obj *model.Device) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Device_name(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Device_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Device",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_createSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_createSession(ctx, field)
 	if err != nil {
@@ -1380,8 +1215,6 @@ func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Contex
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
 			case "size":
 				return ec.fieldContext_SessionInfo_size(ctx, field)
-			case "playbackDevice":
-				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -1449,8 +1282,6 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
 			case "size":
 				return ec.fieldContext_SessionInfo_size(ctx, field)
-			case "playbackDevice":
-				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -1640,64 +1471,6 @@ func (ec *executionContext) fieldContext_Mutation_upsertSpotifyToken(ctx context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_upsertSpotifyToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_setOutputDevice(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_setOutputDevice(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetOutputDevice(rctx, fc.Args["outputDevice"].(model.OutputDevice))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.Device)
-	fc.Result = res
-	return ec.marshalODevice2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐDevice(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_setOutputDevice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Device_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Device_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Device", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setOutputDevice_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -1896,8 +1669,6 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
 			case "size":
 				return ec.fieldContext_SessionInfo_size(ctx, field)
-			case "playbackDevice":
-				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -2032,53 +1803,6 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_sessionID(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_devices(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_devices(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Devices(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Device)
-	fc.Result = res
-	return ec.marshalODevice2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐDeviceᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_devices(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Device_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Device_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Device", field.Name)
 		},
 	}
 	return fc, nil
@@ -2542,47 +2266,6 @@ func (ec *executionContext) fieldContext_SessionInfo_size(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionInfo_playbackDevice(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PlaybackDevice, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SessionInfo_playbackDevice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SessionInfo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Song_id(ctx context.Context, field graphql.CollectedField, obj *model.Song) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Song_id(ctx, field)
 	if err != nil {
@@ -2866,8 +2549,6 @@ func (ec *executionContext) fieldContext_Subscription_sessionUpdated(ctx context
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
 			case "size":
 				return ec.fieldContext_SessionInfo_size(ctx, field)
-			case "playbackDevice":
-				return ec.fieldContext_SessionInfo_playbackDevice(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -5086,34 +4767,6 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputOutputDevice(ctx context.Context, obj interface{}) (model.OutputDevice, error) {
-	var it model.OutputDevice
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"id"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "id":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-			it.ID, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputPlaylistInput(ctx context.Context, obj interface{}) (model.PlaylistInput, error) {
 	var it model.PlaylistInput
 	asMap := map[string]interface{}{}
@@ -5346,41 +4999,6 @@ func (ec *executionContext) _CurrentlyPlayingSong(ctx context.Context, sel ast.S
 	return out
 }
 
-var deviceImplementors = []string{"Device"}
-
-func (ec *executionContext) _Device(ctx context.Context, sel ast.SelectionSet, obj *model.Device) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, deviceImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Device")
-		case "id":
-
-			out.Values[i] = ec._Device_id(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "name":
-
-			out.Values[i] = ec._Device_name(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -5454,12 +5072,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "setOutputDevice":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setOutputDevice(ctx, field)
-			})
-
 		case "setPlaylist":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -5597,26 +5209,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "devices":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_devices(ctx, field)
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
 		case "playlists":
 			field := field
 
@@ -5722,10 +5314,6 @@ func (ec *executionContext) _SessionInfo(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "playbackDevice":
-
-			out.Values[i] = ec._SessionInfo_playbackDevice(ctx, field, obj)
-
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6230,16 +5818,6 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNDevice2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐDevice(ctx context.Context, sel ast.SelectionSet, v *model.Device) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Device(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
 	res, err := graphql.UnmarshalInt(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -6257,11 +5835,6 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 
 func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐNewUser(ctx context.Context, v interface{}) (model.NewUser, error) {
 	res, err := ec.unmarshalInputNewUser(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNOutputDevice2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐOutputDevice(ctx context.Context, v interface{}) (model.OutputDevice, error) {
-	res, err := ec.unmarshalInputOutputDevice(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -6676,60 +6249,6 @@ func (ec *executionContext) marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampb
 		return graphql.Null
 	}
 	return ec._CurrentlyPlayingSong(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalODevice2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐDeviceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Device) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNDevice2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐDevice(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalODevice2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐDevice(ctx context.Context, sel ast.SelectionSet, v *model.Device) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Device(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {

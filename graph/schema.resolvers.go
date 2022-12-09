@@ -237,11 +237,6 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 	return &model.User{ID: userID}, nil
 }
 
-// SetOutputDevice is the resolver for the setOutputDevice field.
-func (r *mutationResolver) SetOutputDevice(ctx context.Context, outputDevice model.OutputDevice) (*model.Device, error) {
-	panic(fmt.Errorf("not implemented: SetOutputDevice - setOutputDevice"))
-}
-
 // SetPlaylist is the resolver for the setPlaylist field.
 func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error) {
 	panic(fmt.Errorf("not implemented: SetPlaylist - setPlaylist"))
@@ -299,7 +294,6 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		}
 	}
 
-
 	// TODO: Check db for bonus votes
 	newVoter, err := voter.NewVoter(userID, voterType, bonusVotes)
 	if err != nil {
@@ -329,11 +323,6 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	return user, nil
 }
 
-// Devices is the resolver for the devices field.
-func (r *queryResolver) Devices(ctx context.Context) ([]*model.Device, error) {
-	panic(fmt.Errorf("not implemented: Devices - devices"))
-}
-
 // Playlists is the resolver for the playlists field.
 func (r *queryResolver) Playlists(ctx context.Context) ([]*model.Playlist, error) {
 	panic(fmt.Errorf("not implemented: Playlists - playlists"))
@@ -352,7 +341,7 @@ func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int
 	if !exists {
 		return nil, utils.LogErrorMessage("Session not found!")
 	}
-	
+
 	channel := make(chan *model.SessionInfo)
 
 	session.ChannelMutex.Lock()
