@@ -273,7 +273,7 @@ func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.Ses
 // Voter is the resolver for the voter field.
 func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
 	userID := ctx.Value("user").(string)
-	slog.Info("Getting voter", "sessionID", sessionID, "user", userID)
+	// slog.Info("Getting voter", "sessionID", sessionID, "user", userID)
 
 	if userID == "" {
 		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
@@ -286,7 +286,6 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	session.VotersMutex.Unlock()
 
 	if exists {
-		slog.Info("Returning existing voter")
 		return existingVoter.GetVoterInfo(), nil
 	}
 
