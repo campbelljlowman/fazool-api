@@ -129,6 +129,7 @@ func (s *Session) SendUpdate() {
 			default: // This is run when our send does not work.
 				fmt.Println("Channel closed in update.")
 				// You can handle any deregistration of the channel here.
+				// TODO: remove channel from channels list if send fails
 			}
 		}
 	}()

@@ -353,6 +353,7 @@ func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
+	// slog.Info("Subscribing to session")
 	session := r.sessions[sessionID]
 	channel := make(chan *model.SessionInfo)
 
