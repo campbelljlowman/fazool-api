@@ -127,12 +127,12 @@ func (s *Session) SendUpdate() {
 
 		for _, ch := range channels {
 			select {
-			case ch <- s.SessionInfo: // This is the actual send.
-				// Our message went through, do nothing
-				activeChannels = append(activeChannels, ch)
-			default: // This is run when our send does not work.
-				fmt.Println("Channel closed in update.")
-				// You can handle any deregistration of the channel here.
+				case ch <- s.SessionInfo: // This is the actual send.
+					// Our message went through, do nothing
+					activeChannels = append(activeChannels, ch)
+				default: // This is run when our send does not work.
+					fmt.Println("Channel closed in update.")
+					// You can handle any deregistration of the channel here.
 			}
 		}
 
