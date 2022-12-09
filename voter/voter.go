@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/constants"
 )
 
 type Voter struct {
@@ -20,10 +21,7 @@ type Voter struct {
 var empty struct{}
 // TODO: Making this long for testing, should be 5
 const regularVoterDuration time.Duration = 15
-const AdminVoterType = "admin"
-const PrivilegedVoterType = "privileged-voter"
-const RegularVoterType = "regular-voter"
-var validVoterTypes = []string{AdminVoterType, PrivilegedVoterType, RegularVoterType}
+var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
 
 
 func NewVoter(id, voterType string, bonusVotes int) (*Voter, error) {
@@ -68,20 +66,20 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 	return &voter
 }
 
-// TODO: Admin shouldn't double vote
 func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, error) {
 	if direction.String() == "UP" {
 		if action.String() == "ADD" {
 			voteMultiplier := 1
-			_, exists := v.SongsUpVoted[song]
-			if v.VoterType != AdminVoterType && exists {
-				return 0, errors.New("You've already voted for this song!")
-			}
-
-			if _, exists := v.SongsDownVoted[song]; exists {
-				delete(v.SongsDownVoted, song)
-				// If song was downvoted and is being upvoted, vote needs to be double
-				voteMultiplier = 2
+			if v.VoterType != constants.AdminVoterType {
+				if _, exists := v.SongsUpVoted[song]; exists {
+					return 0, errors.New("You've already voted for this song!")
+				}
+	
+				if _, exists := v.SongsDownVoted[song]; exists {
+					delete(v.SongsDownVoted, song)
+					// If song was downvoted and is being upvoted, vote needs to be double
+					voteMultiplier = 2
+				}
 			}
 
 			v.SongsUpVoted[song] = empty
@@ -94,15 +92,16 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 	} else if direction.String() == "DOWN"{
 		if action.String() == "ADD" {
 			voteMultiplier := 1
-			_, exists := v.SongsDownVoted[song]
-			if v.VoterType != AdminVoterType && exists {
-				return 0, errors.New("You've already voted for this song!")
-			}
-
-			if _, exists := v.SongsUpVoted[song]; exists {
-				delete(v.SongsUpVoted, song)
-				// If song was downvoted and is being upvoted, vote needs to be double
-				voteMultiplier = 2
+			if v.VoterType != constants.AdminVoterType {
+				if _, exists := v.SongsDownVoted[song]; exists {
+					return 0, errors.New("You've already voted for this song!")
+				}
+	
+				if _, exists := v.SongsUpVoted[song]; exists {
+					delete(v.SongsUpVoted, song)
+					// If song was downvoted and is being upvoted, vote needs to be double
+					voteMultiplier = 2
+				}
 			}
 
 			v.SongsDownVoted[song] = empty

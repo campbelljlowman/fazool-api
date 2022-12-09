@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/campbelljlowman/fazool-api/auth"
+	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/session"
@@ -155,6 +156,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (string, error) {
 	// Get this from new user request!
 	accountLevel := "free"
+	voterLevel := constants.RegularVoterType
 	vaildEmail := utils.ValidateEmail(newUser.Email)
 	if !vaildEmail {
 		return "", utils.LogErrorMessage("Invalid email format")
@@ -172,7 +174,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 
 	passwordHash := utils.HashHelper(newUser.Password)
 
-	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, 0)
+	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, voterLevel, 0)
 	if err != nil {
 		return "", utils.LogErrorObject("Error adding user to database", err)
 	}
@@ -270,13 +272,13 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogErrorMessage("Session is full of voters!")
 	}
 
-	voterType := voter.RegularVoterType
+	voterType := constants.RegularVoterType
 	priviledged := true
 	if priviledged {
-		voterType = voter.PrivilegedVoterType
+		voterType = constants.PrivilegedVoterType
 	}
 	if session.SessionInfo.Admin == userID {
-		voterType = voter.AdminVoterType
+		voterType = constants.AdminVoterType
 	}
 
 

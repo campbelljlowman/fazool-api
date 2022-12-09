@@ -16,5 +16,5 @@ type Database interface {
 
 	CheckIfEmailExists(email string) (bool, error)
 
-	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level string, bonusVotes int) (string, error) 
+	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) 
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+
 type PostgresWrapper struct {
 	postgresClient *pgxpool.Pool
 }
@@ -33,10 +34,11 @@ func NewPostgresClient() *PostgresWrapper {
 		email 		 			varchar(100) not null,
 		pass_hash 	  			varchar(100) not null,
 		account_level 	  		varchar(20) not null,
+		voter_level				varchar(20) not null,
 		bonus_votes				int not null,
 		session_id 	  			int,
 		spotify_access_token 	varchar(200),
-		spotify_refresh_token 	varchar (150)
+		spotify_refresh_token 	varchar(150)
 	);
 
 	UPDATE public.user
@@ -189,12 +191,12 @@ func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 	return emailExists, nil
 }
 
-func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash, account_level string, bonusVotes int) (string, error) {
+func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) {
 	queryString := fmt.Sprintf(
-	`INSERT INTO public.user(first_name, last_name, email, pass_hash, account_level, bonus_votes)
-	VALUES ('%v', '%v', '%v', '%v', '%v', '%v')
+	`INSERT INTO public.user(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
+	VALUES ('%v', '%v', '%v', '%v', '%v', '%v', %v')
 	RETURNING user_id::VARCHAR;`,
-	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, bonusVotes)
+	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, voter_level, bonusVotes)
 
 	var userID string
 	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&userID)
