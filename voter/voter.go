@@ -68,6 +68,7 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 	return &voter
 }
 
+// TODO: Admin shouldn't double vote
 func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, error) {
 	if direction.String() == "UP" {
 		if action.String() == "ADD" {

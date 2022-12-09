@@ -122,16 +122,23 @@ func (s *Session) SendUpdate() {
 		s.ChannelMutex.Lock()
 		channels := s.Channels
 		s.ChannelMutex.Unlock()
+
+		var activeChannels []chan *model.SessionInfo
+
 		for _, ch := range channels {
 			select {
 			case ch <- s.SessionInfo: // This is the actual send.
 				// Our message went through, do nothing
+				activeChannels = append(activeChannels, ch)
 			default: // This is run when our send does not work.
 				fmt.Println("Channel closed in update.")
 				// You can handle any deregistration of the channel here.
-				// TODO: remove channel from channels list if send fails
 			}
 		}
+
+		s.ChannelMutex.Lock()
+		s.Channels = activeChannels
+		s.ChannelMutex.Unlock()
 	}()
 }
 
