@@ -98,14 +98,12 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	session.VotersMutex.Unlock()
 
 	if !voterExists {
-		return nil, fmt.Errorf("User not in active voters! User: %v", userID)
+		return nil, utils.LogErrorMessage(fmt.Sprintf("User not in active voters! User: %v", userID))
 	}
 
 	vote, err := existingVoter.ProcessVote(song.ID, &song.Vote, &song.Action)
 	if err != nil {
-		errorMsg := "Error processing Vote"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error processing vote", err)
 	}
 	existingVoter.Refresh()
 
@@ -160,37 +158,29 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	accountLevel := "free"
 	vaildEmail := utils.ValidateEmail(newUser.Email)
 	if !vaildEmail {
-		errorMsg := "Invalid email format"
-		slog.Warn(errorMsg)
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorMessage("Invalid email format")
 	}
 
 	emailExists, err := r.database.CheckIfEmailExists(newUser.Email)
 
 	if err != nil {
-		errorMsg := "Error searching for email in database"
-		slog.Warn(errorMsg, "error", err)
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorObject("Error searching for email in database", err)
 	}
+
 	if emailExists {
-		errorMsg := "User with this email already exists!"
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorMessage("User with this email already exists!")
 	}
 
 	passwordHash := utils.HashHelper(newUser.Password)
 
 	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, 0)
 	if err != nil {
-		errorMsg := "Error adding user to database"
-		slog.Warn(errorMsg, "error", err)
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorObject("Error adding user to database", err)
 	}
 
 	token, err := auth.GenerateJWT(userID)
 	if err != nil {
-		errorMsg := "Error creating user token"
-		slog.Warn(errorMsg, "error", err)
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorObject("Error creating user token", err)
 	}
 
 	slog.Info("Returning JWT:", "token", token)
@@ -201,22 +191,16 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (string, error) {
 	userID, password, err := r.database.GetUserLoginValues(userLogin.Email)
 	if err != nil {
-		errorMsg := "Error getting user login info from database"
-		slog.Warn(errorMsg, "error", err)
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorObject("Error getting user login info from database", err)
 	}
 
 	if utils.HashHelper(userLogin.Password) != password {
-		errorMsg := "Invalid Login Credentials!"
-		slog.Warn(errorMsg)
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorMessage("Invalid Login Credentials!")
 	}
 
 	token, err := auth.GenerateJWT(userID)
 	if err != nil {
-		errorMsg := "Error creating user token"
-		slog.Warn(errorMsg, "error", err)
-		return "", errors.New(errorMsg)
+		return "", utils.LogErrorObject("Error creating user token", err)
 	}
 
 	return token, nil
@@ -226,23 +210,19 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, fmt.Errorf("No userID found on token for adding Spotify token")
+		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
 	}
 
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
 	if err != nil {
-		errorMsg := "Error setting Spotify access token in database"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error setting Spotify access token in database", err)
 	}
 
 	err = r.database.SetSpotifyRefreshToken(userID, spotifyCreds.RefreshToken)
 
 	if err != nil {
-		errorMsg := "Error setting Spotify refresh token in database"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error setting Spotify refresh token in database", err)
 	}
 
 	return &model.User{ID: userID}, nil
@@ -262,9 +242,7 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.Playl
 func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error) {
 	session, exists := r.sessions[*sessionID]
 	if !exists {
-		errorMsg := "Session not found!"
-		slog.Warn(errorMsg)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorMessage("Session not found!")
 	}
 
 	return session.SessionInfo, nil
@@ -321,14 +299,12 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	// TODO: Validate tis input
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, fmt.Errorf("No userID found on token for getting user")
+		return nil, utils.LogErrorMessage("No userID found on token for getting user")
 	}
 
 	user, err := r.database.GetUserByID(userID)
 	if err != nil {
-		errorMsg := "Error getting user from database"
-		slog.Warn(errorMsg, "error", err)
-		return nil, errors.New(errorMsg)
+		return nil, utils.LogErrorObject("Error getting user from database", err)
 	}
 
 	return user, nil
@@ -353,7 +329,11 @@ func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
 	// slog.Info("Subscribing to session")
-	session := r.sessions[sessionID]
+	session, exists := r.sessions[sessionID]
+	if !exists {
+		return nil, utils.LogErrorMessage("Session not found!")
+	}
+	
 	channel := make(chan *model.SessionInfo)
 
 	session.ChannelMutex.Lock()
