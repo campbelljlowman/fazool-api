@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"golang.org/x/exp/slog"
 )
 
 type Session struct {
@@ -17,10 +17,15 @@ type Session struct {
 	Channels 			[]chan *model.SessionInfo
 	Voters 				map[string] *voter.Voter
 	MusicPlayer			musicplayer.MusicPlayer
+	ExpiresAt			time.Time
 	ChannelMutex 		*sync.Mutex
 	QueueMutex   		*sync.Mutex
 	VotersMutex 		*sync.Mutex
+	ExpiryMutex 		*sync.Mutex
 }
+
+// Session gets removed after being inactive for this long in minutes
+const sessionTimeout time.Duration = 30
 
 func NewSession() Session {
 	session := Session{
@@ -28,9 +33,11 @@ func NewSession() Session {
 		Channels: 			nil,
 		Voters: 			make(map[string]*voter.Voter),	
 		MusicPlayer: 		nil,
+		ExpiresAt: 			time.Now().Add(sessionTimeout * time.Minute),
 		ChannelMutex: 		&sync.Mutex{},
 		QueueMutex: 		&sync.Mutex{},		
 		VotersMutex: 		&sync.Mutex{},		
+		ExpiryMutex: 		&sync.Mutex{},
 	}
 
 	return session
@@ -43,6 +50,13 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	addNextSongFlag := false
 
 	for {
+		// TODO: Might have to make this a pointer
+		if s.ExpiresAt.Before(time.Now()) {
+			slog.Info("Session has expired, ending session", "session_id", s.SessionInfo.ID)
+			// TODO: call function to cleanup session values
+			return
+		}
+
 		sendUpdateFlag = false
 		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := s.MusicPlayer.CurrentSong()
 		if err != nil {
@@ -135,6 +149,10 @@ func (s *Session) SendUpdate() {
 
 		s.Channels = activeChannels
 		s.ChannelMutex.Unlock()
+
+		s.ExpiryMutex.Lock()
+		s.ExpiresAt = time.Now().Add(sessionTimeout * time.Minute)
+		s.ExpiryMutex.Unlock()
 	}()
 }
 
