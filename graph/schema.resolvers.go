@@ -13,15 +13,12 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/session"
-	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/google/uuid"
-	spotify "github.com/zmb3/spotify/v2"
-	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
-	"golang.org/x/oauth2"
 )
 
 // CreateSession is the resolver for the createSession field.
@@ -59,6 +56,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	}
 	session.SessionInfo = sessionInfo
 
+	// TODO: Maybe combine these two sets to a single db function and query
 	err = r.database.SetUserSession(userID, sessionID)
 
 	refreshToken, err := r.database.GetSpotifyRefreshToken(userID)
@@ -66,7 +64,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 		return nil, utils.LogErrorObject("Error getting Spotify refresh token", err)
 	}
 
-	spotifyToken, err := spotifyUtil.RefreshToken(refreshToken)
+	spotifyToken, err := musicplayer.RefreshSpotifyToken(refreshToken)
 	if err != nil {
 		return nil, utils.LogErrorObject("Error refreshing Spotify Token", err)
 	}
@@ -76,13 +74,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 		return nil, utils.LogErrorObject("Error setting new Spotify token", err)
 	}
 
-	// TODO: Use refresh token as well? https://pkg.go.dev/golang.org/x/oauth2#Token
-	token := &oauth2.Token{
-		AccessToken: spotifyToken,
-	}
-	httpClient := spotifyauth.New().Client(ctx, token)
-	client := spotify.New(httpClient)
-	session.SpotifyPlayer = client
+	client := musicplayer.NewSpotifyClient(spotifyToken)
+	session.MusicPlayer = client
 
 	go session.WatchSpotifyCurrentlyPlaying()
 
@@ -149,11 +142,20 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 
 	switch action {
 	case "PLAY":
-		session.SpotifyPlayer.Play(ctx)
+		err := session.MusicPlayer.Play()
+		if err != nil {
+			return nil, utils.LogErrorObject("Error playing song", err)
+		}
 	case "PAUSE":
-		session.SpotifyPlayer.Pause(ctx)
+		err := session.MusicPlayer.Pause()
+		if err != nil {
+			return nil, utils.LogErrorObject("Error pausing song", err)
+		}
 	case "ADVANCE":
-		session.AdvanceQueue(true)
+		err := session.AdvanceQueue(true)
+		if err != nil {
+			return nil, utils.LogErrorObject("Error advancing queue", err)
+		}
 		session.SendUpdate()
 	}
 
@@ -222,6 +224,7 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
 	}
 
+	// TODO: Probably combine these db sets to a single query
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
 	if err != nil {
