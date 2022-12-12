@@ -44,12 +44,16 @@ func (s *SpotifyWrapper) QueueSong(song string) error {
 	return s.client.QueueSong(context.Background(), spotify.ID(song))
 }
 
-// CurrentSong returns the current song that is playing.
-func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, error) {
+// CurrentSong returns the current song that is playing and a bool that indicates whether it's playing or not.
+func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error) {
 	status, err := s.client.PlayerCurrentlyPlaying(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+
+	if !status.Playing {
+		return nil, false, nil
+	} 
 
 	song := &model.CurrentlyPlayingSong{
 		ID: status.Item.ID.String(),
@@ -60,7 +64,8 @@ func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, error) {
 		Playing: status.Playing,
 	}
 
-	return song, nil
+
+	return song, true, nil
 }
 
 func (s *SpotifyWrapper) TimeRemaining() (int, error) {

@@ -14,6 +14,6 @@ type MusicPlayer interface {
   Next() error
   QueueSong(song string) error
   // CurrentSong returns the current song that is playing.
-  CurrentSong() (model.CurrentlyPlayingSong, error)
-  TimeRemaining() int
+  CurrentSong() (*model.CurrentlyPlayingSong, bool, error)
+  TimeRemaining() (int, error)
 }

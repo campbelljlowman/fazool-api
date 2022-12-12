@@ -1,29 +1,25 @@
 package session
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"golang.org/x/exp/slog"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/musicplayer"
+	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
-
-	"github.com/zmb3/spotify/v2"
 )
 
 type Session struct {
-	SessionInfo 	*model.SessionInfo
-	Channels 		[]chan *model.SessionInfo
-	Voters 			map[string] *voter.Voter
-	// TODO: Make this map of interfaces
-	// musicPlayers		map[int] *musicplayer.MusicPlayer
-	SpotifyPlayer 	*spotify.Client
-	ChannelMutex 	*sync.Mutex
-	QueueMutex   	*sync.Mutex
-	VotersMutex 	*sync.Mutex
+	SessionInfo 		*model.SessionInfo
+	Channels 			[]chan *model.SessionInfo
+	Voters 				map[string] *voter.Voter
+	MusicPlayer			musicplayer.MusicPlayer
+	ChannelMutex 		*sync.Mutex
+	QueueMutex   		*sync.Mutex
+	VotersMutex 		*sync.Mutex
 }
 
 func NewSession() Session {
@@ -31,7 +27,7 @@ func NewSession() Session {
 		SessionInfo: 		nil,
 		Channels: 			nil,
 		Voters: 			make(map[string]*voter.Voter),	
-		SpotifyPlayer: 		nil,
+		MusicPlayer: 		nil,
 		ChannelMutex: 		&sync.Mutex{},
 		QueueMutex: 		&sync.Mutex{},		
 		VotersMutex: 		&sync.Mutex{},		
@@ -48,33 +44,33 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 
 	for {
 		sendUpdateFlag = false
-		playerState, err := s.SpotifyPlayer.PlayerState(context.Background())
+		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := s.MusicPlayer.CurrentSong()
 		if err != nil {
-			slog.Warn("Error getting Spotify player state", "error", err)
+			utils.LogErrorObject("Error getting music player state", err)
 			continue
 		}
 
-		if playerState.CurrentlyPlaying.Playing == true {
-			if s.SessionInfo.CurrentlyPlaying.ID != playerState.CurrentlyPlaying.Item.ID.String() {
+		if spotifyCurrentlyPlaying == true {
+			if s.SessionInfo.CurrentlyPlaying.ID != spotifyCurrentlyPlayingSong.ID {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
-				s.SessionInfo.CurrentlyPlaying.ID = playerState.CurrentlyPlaying.Item.ID.String()
-				s.SessionInfo.CurrentlyPlaying.Title = playerState.CurrentlyPlaying.Item.Name
-				// TODO: Loop through all artists and combine
-				s.SessionInfo.CurrentlyPlaying.Artist = playerState.CurrentlyPlaying.Item.Artists[0].Name
-				s.SessionInfo.CurrentlyPlaying.Image = playerState.CurrentlyPlaying.Item.Album.Images[0].URL
-				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+				s.SessionInfo.CurrentlyPlaying = spotifyCurrentlyPlayingSong
 				sendUpdateFlag = true
 				addNextSongFlag = true
-			} else if s.SessionInfo.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
+			} else if s.SessionInfo.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
 				// If same song is paused and then played, set the new state
-				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+				s.SessionInfo.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
 				sendUpdateFlag = true
 			}
 
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
 			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's
 			// Safe to add song
-			timeLeft := playerState.CurrentlyPlaying.Item.SimpleTrack.Duration - playerState.CurrentlyPlaying.Progress
+			timeLeft, err := s.MusicPlayer.TimeRemaining()
+			if err != nil {
+				utils.LogErrorObject("Error getting song time remaining", err)
+				continue
+			}
+
 			if timeLeft < 5000 && addNextSongFlag {
 				s.AdvanceQueue(false)
 
@@ -83,8 +79,8 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 			}
 		} else {
 			// Change currently playing to false if music gets paused
-			if s.SessionInfo.CurrentlyPlaying.Playing != playerState.CurrentlyPlaying.Playing {
-				s.SessionInfo.CurrentlyPlaying.Playing = playerState.CurrentlyPlaying.Playing
+			if s.SessionInfo.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
+				s.SessionInfo.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
 				sendUpdateFlag = true
 			}
 		}
@@ -97,7 +93,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	}
 }
 
-func (s *Session) AdvanceQueue(force bool) {
+func (s *Session) AdvanceQueue(force bool) error {
 	var song *model.Song
 
 	s.QueueMutex.Lock()
@@ -105,7 +101,7 @@ func (s *Session) AdvanceQueue(force bool) {
 		song, s.SessionInfo.Queue = s.SessionInfo.Queue[0], s.SessionInfo.Queue[1:]
 		s.QueueMutex.Unlock()
 
-		s.SpotifyPlayer.QueueSong(context.Background(), spotify.ID(song.ID))
+		s.MusicPlayer.QueueSong(song.ID)
 
 	} else {
 		// This else block is so we can unlock right after we update the queue in the true condition
@@ -113,8 +109,10 @@ func (s *Session) AdvanceQueue(force bool) {
 	}
 
 	if force {
-		s.SpotifyPlayer.Next(context.Background())
+		s.MusicPlayer.Next()
 	}
+
+	return nil
 }
 
 func (s *Session) SendUpdate() {

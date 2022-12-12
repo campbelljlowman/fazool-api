@@ -75,7 +75,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	}
 
 	client := musicplayer.NewSpotifyClient(spotifyToken)
-	session.SpotifyPlayer = client
+	session.MusicPlayer = client
 
 	go session.WatchSpotifyCurrentlyPlaying()
 
@@ -142,11 +142,20 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 
 	switch action {
 	case "PLAY":
-		session.SpotifyPlayer.Play(ctx)
+		err := session.MusicPlayer.Play()
+		if err != nil {
+			return nil, utils.LogErrorObject("Error playing song", err)
+		}
 	case "PAUSE":
-		session.SpotifyPlayer.Pause(ctx)
+		err := session.MusicPlayer.Pause()
+		if err != nil {
+			return nil, utils.LogErrorObject("Error pausing song", err)
+		}
 	case "ADVANCE":
-		session.AdvanceQueue(true)
+		err := session.AdvanceQueue(true)
+		if err != nil {
+			return nil, utils.LogErrorObject("Error advancing queue", err)
+		}
 		session.SendUpdate()
 	}
 
