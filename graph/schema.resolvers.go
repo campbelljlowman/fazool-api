@@ -56,6 +56,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	}
 	session.SessionInfo = sessionInfo
 
+	// TODO: Maybe combine these two sets to a single db function and query
 	err = r.database.SetUserSession(userID, sessionID)
 
 	refreshToken, err := r.database.GetSpotifyRefreshToken(userID)
@@ -223,6 +224,7 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
 	}
 
+	// TODO: Probably combine these db sets to a single query
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
 	if err != nil {
