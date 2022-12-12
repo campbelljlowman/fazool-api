@@ -15,7 +15,7 @@ type Request struct {
 	AccessToken string `json:"access_token"`
 }
 
-func RefreshToken(refreshToken string) (string, error) {
+func RefreshSpotifyToken(refreshToken string) (string, error) {
 	// Hit spotify endpoint to refresh token
 	spotifyClientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	spotifyClientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")

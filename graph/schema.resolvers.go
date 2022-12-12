@@ -16,12 +16,10 @@ import (
 	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/google/uuid"
-	spotify "github.com/zmb3/spotify/v2"
-	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
-	"golang.org/x/oauth2"
 )
 
 // CreateSession is the resolver for the createSession field.
@@ -66,7 +64,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 		return nil, utils.LogErrorObject("Error getting Spotify refresh token", err)
 	}
 
-	spotifyToken, err := spotifyUtil.RefreshToken(refreshToken)
+	spotifyToken, err := spotifyUtil.RefreshSpotifyToken(refreshToken)
 	if err != nil {
 		return nil, utils.LogErrorObject("Error refreshing Spotify Token", err)
 	}
@@ -76,12 +74,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 		return nil, utils.LogErrorObject("Error setting new Spotify token", err)
 	}
 
-	// TODO: Use refresh token as well? https://pkg.go.dev/golang.org/x/oauth2#Token
-	token := &oauth2.Token{
-		AccessToken: spotifyToken,
-	}
-	httpClient := spotifyauth.New().Client(ctx, token)
-	client := spotify.New(httpClient)
+	client := musicplayer.NewSpotifyClient(spotifyToken)
 	session.SpotifyPlayer = client
 
 	go session.WatchSpotifyCurrentlyPlaying()
