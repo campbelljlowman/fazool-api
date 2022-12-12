@@ -12,10 +12,10 @@ import (
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
-	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
@@ -85,6 +85,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	}
 
 	return user, nil
+}
+
+// EndSession is the resolver for the endSession field.
+func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
+	panic(fmt.Errorf("not implemented: EndSession - endSession"))
 }
 
 // UpdateQueue is the resolver for the updateQueue field.

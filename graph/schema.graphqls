@@ -104,6 +104,7 @@ type Query {
 type Mutation {
   # Sessions
   createSession: User!
+  endSession(sessionID: Int!): String!
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
