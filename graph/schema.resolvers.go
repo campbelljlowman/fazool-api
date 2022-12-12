@@ -13,7 +13,6 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/session"
-	"github.com/campbelljlowman/fazool-api/spotifyUtil"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
@@ -64,7 +63,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 		return nil, utils.LogErrorObject("Error getting Spotify refresh token", err)
 	}
 
-	spotifyToken, err := spotifyUtil.RefreshSpotifyToken(refreshToken)
+	spotifyToken, err := musicplayer.RefreshSpotifyToken(refreshToken)
 	if err != nil {
 		return nil, utils.LogErrorObject("Error refreshing Spotify Token", err)
 	}
