@@ -1,15 +1,16 @@
 package musicplayer
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
-	"context"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/zmb3/spotify/v2"
@@ -62,6 +63,10 @@ func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error
 	if !status.Playing {
 		return nil, false, nil
 	} 
+
+	if status.Item == nil {
+		return nil, false, errors.New("Currently playing is set to true but no track is found!")
+	}
 
 	song := &model.CurrentlyPlayingSong{
 		ID: status.Item.ID.String(),

@@ -12,10 +12,10 @@ import (
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
-	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
@@ -44,7 +44,10 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	}
 
 	session := session.NewSession()
+
+	r.sessionsMutex.Lock()
 	r.sessions[sessionID] = &session
+	r.sessionsMutex.Unlock()
 
 	// Create session info
 	sessionInfo := &model.SessionInfo{
@@ -87,11 +90,41 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	return user, nil
 }
 
+// EndSession is the resolver for the endSession field.
+func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
+	userID := ctx.Value("user").(string)
+
+	r.sessionsMutex.Lock()
+	session, exists := r.sessions[sessionID]
+	r.sessionsMutex.Unlock()
+
+	if !exists {
+		return "", utils.LogErrorMessage("Session not found!")
+	}
+
+	if userID != session.SessionInfo.Admin {
+		return "", utils.LogErrorMessage(fmt.Sprintf("User %v is not the admin for this session!", userID))
+	}
+
+	err := r.endSession(session, userID)
+	if err != nil {
+		return "", utils.LogErrorObject("Error removing session for the user", err)
+	}
+
+	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
+}
+
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	// TODO: Check for voter auth on context and make sure sessionIDs match
 	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
-	session := r.sessions[sessionID]
+	r.sessionsMutex.Lock()
+	session, exists := r.sessions[sessionID]
+	r.sessionsMutex.Unlock()
+
+	if !exists {
+		return nil, utils.LogErrorMessage("Session not found!")
+	}
 
 	userID := ctx.Value("user").(string)
 	session.VotersMutex.Lock()
@@ -138,7 +171,13 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
-	session := r.sessions[sessionID]
+	r.sessionsMutex.Lock()
+	session, exists := r.sessions[sessionID]
+	r.sessionsMutex.Unlock()
+
+	if !exists {
+		return nil, utils.LogErrorMessage("Session not found!")
+	}
 
 	switch action {
 	case "PLAY":
@@ -247,7 +286,10 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.Playl
 
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error) {
+	r.sessionsMutex.Lock()
 	session, exists := r.sessions[*sessionID]
+	r.sessionsMutex.Unlock()
+
 	if !exists {
 		return nil, utils.LogErrorMessage("Session not found!")
 	}
@@ -264,7 +306,13 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
 	}
 
-	session := r.sessions[sessionID]
+	r.sessionsMutex.Lock()
+	session, exists := r.sessions[sessionID]
+	r.sessionsMutex.Unlock()
+
+	if !exists {
+		return nil, utils.LogErrorMessage("Session not found!")
+	}
 
 	session.VotersMutex.Lock()
 	existingVoter, exists := session.Voters[userID]
@@ -340,7 +388,10 @@ func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
 	// slog.Info("Subscribing to session")
+	r.sessionsMutex.Lock()
 	session, exists := r.sessions[sessionID]
+	r.sessionsMutex.Unlock()
+
 	if !exists {
 		return nil, utils.LogErrorMessage("Session not found!")
 	}

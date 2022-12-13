@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"golang.org/x/exp/slog"
 )
 
 type Session struct {
@@ -17,10 +17,16 @@ type Session struct {
 	Channels 			[]chan *model.SessionInfo
 	Voters 				map[string] *voter.Voter
 	MusicPlayer			musicplayer.MusicPlayer
+	ExpiresAt			time.Time
 	ChannelMutex 		*sync.Mutex
 	QueueMutex   		*sync.Mutex
 	VotersMutex 		*sync.Mutex
+	ExpiryMutex 		*sync.Mutex
 }
+
+// Session gets removed after being inactive for this long in minutes
+const sessionTimeout time.Duration = 1
+const sessionWatchFrequency time.Duration = 250
 
 func NewSession() Session {
 	session := Session{
@@ -28,9 +34,11 @@ func NewSession() Session {
 		Channels: 			nil,
 		Voters: 			make(map[string]*voter.Voter),	
 		MusicPlayer: 		nil,
+		ExpiresAt: 			time.Now().Add(sessionTimeout * time.Minute),
 		ChannelMutex: 		&sync.Mutex{},
 		QueueMutex: 		&sync.Mutex{},		
 		VotersMutex: 		&sync.Mutex{},		
+		ExpiryMutex: 		&sync.Mutex{},
 	}
 
 	return session
@@ -43,6 +51,12 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	addNextSongFlag := false
 
 	for {
+		// TODO: Might have to make this a pointer
+		if s.ExpiresAt.Before(time.Now()) {
+			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
+			return
+		}
+
 		sendUpdateFlag = false
 		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := s.MusicPlayer.CurrentSong()
 		if err != nil {
@@ -89,7 +103,8 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 			s.SendUpdate()
 		}
 
-		time.Sleep(250 * time.Millisecond)
+		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
+		time.Sleep(sessionWatchFrequency * time.Millisecond)
 	}
 }
 
@@ -97,19 +112,24 @@ func (s *Session) AdvanceQueue(force bool) error {
 	var song *model.Song
 
 	s.QueueMutex.Lock()
-	if len(s.SessionInfo.Queue) != 0 {
-		song, s.SessionInfo.Queue = s.SessionInfo.Queue[0], s.SessionInfo.Queue[1:]
+	if len(s.SessionInfo.Queue) == 0 {
 		s.QueueMutex.Unlock()
+		return nil
+	}
 
-		s.MusicPlayer.QueueSong(song.ID)
+	song, s.SessionInfo.Queue = s.SessionInfo.Queue[0], s.SessionInfo.Queue[1:]
+	s.QueueMutex.Unlock()
 
-	} else {
-		// This else block is so we can unlock right after we update the queue in the true condition
-		s.QueueMutex.Unlock()
+	err := s.MusicPlayer.QueueSong(song.ID)
+	if err != nil {
+		return err
 	}
 
 	if force {
-		s.MusicPlayer.Next()
+		err := s.MusicPlayer.Next()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -135,6 +155,10 @@ func (s *Session) SendUpdate() {
 
 		s.Channels = activeChannels
 		s.ChannelMutex.Unlock()
+
+		s.ExpiryMutex.Lock()
+		s.ExpiresAt = time.Now().Add(sessionTimeout * time.Minute)
+		s.ExpiryMutex.Unlock()
 	}()
 }
 
