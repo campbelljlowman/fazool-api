@@ -27,7 +27,7 @@ type Session struct {
 // Session gets removed after being inactive for this long in minutes
 const sessionTimeout time.Duration = 30
 // Spotify gets watched by default at this frequency in milliseconds
-const sessionWatchFrequency time.Duration = 250
+const spotifyWatchFrequency time.Duration = 250
 
 func NewSession() Session {
 	session := Session{
@@ -46,13 +46,11 @@ func NewSession() Session {
 }
 
 func (s *Session) WatchSpotifyCurrentlyPlaying() {
-	// TODO: Add logic to adjust the refresh frequency based on where in the song it is
 	s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	sendUpdateFlag := false
 	addNextSongFlag := false
 
 	for {
-		// TODO: Might have to make this a pointer
 		if s.ExpiresAt.Before(time.Now()) {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
 			return
@@ -105,7 +103,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 		}
 
 		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
-		time.Sleep(sessionWatchFrequency * time.Millisecond)
+		time.Sleep(spotifyWatchFrequency * time.Millisecond)
 	}
 }
 

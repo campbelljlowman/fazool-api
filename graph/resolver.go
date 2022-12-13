@@ -16,6 +16,9 @@ import (
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
 
+// Sessions get watched at this frequency in seconds
+const sessionWatchFrequency time.Duration = 10
+
 type Resolver struct {
 	sessions 		map[int]*session.Session
 	sessionsMutex 	*sync.Mutex
@@ -43,7 +46,7 @@ func (r *Resolver) WatchSessions() {
 			}
 		}
 		r.sessionsMutex.Unlock()
-		time.Sleep(10 * time.Second)
+		time.Sleep(sessionWatchFrequency * time.Second)
 	}
 }
 

@@ -19,8 +19,8 @@ type Voter struct {
 }
 
 var empty struct{}
-// TODO: Making this long for testing, should be 5
-const regularVoterDuration time.Duration = 15
+const regularVoterDuration time.Duration = 5
+const priviledgedVoterDuration time.Duration = 5
 var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
 
 
@@ -32,7 +32,7 @@ func NewVoter(id, voterType string, bonusVotes int) (*Voter, error) {
 	v := Voter{
 		Id: id,
 		VoterType: voterType,
-		Expires: time.Now().Add(regularVoterDuration * time.Minute),
+		Expires: time.Now().Add(getVoterDuration(voterType) * time.Minute),
 		SongsUpVoted: make(map[string]struct{}),
 		SongsDownVoted: make(map[string]struct{}),
 		BonusVotes: bonusVotes,
@@ -83,11 +83,11 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 			}
 
 			v.SongsUpVoted[song] = empty
-			return voteMultiplier * v.getVoteValue(), nil
+			return voteMultiplier * getVoteValue(v.VoterType), nil
 
 		} else if action.String() == "REMOVE" {
 			delete(v.SongsUpVoted, song)
-			return -v.getVoteValue(), nil
+			return -getVoteValue(v.VoterType), nil
 		}
 	} else if direction.String() == "DOWN"{
 		if action.String() == "ADD" {
@@ -105,11 +105,11 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 			}
 
 			v.SongsDownVoted[song] = empty
-			return -voteMultiplier * v.getVoteValue(), nil
+			return -voteMultiplier * getVoteValue(v.VoterType), nil
 
 		} else if action.String() == "REMOVE" {
 			delete(v.SongsDownVoted, song)
-			return v.getVoteValue(), nil
+			return getVoteValue(v.VoterType), nil
 		}
 	}
 
@@ -117,14 +117,21 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 }
 
 func (v *Voter) Refresh() {
-	v.Expires = time.Now().Add(5 * time.Minute)
+	v.Expires = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
 }
 
-func (v *Voter) getVoteValue () int {
-	if v.VoterType == constants.PrivilegedVoterType {
+func getVoteValue (voterType string) int {
+	if voterType == constants.PrivilegedVoterType {
 		return 2
 	}
 	return 1
+}
+
+func getVoterDuration (voterType string) time.Duration {
+	if voterType == constants.PrivilegedVoterType {
+		return priviledgedVoterDuration
+	}
+	return regularVoterDuration
 }
 
 func contains(elems []string, v string) bool {

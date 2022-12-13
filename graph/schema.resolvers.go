@@ -116,7 +116,6 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
-	// TODO: Check for voter auth on context and make sure sessionIDs match
 	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
 	r.sessionsMutex.Lock()
 	session, exists := r.sessions[sessionID]
@@ -328,7 +327,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 
 	voterType := constants.RegularVoterType
 	bonusVotes := 0
-	// If userID parses as a UUID, it's a guest voter
+	// If userID parses as a UUID, it's a guest voter, so no need to check it in the database
 	_, err := uuid.Parse(userID)
 	if err != nil {
 		voterLevel, bonusVotesValue, err := r.database.GetVoterValues(userID)
@@ -345,7 +344,6 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		}
 	}
 
-	// TODO: Check db for bonus votes
 	newVoter, err := voter.NewVoter(userID, voterType, bonusVotes)
 	if err != nil {
 		return nil, utils.LogErrorMessage("Error generating new voter")
@@ -360,7 +358,6 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
-	// TODO: Validate tis input
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
 		return nil, utils.LogErrorMessage("No userID found on token for getting user")
