@@ -25,7 +25,8 @@ type Session struct {
 }
 
 // Session gets removed after being inactive for this long in minutes
-const sessionTimeout time.Duration = 30
+const sessionTimeout time.Duration = 1
+const sessionWatchFrequency time.Duration = 250
 
 func NewSession() Session {
 	session := Session{
@@ -52,8 +53,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	for {
 		// TODO: Might have to make this a pointer
 		if s.ExpiresAt.Before(time.Now()) {
-			slog.Info("Session has expired, ending session", "session_id", s.SessionInfo.ID)
-			// TODO: call function to cleanup session values
+			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
 
@@ -103,7 +103,8 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 			s.SendUpdate()
 		}
 
-		time.Sleep(250 * time.Millisecond)
+		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
+		time.Sleep(sessionWatchFrequency * time.Millisecond)
 	}
 }
 
@@ -111,19 +112,24 @@ func (s *Session) AdvanceQueue(force bool) error {
 	var song *model.Song
 
 	s.QueueMutex.Lock()
-	if len(s.SessionInfo.Queue) != 0 {
-		song, s.SessionInfo.Queue = s.SessionInfo.Queue[0], s.SessionInfo.Queue[1:]
+	if len(s.SessionInfo.Queue) == 0 {
 		s.QueueMutex.Unlock()
+		return nil
+	}
 
-		s.MusicPlayer.QueueSong(song.ID)
+	song, s.SessionInfo.Queue = s.SessionInfo.Queue[0], s.SessionInfo.Queue[1:]
+	s.QueueMutex.Unlock()
 
-	} else {
-		// This else block is so we can unlock right after we update the queue in the true condition
-		s.QueueMutex.Unlock()
+	err := s.MusicPlayer.QueueSong(song.ID)
+	if err != nil {
+		return err
 	}
 
 	if force {
-		s.MusicPlayer.Next()
+		err := s.MusicPlayer.Next()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

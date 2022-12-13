@@ -33,7 +33,9 @@ func InitializeRoutes() *gin.Engine {
 	pgClient := database.NewPostgresClient()
 	redisClient := cache.GetRedisClient()
 	r := graph.NewResolver(pgClient, redisClient)
+	go r.WatchSessions()
 	srv := graph.NewGraphQLServer(r)
+
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
 	})
