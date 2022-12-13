@@ -39,7 +39,6 @@ func (r *Resolver) WatchSessions() {
 
 		for _, s := range r.sessions{
 			if s.ExpiresAt.Before(time.Now()) {
-				slog.Info("Session has expired, ending session", "session_id", s.SessionInfo.ID)
 				r.endSession(s, s.SessionInfo.Admin)
 			}
 		}

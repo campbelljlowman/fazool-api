@@ -25,7 +25,8 @@ type Session struct {
 }
 
 // Session gets removed after being inactive for this long in minutes
-const sessionTimeout time.Duration = 1
+const sessionTimeout time.Duration = 30
+// Spotify gets watched by default at this frequency in milliseconds
 const sessionWatchFrequency time.Duration = 250
 
 func NewSession() Session {
