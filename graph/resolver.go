@@ -61,6 +61,7 @@ func (r *Resolver) endSession(session *session.Session, userID string) error {
 	for _, ch := range session.Channels {
 		close(ch)
 	}
+	session.ChannelMutex.Unlock()
 
 	delete(r.sessions, session.SessionInfo.ID)
 

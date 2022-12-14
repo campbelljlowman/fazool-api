@@ -4,12 +4,12 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"math/big"
 	"net/mail"
-	"errors"
+	"sync"
 
 	"golang.org/x/exp/slog"
-
 )
 
 func HashHelper(s string) string {
@@ -43,4 +43,11 @@ func LogErrorMessage(msg string) error {
 func LogErrorObject(msg string, err error) error {
 	slog.Warn(msg, "error", err)
 	return errors.New(msg)
+}
+
+func GetFromMutexedMap[T any, V comparable](m map[V]*T, key V, mutex *sync.Mutex) (*T, bool){
+	mutex.Lock()
+	value, exists := m[key]
+	mutex.Unlock()
+	return value, exists
 }
