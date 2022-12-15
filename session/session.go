@@ -173,7 +173,6 @@ func (s *Session) WatchVoters() {
 			if voter.VoterType == constants.AdminVoterType {
 				continue
 			}
-			slog.Info("Checking expiry for voter", "voter", voter.Id)
 
 			if voter.Expires.Before(time.Now()){
 				slog.Info("Voter exipred! Removing", "voter", voter.Id)

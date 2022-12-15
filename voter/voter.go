@@ -19,8 +19,8 @@ type Voter struct {
 }
 
 var empty struct{}
-const regularVoterDuration time.Duration = 1
-const priviledgedVoterDuration time.Duration = 1
+const regularVoterDuration time.Duration = 15
+const priviledgedVoterDuration time.Duration = 15
 var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
 
 
