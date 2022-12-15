@@ -81,6 +81,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	session.MusicPlayer = client
 
 	go session.WatchSpotifyCurrentlyPlaying()
+	go session.WatchVoters()
 
 	user := &model.User{
 		ID:        userID,
@@ -306,6 +307,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	existingVoter, exists := utils.GetFromMutexedMap(session.Voters, userID, session.VotersMutex)
 
 	if exists {
+		slog.Info("return existing voter", "voter", existingVoter.Id)
 		return existingVoter.GetVoterInfo(), nil
 	}
 
@@ -332,6 +334,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		}
 	}
 
+	slog.Info("Generating new voter", "voter", userID)
 	newVoter, err := voter.NewVoter(userID, voterType, bonusVotes)
 	if err != nil {
 		return nil, utils.LogErrorMessage("Error generating new voter")

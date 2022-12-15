@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/utils"
@@ -28,6 +29,8 @@ type Session struct {
 const sessionTimeout time.Duration = 30
 // Spotify gets watched by default at this frequency in milliseconds
 const spotifyWatchFrequency time.Duration = 250
+// Voters get watched at this frequency in seconds
+const voterWatchFrequency time.Duration = 1
 
 func NewSession() Session {
 	session := Session{
@@ -162,3 +165,24 @@ func (s *Session) SendUpdate() {
 }
 
 // TODO: Write function that watches voters and removes any inactive ones
+func (s *Session) WatchVoters() {
+
+	for {
+		s.VotersMutex.Lock()
+		for _, voter := range(s.Voters){
+			if voter.VoterType == constants.AdminVoterType {
+				continue
+			}
+			slog.Info("Checking expiry for voter", "voter", voter.Id)
+
+			if voter.Expires.Before(time.Now()){
+				slog.Info("Voter exipred! Removing", "voter", voter.Id)
+				delete(s.Voters, voter.Id)
+			}
+
+		}
+		s.VotersMutex.Unlock()
+
+		time.Sleep(voterWatchFrequency * time.Second)
+	}
+}
