@@ -66,13 +66,19 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 	return &voter
 }
 
-func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, error) {
+func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
 	if direction.String() == "UP" {
 		if action.String() == "ADD" {
 			voteMultiplier := 1
 			if v.VoterType != constants.AdminVoterType {
 				if _, exists := v.SongsUpVoted[song]; exists {
-					return 0, errors.New("You've already voted for this song!")
+					if v.BonusVotes <= 0 {
+						return 0, false, errors.New("You've already voted for this song!")
+					} else {
+						// Handle bonus votes
+						v.BonusVotes -= 1
+						return 1, true, nil
+					}
 				}
 	
 				if _, exists := v.SongsDownVoted[song]; exists {
@@ -83,18 +89,18 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 			}
 
 			v.SongsUpVoted[song] = empty
-			return voteMultiplier * getVoteValue(v.VoterType), nil
+			return voteMultiplier * getVoteValue(v.VoterType), false, nil
 
 		} else if action.String() == "REMOVE" {
 			delete(v.SongsUpVoted, song)
-			return -getVoteValue(v.VoterType), nil
+			return -getVoteValue(v.VoterType), false, nil
 		}
 	} else if direction.String() == "DOWN"{
 		if action.String() == "ADD" {
 			voteMultiplier := 1
 			if v.VoterType != constants.AdminVoterType {
 				if _, exists := v.SongsDownVoted[song]; exists {
-					return 0, errors.New("You've already voted for this song!")
+					return 0, false, errors.New("You've already voted for this song!")
 				}
 	
 				if _, exists := v.SongsUpVoted[song]; exists {
@@ -105,15 +111,15 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 			}
 
 			v.SongsDownVoted[song] = empty
-			return -voteMultiplier * getVoteValue(v.VoterType), nil
+			return -voteMultiplier * getVoteValue(v.VoterType), false, nil
 
 		} else if action.String() == "REMOVE" {
 			delete(v.SongsDownVoted, song)
-			return getVoteValue(v.VoterType), nil
+			return getVoteValue(v.VoterType), false, nil
 		}
 	}
 
-	return 0, fmt.Errorf("Song vote inputs aren't valid!")
+	return 0, false, fmt.Errorf("Song vote inputs aren't valid!")
 }
 
 func (v *Voter) Refresh() {

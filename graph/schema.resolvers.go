@@ -96,7 +96,6 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 	userID := ctx.Value("user").(string)
 
 	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
-
 	if !exists {
 		return "", utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
 	}
@@ -117,7 +116,6 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
 	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
-
 	if !exists {
 		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
 	}
@@ -125,16 +123,19 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	userID := ctx.Value("user").(string)
 
 	existingVoter, voterExists := utils.GetFromMutexedMap(session.Voters, userID, session.VotersMutex)
-
-
 	if !voterExists {
 		return nil, utils.LogErrorMessage(fmt.Sprintf("User not in active voters! User: %v", userID))
 	}
 
-	vote, err := existingVoter.ProcessVote(song.ID, &song.Vote, &song.Action)
+	vote, isBonusVote, err := existingVoter.ProcessVote(song.ID, &song.Vote, &song.Action)
 	if err != nil {
 		return nil, utils.LogErrorObject("Error processing vote", err)
 	}
+	if isBonusVote {
+		session.BonusVoteMutex.Lock()
+		session.BonusVotes[song.ID][existingVoter.Id] += vote
+	}
+
 	existingVoter.Refresh()
 
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Artist)

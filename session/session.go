@@ -19,10 +19,12 @@ type Session struct {
 	Voters 				map[string] *voter.Voter
 	MusicPlayer			musicplayer.MusicPlayer
 	ExpiresAt			time.Time
+	BonusVotes 			map[string]map[string]int
 	ChannelMutex 		*sync.Mutex
 	QueueMutex   		*sync.Mutex
 	VotersMutex 		*sync.Mutex
 	ExpiryMutex 		*sync.Mutex
+	BonusVoteMutex 		*sync.Mutex
 }
 
 // Session gets removed after being inactive for this long in minutes
@@ -39,10 +41,12 @@ func NewSession() Session {
 		Voters: 			make(map[string]*voter.Voter),	
 		MusicPlayer: 		nil,
 		ExpiresAt: 			time.Now().Add(sessionTimeout * time.Minute),
+		BonusVotes: 		make(map[string]map[string]int),
 		ChannelMutex: 		&sync.Mutex{},
 		QueueMutex: 		&sync.Mutex{},		
 		VotersMutex: 		&sync.Mutex{},		
 		ExpiryMutex: 		&sync.Mutex{},
+		BonusVoteMutex: 	&sync.Mutex{},
 	}
 
 	return session
@@ -168,6 +172,11 @@ func (s *Session) SendUpdate() {
 func (s *Session) WatchVoters() {
 
 	for {
+		if s.ExpiresAt.Before(time.Now()) {
+			slog.Info("Session has expired, ending session voter watcher", "session_id", s.SessionInfo.ID)
+			return
+		}
+
 		s.VotersMutex.Lock()
 		for _, voter := range(s.Voters){
 			if voter.VoterType == constants.AdminVoterType {
