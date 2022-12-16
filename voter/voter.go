@@ -110,6 +110,7 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 				}
 			}
 
+			// TODO: Down vote should always be 1, no bonus vote for down direction
 			v.SongsDownVoted[song] = empty
 			return -voteMultiplier * getVoteValue(v.VoterType), false, nil
 
