@@ -110,7 +110,7 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
-  setPlaylist(sessionID: Int!, playlist: String!): Playlist
+  setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
 }
 
 type Subscription {

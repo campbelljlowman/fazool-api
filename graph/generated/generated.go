@@ -123,7 +123,7 @@ type MutationResolver interface {
 	CreateUser(ctx context.Context, newUser model.NewUser) (string, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (string, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
-	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.Playlist, error)
+	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error)
 }
 type QueryResolver interface {
 	Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error)
@@ -694,7 +694,7 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
-  setPlaylist(sessionID: Int!, playlist: String!): Playlist
+  setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
 }
 
 type Subscription {
@@ -1615,11 +1615,14 @@ func (ec *executionContext) _Mutation_setPlaylist(ctx context.Context, field gra
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Playlist)
+	res := resTmp.(*model.SessionInfo)
 	fc.Result = res
-	return ec.marshalOPlaylist2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐPlaylist(ctx, field.Selections, res)
+	return ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1631,13 +1634,17 @@ func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Contex
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Playlist_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Playlist_name(ctx, field)
-			case "image":
-				return ec.fieldContext_Playlist_image(ctx, field)
+				return ec.fieldContext_SessionInfo_id(ctx, field)
+			case "currentlyPlaying":
+				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
+			case "queue":
+				return ec.fieldContext_SessionInfo_queue(ctx, field)
+			case "admin":
+				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "size":
+				return ec.fieldContext_SessionInfo_size(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Playlist", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
 	}
 	defer func() {
@@ -5235,6 +5242,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 				return ec._Mutation_setPlaylist(ctx, field)
 			})
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6471,13 +6481,6 @@ func (ec *executionContext) marshalOPlaylist2ᚕᚖgithubᚗcomᚋcampbelljlowma
 	}
 
 	return ret
-}
-
-func (ec *executionContext) marshalOPlaylist2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐPlaylist(ctx context.Context, sel ast.SelectionSet, v *model.Playlist) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Playlist(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v *model.SessionInfo) graphql.Marshaler {

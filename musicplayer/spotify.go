@@ -133,6 +133,28 @@ func (s *SpotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
 	return playlists, nil
 }
 
+func (s *SpotifyWrapper) GetSongsInPlaylist(playlist string) ([]*model.Song, error) {
+	playlistItems, err := s.client.GetPlaylist(context.Background(), spotify.ID(playlist))
+	if err != nil {
+		return nil, err
+	}
+
+	var songs []*model.Song
+
+	for _, song := range(playlistItems.Tracks.Tracks) {
+		s := &model.Song{
+			ID: song.Track.ID.String(),
+			Title: song.Track.Name,
+			Artist: song.Track.Artists[0].Name,
+			Image: song.Track.Album.Images[0].URL,
+			Votes: 0,
+		}
+		songs = append(songs, s)
+	}
+
+	return songs, nil
+}
+
 
 type Request struct {
 	AccessToken string `json:"access_token"`
