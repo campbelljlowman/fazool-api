@@ -72,7 +72,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Playlists  func(childComplexity int) int
+		Playlists  func(childComplexity int, sessionID int) int
 		Session    func(childComplexity int, sessionID *int) int
 		User       func(childComplexity int) int
 		Voter      func(childComplexity int, sessionID int) int
@@ -129,7 +129,7 @@ type QueryResolver interface {
 	Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error)
 	Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error)
 	User(ctx context.Context) (*model.User, error)
-	Playlists(ctx context.Context) ([]*model.Playlist, error)
+	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
 	VoterToken(ctx context.Context) (string, error)
 }
 type SubscriptionResolver interface {
@@ -303,7 +303,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Playlists(childComplexity), true
+		args, err := ec.field_Query_playlists_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Playlists(childComplexity, args["sessionID"].(int)), true
 
 	case "Query.session":
 		if e.complexity.Query.Session == nil {
@@ -672,7 +677,7 @@ type Query {
   session(sessionID: Int): SessionInfo
   voter(sessionID: Int!): VoterInfo!
   user: User!
-  playlists: [Playlist!]
+  playlists(sessionID: Int!): [Playlist!]
   voterToken: String!
 }
 
@@ -846,6 +851,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_playlists_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg0
 	return args, nil
 }
 
@@ -1965,7 +1985,7 @@ func (ec *executionContext) _Query_playlists(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Playlists(rctx)
+		return ec.resolvers.Query().Playlists(rctx, fc.Args["sessionID"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1996,6 +2016,17 @@ func (ec *executionContext) fieldContext_Query_playlists(ctx context.Context, fi
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Playlist", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_playlists_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }

@@ -365,8 +365,18 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 }
 
 // Playlists is the resolver for the playlists field.
-func (r *queryResolver) Playlists(ctx context.Context) ([]*model.Playlist, error) {
-	panic(fmt.Errorf("not implemented: Playlists - playlists"))
+func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error) {
+	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	if !exists {
+		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+	}
+
+	playlists, err := session.MusicPlayer.GetPlaylists()
+	if err != nil {
+		return nil, utils.LogErrorObject("Error getting playlists for the session!", err)
+	}
+
+	return playlists, nil
 }
 
 // VoterToken is the resolver for the voterToken field.

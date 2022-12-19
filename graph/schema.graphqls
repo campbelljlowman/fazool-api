@@ -93,7 +93,7 @@ type Query {
   session(sessionID: Int): SessionInfo
   voter(sessionID: Int!): VoterInfo!
   user: User!
-  playlists: [Playlist!]
+  playlists(sessionID: Int!): [Playlist!]
   voterToken: String!
 }
 
