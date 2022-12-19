@@ -69,7 +69,7 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
 	if direction.String() == "UP" {
 		if action.String() == "ADD" {
-			voteMultiplier := 1
+			voteAdjustment := 0
 			if v.VoterType != constants.AdminVoterType {
 				if _, exists := v.SongsUpVoted[song]; exists {
 					if v.BonusVotes <= 0 {
@@ -84,12 +84,12 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 				if _, exists := v.SongsDownVoted[song]; exists {
 					delete(v.SongsDownVoted, song)
 					// If song was downvoted and is being upvoted, vote needs to be double
-					voteMultiplier = 2
+					voteAdjustment = 1
 				}
 			}
 
 			v.SongsUpVoted[song] = empty
-			return voteMultiplier * getVoteValue(v.VoterType), false, nil
+			return voteAdjustment + getVoteValue(v.VoterType), false, nil
 
 		} else if action.String() == "REMOVE" {
 			delete(v.SongsUpVoted, song)
@@ -97,7 +97,7 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 		}
 	} else if direction.String() == "DOWN"{
 		if action.String() == "ADD" {
-			voteMultiplier := 1
+			voteAdjustment := 0
 			if v.VoterType != constants.AdminVoterType {
 				if _, exists := v.SongsDownVoted[song]; exists {
 					return 0, false, errors.New("You've already voted for this song!")
@@ -106,17 +106,16 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 				if _, exists := v.SongsUpVoted[song]; exists {
 					delete(v.SongsUpVoted, song)
 					// If song was downvoted and is being upvoted, vote needs to be double
-					voteMultiplier = 2
+					voteAdjustment = getVoteValue(v.VoterType)
 				}
 			}
 
-			// TODO: Down vote should always be 1, no bonus vote for down direction
 			v.SongsDownVoted[song] = empty
-			return -voteMultiplier * getVoteValue(v.VoterType), false, nil
+			return -(voteAdjustment + 1), false, nil
 
 		} else if action.String() == "REMOVE" {
 			delete(v.SongsDownVoted, song)
-			return getVoteValue(v.VoterType), false, nil
+			return 1, false, nil
 		}
 	}
 
