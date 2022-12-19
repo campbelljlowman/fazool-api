@@ -22,6 +22,7 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 
 		userID, err := auth.VerifyJWT(authString)
 		if err != nil {
+			// TODO: Parse this as uuid and fail if it doesn't
 			slog.Debug("Couldn't verify JWT token", "error", err.Error())
 			userID = strings.Split(authString, " ")[1]
 		}
