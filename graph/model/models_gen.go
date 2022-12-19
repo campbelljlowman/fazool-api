@@ -24,12 +24,9 @@ type NewUser struct {
 }
 
 type Playlist struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type PlaylistInput struct {
-	ID string `json:"id"`
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Image string `json:"image"`
 }
 
 type SessionInfo struct {

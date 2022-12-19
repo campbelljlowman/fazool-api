@@ -276,7 +276,7 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 }
 
 // SetPlaylist is the resolver for the setPlaylist field.
-func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error) {
+func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.Playlist, error) {
 	panic(fmt.Errorf("not implemented: SetPlaylist - setPlaylist"))
 }
 

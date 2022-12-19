@@ -44,6 +44,7 @@ type VoterInfo {
 type Playlist {
   id: String!
   name: String!
+  image: String!
 }
 
 enum QueueAction {
@@ -88,11 +89,6 @@ input SpotifyCreds {
   refreshToken: String!
 }
 
-
-input PlaylistInput {
-  id: String!
-}
-
 type Query {
   session(sessionID: Int): SessionInfo
   voter(sessionID: Int!): VoterInfo!
@@ -114,7 +110,7 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
-  setPlaylist(playlist: PlaylistInput!): Playlist
+  setPlaylist(sessionID: Int!, playlist: String!): Playlist
 }
 
 type Subscription {
