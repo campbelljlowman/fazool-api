@@ -16,4 +16,6 @@ type MusicPlayer interface {
   // CurrentSong returns the current song that is playing.
   CurrentSong() (*model.CurrentlyPlayingSong, bool, error)
   TimeRemaining() (int, error)
+  GetPlaylists() ([]*model.Playlist, error)
+  GetSongsInPlaylist(string) ([]*model.Song, error)
 }

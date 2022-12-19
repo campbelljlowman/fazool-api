@@ -59,19 +59,20 @@ type ComplexityRoot struct {
 		CreateUser             func(childComplexity int, newUser model.NewUser) int
 		EndSession             func(childComplexity int, sessionID int) int
 		Login                  func(childComplexity int, userLogin model.UserLogin) int
-		SetPlaylist            func(childComplexity int, playlist model.PlaylistInput) int
+		SetPlaylist            func(childComplexity int, sessionID int, playlist string) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
 		UpsertSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
 	}
 
 	Playlist struct {
-		ID   func(childComplexity int) int
-		Name func(childComplexity int) int
+		ID    func(childComplexity int) int
+		Image func(childComplexity int) int
+		Name  func(childComplexity int) int
 	}
 
 	Query struct {
-		Playlists  func(childComplexity int) int
+		Playlists  func(childComplexity int, sessionID int) int
 		Session    func(childComplexity int, sessionID *int) int
 		User       func(childComplexity int) int
 		Voter      func(childComplexity int, sessionID int) int
@@ -122,13 +123,13 @@ type MutationResolver interface {
 	CreateUser(ctx context.Context, newUser model.NewUser) (string, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (string, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
-	SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error)
+	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error)
 }
 type QueryResolver interface {
 	Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error)
 	Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error)
 	User(ctx context.Context) (*model.User, error)
-	Playlists(ctx context.Context) ([]*model.Playlist, error)
+	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
 	VoterToken(ctx context.Context) (string, error)
 }
 type SubscriptionResolver interface {
@@ -238,7 +239,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetPlaylist(childComplexity, args["playlist"].(model.PlaylistInput)), true
+		return e.complexity.Mutation.SetPlaylist(childComplexity, args["sessionID"].(int), args["playlist"].(string)), true
 
 	case "Mutation.updateCurrentlyPlaying":
 		if e.complexity.Mutation.UpdateCurrentlyPlaying == nil {
@@ -283,6 +284,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Playlist.ID(childComplexity), true
 
+	case "Playlist.image":
+		if e.complexity.Playlist.Image == nil {
+			break
+		}
+
+		return e.complexity.Playlist.Image(childComplexity), true
+
 	case "Playlist.name":
 		if e.complexity.Playlist.Name == nil {
 			break
@@ -295,7 +303,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Playlists(childComplexity), true
+		args, err := ec.field_Query_playlists_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Playlists(childComplexity, args["sessionID"].(int)), true
 
 	case "Query.session":
 		if e.complexity.Query.Session == nil {
@@ -489,7 +502,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputNewUser,
-		ec.unmarshalInputPlaylistInput,
 		ec.unmarshalInputSongUpdate,
 		ec.unmarshalInputSpotifyCreds,
 		ec.unmarshalInputUserLogin,
@@ -616,6 +628,7 @@ type VoterInfo {
 type Playlist {
   id: String!
   name: String!
+  image: String!
 }
 
 enum QueueAction {
@@ -660,16 +673,11 @@ input SpotifyCreds {
   refreshToken: String!
 }
 
-
-input PlaylistInput {
-  id: String!
-}
-
 type Query {
   session(sessionID: Int): SessionInfo
   voter(sessionID: Int!): VoterInfo!
   user: User!
-  playlists: [Playlist!]
+  playlists(sessionID: Int!): [Playlist!]
   voterToken: String!
 }
 
@@ -686,7 +694,7 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
-  setPlaylist(playlist: PlaylistInput!): Playlist
+  setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
 }
 
 type Subscription {
@@ -747,15 +755,24 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 func (ec *executionContext) field_Mutation_setPlaylist_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.PlaylistInput
-	if tmp, ok := rawArgs["playlist"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlist"))
-		arg0, err = ec.unmarshalNPlaylistInput2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐPlaylistInput(ctx, tmp)
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["playlist"] = arg0
+	args["sessionID"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["playlist"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlist"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["playlist"] = arg1
 	return args, nil
 }
 
@@ -834,6 +851,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_playlists_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg0
 	return args, nil
 }
 
@@ -1576,18 +1608,21 @@ func (ec *executionContext) _Mutation_setPlaylist(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetPlaylist(rctx, fc.Args["playlist"].(model.PlaylistInput))
+		return ec.resolvers.Mutation().SetPlaylist(rctx, fc.Args["sessionID"].(int), fc.Args["playlist"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Playlist)
+	res := resTmp.(*model.SessionInfo)
 	fc.Result = res
-	return ec.marshalOPlaylist2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐPlaylist(ctx, field.Selections, res)
+	return ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1599,11 +1634,17 @@ func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Contex
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Playlist_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Playlist_name(ctx, field)
+				return ec.fieldContext_SessionInfo_id(ctx, field)
+			case "currentlyPlaying":
+				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
+			case "queue":
+				return ec.fieldContext_SessionInfo_queue(ctx, field)
+			case "admin":
+				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "size":
+				return ec.fieldContext_SessionInfo_size(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Playlist", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
 	}
 	defer func() {
@@ -1696,6 +1737,50 @@ func (ec *executionContext) _Playlist_name(ctx context.Context, field graphql.Co
 }
 
 func (ec *executionContext) fieldContext_Playlist_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Playlist",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Playlist_image(ctx context.Context, field graphql.CollectedField, obj *model.Playlist) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Playlist_image(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Image, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Playlist_image(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Playlist",
 		Field:      field,
@@ -1907,7 +1992,7 @@ func (ec *executionContext) _Query_playlists(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Playlists(rctx)
+		return ec.resolvers.Query().Playlists(rctx, fc.Args["sessionID"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1933,9 +2018,22 @@ func (ec *executionContext) fieldContext_Query_playlists(ctx context.Context, fi
 				return ec.fieldContext_Playlist_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Playlist_name(ctx, field)
+			case "image":
+				return ec.fieldContext_Playlist_image(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Playlist", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_playlists_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -4852,34 +4950,6 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputPlaylistInput(ctx context.Context, obj interface{}) (model.PlaylistInput, error) {
-	var it model.PlaylistInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"id"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "id":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-			it.ID, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj interface{}) (model.SongUpdate, error) {
 	var it model.SongUpdate
 	asMap := map[string]interface{}{}
@@ -5172,6 +5242,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 				return ec._Mutation_setPlaylist(ctx, field)
 			})
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5203,6 +5276,13 @@ func (ec *executionContext) _Playlist(ctx context.Context, sel ast.SelectionSet,
 		case "name":
 
 			out.Values[i] = ec._Playlist_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "image":
+
+			out.Values[i] = ec._Playlist_image(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -5942,11 +6022,6 @@ func (ec *executionContext) marshalNPlaylist2ᚖgithubᚗcomᚋcampbelljlowman�
 	return ec._Playlist(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNPlaylistInput2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐPlaylistInput(ctx context.Context, v interface{}) (model.PlaylistInput, error) {
-	res, err := ec.unmarshalInputPlaylistInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalNQueueAction2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐQueueAction(ctx context.Context, v interface{}) (model.QueueAction, error) {
 	var res model.QueueAction
 	err := res.UnmarshalGQL(v)
@@ -6406,13 +6481,6 @@ func (ec *executionContext) marshalOPlaylist2ᚕᚖgithubᚗcomᚋcampbelljlowma
 	}
 
 	return ret
-}
-
-func (ec *executionContext) marshalOPlaylist2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐPlaylist(ctx context.Context, sel ast.SelectionSet, v *model.Playlist) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Playlist(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v *model.SessionInfo) graphql.Marshaler {

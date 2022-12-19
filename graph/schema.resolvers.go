@@ -276,8 +276,31 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 }
 
 // SetPlaylist is the resolver for the setPlaylist field.
-func (r *mutationResolver) SetPlaylist(ctx context.Context, playlist model.PlaylistInput) (*model.Playlist, error) {
-	panic(fmt.Errorf("not implemented: SetPlaylist - setPlaylist"))
+func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error) {
+	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, utils.LogErrorMessage("No userID found on token for setting playlist")
+	}
+
+	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	if !exists {
+		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+	}
+
+	if userID != session.SessionInfo.Admin {
+		return nil, utils.LogErrorMessage("Only session Admin is permitted to get playlists")
+	}
+
+	songs, err := session.MusicPlayer.GetSongsInPlaylist(playlist)
+	if err != nil {
+		return nil, utils.LogErrorObject("Error getting songs in playlist", err)
+	}
+
+	session.QueueMutex.Lock()
+	session.SessionInfo.Queue = songs
+	session.QueueMutex.Unlock()
+
+	return session.SessionInfo, nil
 }
 
 // Session is the resolver for the session field.
@@ -365,8 +388,27 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 }
 
 // Playlists is the resolver for the playlists field.
-func (r *queryResolver) Playlists(ctx context.Context) ([]*model.Playlist, error) {
-	panic(fmt.Errorf("not implemented: Playlists - playlists"))
+func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error) {
+	userID, _ := ctx.Value("user").(string)
+	if userID == "" {
+		return nil, utils.LogErrorMessage("No userID found on token for getting playlists")
+	}
+
+	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	if !exists {
+		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+	}
+
+	if userID != session.SessionInfo.Admin {
+		return nil, utils.LogErrorMessage("Only session Admin is permitted to get playlists")
+	}
+
+	playlists, err := session.MusicPlayer.GetPlaylists()
+	if err != nil {
+		return nil, utils.LogErrorObject("Error getting playlists for the session!", err)
+	}
+
+	return playlists, nil
 }
 
 // VoterToken is the resolver for the voterToken field.
