@@ -13,7 +13,7 @@ import (
 
 
 type PostgresWrapper struct {
-	postgresClient *pgxpool.Pool
+	PostgresClient *pgxpool.Pool
 }
 
 func NewPostgresClient() *PostgresWrapper {
@@ -61,7 +61,7 @@ func (p *PostgresWrapper) GetUserByEmail(userEmail string) (*model.User, error) 
 	userEmail)
 	var sessionID int
 	var userID, firstName, lastName, email string
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (p *PostgresWrapper) GetUserByID(userID string) (*model.User, error) {
 
 	var sessionID int
 	var firstName, lastName, email string
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&firstName, &lastName, &email, &sessionID)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&firstName, &lastName, &email, &sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (string, string, 
 	slog.Debug("Query string:", "query-string", queryString)
 
 	var userID, password string
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &password)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &password)
 	if err != nil {
 		return "", "", err
 	}
@@ -121,7 +121,7 @@ func (p *PostgresWrapper) GetSpotifyRefreshToken(userID string) (string, error) 
 	`SELECT spotify_refresh_token FROM public.user WHERE user_id = '%v'`,
 	userID)
 	var spotifyRefreshToken string
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&spotifyRefreshToken)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&spotifyRefreshToken)
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +134,7 @@ func (p *PostgresWrapper) GetAccountLevel(userID string) (string, error){
 		`SELECT account_level FROM public.user WHERE user_id = '%v'`,
 	userID)
 	var accountLevel string
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&accountLevel)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&accountLevel)
 	if err != nil {
 		return "", err
 	}
@@ -148,7 +148,7 @@ func (p *PostgresWrapper) GetVoterValues(userID string) (string, int, error){
 	userID)
 	var voterLevel string
 	var bonusVotes int
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&voterLevel, &bonusVotes)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&voterLevel, &bonusVotes)
 	if err != nil {
 		return "", 0, err
 	}
@@ -162,7 +162,7 @@ func (p *PostgresWrapper) SetUserSession(userID string, sessionID int) error {
 	SET session_id = %v
 	WHERE user_id = %v;`, sessionID, userID)
 
-	commandTag, err := p.postgresClient.Exec(context.Background(), queryString)
+	commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
 
 	if err != nil {
 		return err
@@ -173,13 +173,13 @@ func (p *PostgresWrapper) SetUserSession(userID string, sessionID int) error {
 	return nil
 }
 
-func (p *PostgresWrapper) SetSpotifyAccessToken(userID string, AccessToken string) error {
+func (p *PostgresWrapper) SetSpotifyAccessToken(userID, AccessToken string) error {
 	queryString := fmt.Sprintf(
 	`UPDATE public.user
 	SET spotify_access_token = '%v'
 	WHERE user_id = %v;`, AccessToken, userID)
 
-	commandTag, err := p.postgresClient.Exec(context.Background(), queryString)
+	commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
 
 	if err != nil {
 		return err
@@ -190,13 +190,13 @@ func (p *PostgresWrapper) SetSpotifyAccessToken(userID string, AccessToken strin
 	return nil
 }
 
-func (p *PostgresWrapper) SetSpotifyRefreshToken(userID string, RefreshToken string) error {
+func (p *PostgresWrapper) SetSpotifyRefreshToken(userID, RefreshToken string) error {
 	queryString := fmt.Sprintf(
 	`UPDATE public.user
 	SET spotify_refresh_token = '%v'
 	WHERE user_id = %v;`, RefreshToken, userID)
 
-	commandTag, err := p.postgresClient.Exec(context.Background(), queryString)
+	commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
 
 	if err != nil {
 		return err
@@ -207,10 +207,28 @@ func (p *PostgresWrapper) SetSpotifyRefreshToken(userID string, RefreshToken str
 	return nil
 }
 
+func (p *PostgresWrapper) SubtractBonusVotes(userID string, bonusVotes int) error {
+	queryString := fmt.Sprintf(
+		`UPDATE public.user
+		SET bonus_votes = bonus_votes - '%v'
+		WHERE user_id = %v;`, bonusVotes, userID)
+	
+		commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
+	
+		if err != nil {
+			return err
+		}
+		if commandTag.RowsAffected() != 1 {
+			return fmt.Errorf("User %v not found to update", userID)
+		}
+		return nil
+}
+
+
 func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 	queryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.user WHERE email = '%v' LIMIT 1);", email)
 	var emailExists bool
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&emailExists)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&emailExists)
 	if err != nil {
 		return true, err
 	}
@@ -226,10 +244,14 @@ func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash,
 	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, voter_level, bonusVotes)
 
 	var userID string
-	err := p.postgresClient.QueryRow(context.Background(), queryString).Scan(&userID)
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID)
 	if err != nil {
 		return "", err
 	}
 
 	return userID, nil
+}
+
+func (p *PostgresWrapper) CloseConnection() {
+	p.PostgresClient.Close()
 }

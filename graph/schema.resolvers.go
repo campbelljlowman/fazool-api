@@ -134,6 +134,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	if isBonusVote {
 		session.BonusVoteMutex.Lock()
 		session.BonusVotes[song.ID][existingVoter.Id] += vote
+		session.BonusVoteMutex.Unlock()
 	}
 
 	existingVoter.Refresh()

@@ -1,16 +1,22 @@
 package session
 
 import (
+	"os"
 	"fmt"
 	"sync"
 	"time"
+	"context"
 
 	"github.com/campbelljlowman/fazool-api/constants"
+	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"golang.org/x/exp/slog"
+
+	"github.com/jackc/pgx/v4/pgxpool"
+
 )
 
 type Session struct {
@@ -131,11 +137,18 @@ func (s *Session) AdvanceQueue(force bool) error {
 		return err
 	}
 
-	if force {
-		err := s.MusicPlayer.Next()
-		if err != nil {
-			return err
-		}
+	err = s.processBonusVotes(song.ID)
+	if err != nil {
+		return err
+	}
+
+	if !force {
+		return nil
+	}
+
+	err = s.MusicPlayer.Next()
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -193,4 +206,33 @@ func (s *Session) WatchVoters() {
 
 		time.Sleep(voterWatchFrequency * time.Second)
 	}
+}
+
+// TODO: This code hasn't been tested
+func (s *Session) processBonusVotes(songID string) error {
+	s.BonusVoteMutex.Lock()
+	bonusVotes, exists := s.BonusVotes[songID]
+	s.BonusVoteMutex.Unlock()
+	if !exists {
+		return nil
+	}
+
+	databaseURL := os.Getenv("POSTRGRES_URL")
+
+	dbPool, err := pgxpool.Connect(context.Background(), databaseURL)
+	if err != nil {
+		return err
+	}
+
+	pg := database.PostgresWrapper{PostgresClient: dbPool}
+
+	for userID, votes := range(bonusVotes){
+		err = pg.SubtractBonusVotes(userID, votes)
+		if err != nil {
+			slog.Warn("Error updating user's bonus votes", "user", userID)
+		}
+	}
+
+	pg.CloseConnection()
+	return nil
 }

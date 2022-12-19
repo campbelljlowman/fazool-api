@@ -13,10 +13,13 @@ type Database interface {
 	GetVoterValues(userID string) (string, int, error)
 
 	SetUserSession(userID string, sessionID int) error
-	SetSpotifyAccessToken(userID string, AccessToken string) error
-	SetSpotifyRefreshToken(userID string, RefreshToken string) error
+	SetSpotifyAccessToken(userID, AccessToken string) error
+	SetSpotifyRefreshToken(userID, RefreshToken string) error
+	SubtractBonusVotes(userID string, bonusVotes int) error
 
 	CheckIfEmailExists(email string) (bool, error)
 
 	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) 
+
+	CloseConnection()
 }
