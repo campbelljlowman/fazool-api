@@ -212,6 +212,7 @@ func (s *Session) WatchVoters() {
 func (s *Session) processBonusVotes(songID string) error {
 	s.BonusVoteMutex.Lock()
 	bonusVotes, exists := s.BonusVotes[songID]
+	delete(s.BonusVotes, songID)
 	s.BonusVoteMutex.Unlock()
 	if !exists {
 		return nil
