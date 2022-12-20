@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/constants"
+	"github.com/campbelljlowman/fazool-api/graph/model"
 )
 
 type Voter struct {
@@ -67,56 +67,51 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 }
 
 func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
-	if direction.String() == "UP" {
-		if action.String() == "ADD" {
-			voteAdjustment := 0
-			if v.VoterType != constants.AdminVoterType {
-				if _, exists := v.SongsUpVoted[song]; exists {
-					if v.BonusVotes <= 0 {
-						return 0, false, errors.New("You've already voted for this song!")
-					} else {
-						// Handle bonus votes
-						v.BonusVotes -= 1
-						return 1, true, nil
-					}
-				}
-	
-				if _, exists := v.SongsDownVoted[song]; exists {
-					delete(v.SongsDownVoted, song)
-					// If song was downvoted and is being upvoted, vote needs to be double
-					voteAdjustment = 1
-				}
-			}
-
-			v.SongsUpVoted[song] = empty
-			return voteAdjustment + getVoteValue(v.VoterType), false, nil
-
-		} else if action.String() == "REMOVE" {
-			delete(v.SongsUpVoted, song)
-			return -getVoteValue(v.VoterType), false, nil
-		}
-	} else if direction.String() == "DOWN"{
-		if action.String() == "ADD" {
-			voteAdjustment := 0
-			if v.VoterType != constants.AdminVoterType {
-				if _, exists := v.SongsDownVoted[song]; exists {
+	switch {
+	case action.String() == "ADD" && direction.String() == "UP":
+		voteAdjustment := 0
+		if v.VoterType != constants.AdminVoterType {
+			if _, exists := v.SongsUpVoted[song]; exists {
+				if v.BonusVotes <= 0 {
 					return 0, false, errors.New("You've already voted for this song!")
-				}
-	
-				if _, exists := v.SongsUpVoted[song]; exists {
-					delete(v.SongsUpVoted, song)
-					// If song was downvoted and is being upvoted, vote needs to be double
-					voteAdjustment = getVoteValue(v.VoterType)
+				} else {
+					// Handle bonus votes
+					v.BonusVotes -= 1
+					return 1, true, nil
 				}
 			}
 
-			v.SongsDownVoted[song] = empty
-			return -(voteAdjustment + 1), false, nil
-
-		} else if action.String() == "REMOVE" {
-			delete(v.SongsDownVoted, song)
-			return 1, false, nil
+			if _, exists := v.SongsDownVoted[song]; exists {
+				delete(v.SongsDownVoted, song)
+				// If song was downvoted and is being upvoted, vote needs to be double
+				voteAdjustment = 1
+			}
 		}
+
+		v.SongsUpVoted[song] = empty
+		return voteAdjustment + getVoteValue(v.VoterType), false, nil
+	case action.String() == "ADD" && direction.String() == "DOWN":
+		voteAdjustment := 0
+		if v.VoterType != constants.AdminVoterType {
+			if _, exists := v.SongsDownVoted[song]; exists {
+				return 0, false, errors.New("You've already voted for this song!")
+			}
+
+			if _, exists := v.SongsUpVoted[song]; exists {
+				delete(v.SongsUpVoted, song)
+				// If song was downvoted and is being upvoted, vote needs to be double
+				voteAdjustment = getVoteValue(v.VoterType)
+			}
+		}
+
+		v.SongsDownVoted[song] = empty
+		return -(voteAdjustment + 1), false, nil
+	case action.String() == "REMOVE" && direction.String() == "UP":
+		delete(v.SongsUpVoted, song)
+		return -getVoteValue(v.VoterType), false, nil
+	case action.String() == "REMOVE" && direction.String() == "DOWN":
+		delete(v.SongsDownVoted, song)
+		return 1, false, nil
 	}
 
 	return 0, false, fmt.Errorf("Song vote inputs aren't valid!")

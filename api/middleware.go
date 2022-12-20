@@ -32,18 +32,18 @@ func jwtAuthMiddleware() gin.HandlerFunc {
 		user := ""
 		// Try to parse token as UUID
 		_, err := uuid.Parse(tokenString)
-		if err != nil {
-			slog.Debug("Token passed isn't valid UUID", "error", err.Error())
-		} else {
+		if err == nil {
 			user = tokenString
 		}
 
 		// Try to parse userID from token
 		userID, err := auth.VerifyJWT(tokenString)
-		if err != nil {
-			slog.Debug("Token passed isn't valid JWT", "error", err.Error())
-		} else {
+		if err == nil {
 			user = userID
+		}
+
+		if userID == "" {
+			slog.Debug("Request made with no user or voter token")
 		}
 
 		ctx1 := context.WithValue(c.Request.Context(), "user", user)
