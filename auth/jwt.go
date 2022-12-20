@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -35,15 +34,7 @@ func GenerateJWT(userID string) (string, error){
 	return tokenString, nil
 }
 
-func VerifyJWT(bearerToken string) (string, error) {
-	var tokenString string
-	if len(strings.Split(bearerToken, " ")) == 2 {
-		tokenString = strings.Split(bearerToken, " ")[1]
-	} else {
-		return "", fmt.Errorf("No JWT token passed, token value: %v", bearerToken)
-	}
-
-
+func VerifyJWT(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
