@@ -50,3 +50,6 @@ pg:
 
 redis:
 	sudo service redis-server start
+
+test:
+	go test -v ./... -coverprofile=coverage.out

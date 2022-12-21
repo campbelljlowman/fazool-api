@@ -127,7 +127,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogErrorMessage(fmt.Sprintf("User not in active voters! User: %v", userID))
 	}
 
-	vote, isBonusVote, err := existingVoter.ProcessVote(song.ID, &song.Vote, &song.Action)
+	vote, isBonusVote, err := existingVoter.GetVoteAmountAndType(song.ID, &song.Vote, &song.Action)
 	if err != nil {
 		return nil, utils.LogErrorObject("Error processing vote", err)
 	}
@@ -140,7 +140,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		session.BonusVoteMutex.Unlock()
 	}
 
-	existingVoter.Refresh()
+	existingVoter.RefreshVoterExpiration()
 
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Artist)
 	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.Song) bool { return s.ID == song.ID })

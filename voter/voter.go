@@ -19,8 +19,8 @@ type Voter struct {
 }
 
 var empty struct{}
-const regularVoterDuration time.Duration = 15
-const priviledgedVoterDuration time.Duration = 15
+const regularVoterDurationInMinutes time.Duration = 15
+const priviledgedVoterDurationInMinutes time.Duration = 15
 var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
 
 
@@ -66,7 +66,7 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 	return &voter
 }
 
-func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
+func (v *Voter) GetVoteAmountAndType(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
 	switch {
 	case action.String() == "ADD" && direction.String() == "UP":
 		voteAdjustment := 0
@@ -117,7 +117,7 @@ func (v *Voter) ProcessVote(song string, direction *model.SongVoteDirection, act
 	return 0, false, fmt.Errorf("Song vote inputs aren't valid!")
 }
 
-func (v *Voter) Refresh() {
+func (v *Voter) RefreshVoterExpiration() {
 	v.Expires = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
 }
 
@@ -130,9 +130,9 @@ func getVoteValue (voterType string) int {
 
 func getVoterDuration (voterType string) time.Duration {
 	if voterType == constants.PrivilegedVoterType {
-		return priviledgedVoterDuration
+		return priviledgedVoterDurationInMinutes
 	}
-	return regularVoterDuration
+	return regularVoterDurationInMinutes
 }
 
 func contains(elems []string, v string) bool {

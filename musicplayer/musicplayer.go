@@ -4,6 +4,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 )
 
+// TODO: Rename this to streaming service
 // MusicPlayer is an interface that defines the methods that a music player should have.
 type MusicPlayer interface {
   // Play starts playback of the current song.
