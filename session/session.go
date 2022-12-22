@@ -11,7 +11,6 @@ import (
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
-	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"golang.org/x/exp/slog"
 
@@ -72,7 +71,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 		sendUpdateFlag = false
 		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := s.MusicPlayer.CurrentSong()
 		if err != nil {
-			utils.LogErrorObject("Error getting music player state", err)
+			slog.Warn("Error getting music player state", "error", err)
 			continue
 		}
 
@@ -93,7 +92,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 			// Safe to add song
 			timeLeft, err := s.MusicPlayer.TimeRemaining()
 			if err != nil {
-				utils.LogErrorObject("Error getting song time remaining", err)
+				slog.Warn("Error getting song time remaining", "error", err)
 				continue
 			}
 

@@ -25,12 +25,12 @@ import (
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, utils.LogErrorMessage("No userID found on token for creating session")
+		return nil, utils.LogAndReturnError("No userID found on token for creating session", nil)
 	}
 
 	accountLevel, err := r.database.GetAccountLevel(userID)
 	if userID == "" {
-		return nil, utils.LogErrorMessage("Error getting account level from database")
+		return nil, utils.LogAndReturnError("Error getting account level from database", nil)
 	}
 
 	sessionSize := 0
@@ -40,7 +40,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
-		return nil, utils.LogErrorObject("Error generating session ID", err)
+		return nil, utils.LogAndReturnError("Error generating session ID", err)
 	}
 
 	session := session.NewSession()
@@ -64,17 +64,17 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	refreshToken, err := r.database.GetSpotifyRefreshToken(userID)
 	if err != nil {
-		return nil, utils.LogErrorObject("Error getting Spotify refresh token", err)
+		return nil, utils.LogAndReturnError("Error getting Spotify refresh token", err)
 	}
 
 	spotifyToken, err := musicplayer.RefreshSpotifyToken(refreshToken)
 	if err != nil {
-		return nil, utils.LogErrorObject("Error refreshing Spotify Token", err)
+		return nil, utils.LogAndReturnError("Error refreshing Spotify Token", err)
 	}
 
 	err = r.database.SetSpotifyAccessToken(userID, spotifyToken)
 	if err != nil {
-		return nil, utils.LogErrorObject("Error setting new Spotify token", err)
+		return nil, utils.LogAndReturnError("Error setting new Spotify token", err)
 	}
 
 	client := musicplayer.NewSpotifyClient(spotifyToken)
@@ -95,18 +95,18 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
 	userID := ctx.Value("user").(string)
 
-	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
 	if !exists {
-		return "", utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+		return "", utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
 	if userID != session.SessionInfo.Admin {
-		return "", utils.LogErrorMessage(fmt.Sprintf("User %v is not the admin for this session!", userID))
+		return "", utils.LogAndReturnError(fmt.Sprintf("User %v is not the admin for this session!", userID), nil)
 	}
 
 	err := r.endSession(session, userID)
 	if err != nil {
-		return "", utils.LogErrorObject("Error removing session for the user", err)
+		return "", utils.LogAndReturnError("Error removing session for the user", err)
 	}
 
 	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
@@ -115,21 +115,21 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
-	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
 	if !exists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
 	userID := ctx.Value("user").(string)
 
-	existingVoter, voterExists := utils.GetFromMutexedMap(session.Voters, userID, session.VotersMutex)
+	existingVoter, voterExists := utils.GetValueFromMutexedMap(session.Voters, userID, session.VotersMutex)
 	if !voterExists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("User not in active voters! User: %v", userID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("User not in active voters! User: %v", userID), nil)
 	}
 
 	vote, isBonusVote, err := existingVoter.GetVoteAmountAndType(song.ID, &song.Vote, &song.Action)
 	if err != nil {
-		return nil, utils.LogErrorObject("Error processing vote", err)
+		return nil, utils.LogAndReturnError("Error processing vote", err)
 	}
 	if isBonusVote {
 		session.BonusVoteMutex.Lock()
@@ -172,27 +172,27 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
-	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
 
 	if !exists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
 	switch action {
 	case "PLAY":
 		err := session.MusicPlayer.Play()
 		if err != nil {
-			return nil, utils.LogErrorObject("Error playing song", err)
+			return nil, utils.LogAndReturnError("Error playing song", err)
 		}
 	case "PAUSE":
 		err := session.MusicPlayer.Pause()
 		if err != nil {
-			return nil, utils.LogErrorObject("Error pausing song", err)
+			return nil, utils.LogAndReturnError("Error pausing song", err)
 		}
 	case "ADVANCE":
 		err := session.AdvanceQueue(true)
 		if err != nil {
-			return nil, utils.LogErrorObject("Error advancing queue", err)
+			return nil, utils.LogAndReturnError("Error advancing queue", err)
 		}
 		session.SendUpdate()
 	}
@@ -207,29 +207,29 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	voterLevel := constants.RegularVoterType
 	vaildEmail := utils.ValidateEmail(newUser.Email)
 	if !vaildEmail {
-		return "", utils.LogErrorMessage("Invalid email format")
+		return "", utils.LogAndReturnError("Invalid email format", nil)
 	}
 
 	emailExists, err := r.database.CheckIfEmailExists(newUser.Email)
 
 	if err != nil {
-		return "", utils.LogErrorObject("Error searching for email in database", err)
+		return "", utils.LogAndReturnError("Error searching for email in database", err)
 	}
 
 	if emailExists {
-		return "", utils.LogErrorMessage("User with this email already exists!")
+		return "", utils.LogAndReturnError("User with this email already exists!", nil)
 	}
 
 	passwordHash := utils.HashHelper(newUser.Password)
 
 	userID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, voterLevel, 0)
 	if err != nil {
-		return "", utils.LogErrorObject("Error adding user to database", err)
+		return "", utils.LogAndReturnError("Error adding user to database", err)
 	}
 
 	token, err := auth.GenerateJWT(userID)
 	if err != nil {
-		return "", utils.LogErrorObject("Error creating user token", err)
+		return "", utils.LogAndReturnError("Error creating user token", err)
 	}
 
 	slog.Info("Returning JWT:", "token", token)
@@ -240,16 +240,16 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (string, error) {
 	userID, password, err := r.database.GetUserLoginValues(userLogin.Email)
 	if err != nil {
-		return "", utils.LogErrorObject("Error getting user login info from database", err)
+		return "", utils.LogAndReturnError("Error getting user login info from database", err)
 	}
 
 	if utils.HashHelper(userLogin.Password) != password {
-		return "", utils.LogErrorMessage("Invalid Login Credentials!")
+		return "", utils.LogAndReturnError("Invalid Login Credentials!", nil)
 	}
 
 	token, err := auth.GenerateJWT(userID)
 	if err != nil {
-		return "", utils.LogErrorObject("Error creating user token", err)
+		return "", utils.LogAndReturnError("Error creating user token", err)
 	}
 
 	return token, nil
@@ -259,20 +259,20 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
+		return nil, utils.LogAndReturnError("No userID found on token for adding Spotify token", nil)
 	}
 
 	// TODO: Probably combine these db sets to a single query
 	err := r.database.SetSpotifyAccessToken(userID, spotifyCreds.AccessToken)
 
 	if err != nil {
-		return nil, utils.LogErrorObject("Error setting Spotify access token in database", err)
+		return nil, utils.LogAndReturnError("Error setting Spotify access token in database", err)
 	}
 
 	err = r.database.SetSpotifyRefreshToken(userID, spotifyCreds.RefreshToken)
 
 	if err != nil {
-		return nil, utils.LogErrorObject("Error setting Spotify refresh token in database", err)
+		return nil, utils.LogAndReturnError("Error setting Spotify refresh token in database", err)
 	}
 
 	return &model.User{ID: userID}, nil
@@ -282,21 +282,21 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error) {
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, utils.LogErrorMessage("No userID found on token for setting playlist")
+		return nil, utils.LogAndReturnError("No userID found on token for setting playlist", nil)
 	}
 
-	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
 	if !exists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
 	if userID != session.SessionInfo.Admin {
-		return nil, utils.LogErrorMessage("Only session Admin is permitted to get playlists")
+		return nil, utils.LogAndReturnError("Only session Admin is permitted to get playlists", nil)
 	}
 
 	songs, err := session.MusicPlayer.GetSongsInPlaylist(playlist)
 	if err != nil {
-		return nil, utils.LogErrorObject("Error getting songs in playlist", err)
+		return nil, utils.LogAndReturnError("Error getting songs in playlist", err)
 	}
 
 	session.QueueMutex.Lock()
@@ -308,10 +308,10 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error) {
-	session, exists := utils.GetFromMutexedMap(r.sessions, *sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, *sessionID, r.sessionsMutex)
 
 	if !exists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", *sessionID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", *sessionID), nil)
 	}
 
 	return session.SessionInfo, nil
@@ -323,16 +323,16 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	// slog.Info("Getting voter", "sessionID", sessionID, "user", userID)
 
 	if userID == "" {
-		return nil, utils.LogErrorMessage("No userID found on token for adding Spotify token")
+		return nil, utils.LogAndReturnError("No userID found on token for adding Spotify token", nil)
 	}
 
-	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
 
 	if !exists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	existingVoter, exists := utils.GetFromMutexedMap(session.Voters, userID, session.VotersMutex)
+	existingVoter, exists := utils.GetValueFromMutexedMap(session.Voters, userID, session.VotersMutex)
 
 	if exists {
 		slog.Info("return existing voter", "voter", existingVoter.Id)
@@ -340,7 +340,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	}
 
 	if len(session.Voters) >= session.SessionInfo.Size {
-		return nil, utils.LogErrorMessage("Session is full of voters!")
+		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}
 
 	voterType := constants.RegularVoterType
@@ -351,7 +351,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		voterLevel, bonusVotesValue, err := r.database.GetVoterValues(userID)
 		bonusVotes = bonusVotesValue
 		if err != nil {
-			return nil, utils.LogErrorObject("Error getting voter from database", err)
+			return nil, utils.LogAndReturnError("Error getting voter from database", err)
 		}
 
 		if voterLevel == constants.PrivilegedVoterType {
@@ -365,7 +365,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	slog.Info("Generating new voter", "voter", userID)
 	newVoter, err := voter.NewVoter(userID, voterType, bonusVotes)
 	if err != nil {
-		return nil, utils.LogErrorMessage("Error generating new voter")
+		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}
 
 	session.VotersMutex.Lock()
@@ -379,12 +379,12 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, utils.LogErrorMessage("No userID found on token for getting user")
+		return nil, utils.LogAndReturnError("No userID found on token for getting user", nil)
 	}
 
 	user, err := r.database.GetUserByID(userID)
 	if err != nil {
-		return nil, utils.LogErrorObject("Error getting user from database", err)
+		return nil, utils.LogAndReturnError("Error getting user from database", err)
 	}
 
 	return user, nil
@@ -394,21 +394,21 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error) {
 	userID, _ := ctx.Value("user").(string)
 	if userID == "" {
-		return nil, utils.LogErrorMessage("No userID found on token for getting playlists")
+		return nil, utils.LogAndReturnError("No userID found on token for getting playlists", nil)
 	}
 
-	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
 	if !exists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
 	if userID != session.SessionInfo.Admin {
-		return nil, utils.LogErrorMessage("Only session Admin is permitted to get playlists")
+		return nil, utils.LogAndReturnError("Only session Admin is permitted to get playlists", nil)
 	}
 
 	playlists, err := session.MusicPlayer.GetPlaylists()
 	if err != nil {
-		return nil, utils.LogErrorObject("Error getting playlists for the session!", err)
+		return nil, utils.LogAndReturnError("Error getting playlists for the session!", err)
 	}
 
 	return playlists, nil
@@ -423,10 +423,10 @@ func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
 	// slog.Info("Subscribing to session")
-	session, exists := utils.GetFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
 
 	if !exists {
-		return nil, utils.LogErrorMessage(fmt.Sprintf("Session %v not found!", sessionID))
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
 	channel := make(chan *model.SessionInfo)

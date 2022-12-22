@@ -1,8 +1,9 @@
 package utils
 
 import (
+	"errors"
+	"sync"
 	"testing"
-
 )
 
 var hashHelperTests = []struct {
@@ -45,5 +46,51 @@ func TestGenerateSessionID(t *testing.T){
 
 	if sessionID < 100000 || sessionID > 999999 || err != nil {
 		t.Errorf("GenerateSessionID() failed! Value: %v, Error: %v", sessionID, err)
+	}
+}
+
+var logAndReturnErrorTests = []struct {
+	inputMessage string
+	inputError error
+	expectedOutput error
+}{
+	{"Test error message", nil, errors.New("Test error message")},
+	{"", nil, errors.New("")},
+	{"Test error message", errors.New("Error message to log"),  errors.New("Test error message")},
+}
+func TestLogAndReturnError(t *testing.T) {
+	for _, testCase := range(logAndReturnErrorTests) {
+		resultError := LogAndReturnError(testCase.inputMessage, testCase.inputError)
+
+		if resultError.Error() != testCase.expectedOutput.Error() {
+			t.Errorf("LogAndReturnError(%v, %v) failed! Wanted: %v, got: %v", testCase.inputMessage, testCase.inputError, testCase.expectedOutput, resultError)
+		}
+	}
+}
+
+var getValueFromMutexedMapTests = []struct {
+	inputKey string 
+	expectedOutputValue string
+	expectedOutputExists bool
+}{
+	{"keyThatExists", "valueThatExists", true},
+	{"keyThatDoesntExist", "", false},
+}
+func TestGetValueFromMutexedMap(t *testing.T) {
+	valueThatExists := "valueThatExists"
+	testMap := map[string]*string {"keyThatExists": &valueThatExists}
+	mutex := sync.Mutex{}
+
+	for _, testCase := range(getValueFromMutexedMapTests) {
+		value, exists := GetValueFromMutexedMap(testMap, testCase.inputKey, &mutex)
+
+		if exists && *value != testCase.expectedOutputValue {
+			t.Errorf("GetValueFromMutexedMap() for key %v failed! Wanted: %v, got: %v", testCase.inputKey, testCase.expectedOutputValue, value)
+		}
+
+		if exists != testCase.expectedOutputExists {
+			t.Errorf("GetValueFromMutexedMap() for key %v failed! Wanted: %v, got: %v", testCase.inputKey, testCase.expectedOutputExists, exists)
+		}
+
 	}
 }

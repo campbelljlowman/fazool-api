@@ -35,17 +35,16 @@ func GenerateSessionID() (int, error) {
 	return int(number), nil
 }
 
-func LogErrorMessage(msg string) error {
-	slog.Warn(msg)
+func LogAndReturnError(msg string, err error) error {
+	if err != nil {
+		slog.Warn(msg, "error", err)
+	} else {
+		slog.Warn(msg)
+	}
 	return errors.New(msg)
 }
 
-func LogErrorObject(msg string, err error) error {
-	slog.Warn(msg, "error", err)
-	return errors.New(msg)
-}
-
-func GetFromMutexedMap[T any, V comparable](m map[V]*T, key V, mutex *sync.Mutex) (*T, bool){
+func GetValueFromMutexedMap[T any, V comparable](m map[V]*T, key V, mutex *sync.Mutex) (*T, bool){
 	mutex.Lock()
 	value, exists := m[key]
 	mutex.Unlock()
