@@ -12,7 +12,7 @@ import (
 type Voter struct {
 	Id string
 	VoterType string
-	Expires time.Time
+	ExpiresAt time.Time
 	SongsUpVoted map[string]struct{}
 	SongsDownVoted map[string]struct{}
 	BonusVotes int
@@ -32,7 +32,7 @@ func NewVoter(id, voterType string, bonusVotes int) (*Voter, error) {
 	v := Voter{
 		Id: id,
 		VoterType: voterType,
-		Expires: time.Now().Add(getVoterDuration(voterType) * time.Minute),
+		ExpiresAt: time.Now().Add(getVoterDuration(voterType) * time.Minute),
 		SongsUpVoted: make(map[string]struct{}),
 		SongsDownVoted: make(map[string]struct{}),
 		BonusVotes: bonusVotes,
@@ -118,7 +118,7 @@ func (v *Voter) GetVoteAmountAndType(song string, direction *model.SongVoteDirec
 }
 
 func (v *Voter) RefreshVoterExpiration() {
-	v.Expires = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
+	v.ExpiresAt = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
 }
 
 func getVoteValue (voterType string) int {

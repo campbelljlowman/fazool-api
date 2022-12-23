@@ -63,7 +63,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	addNextSongFlag := false
 
 	for {
-		if s.ExpiresAt.Before(time.Now()) {
+		if time.Now().After(s.ExpiresAt) {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
@@ -184,7 +184,7 @@ func (s *Session) SendUpdate() {
 func (s *Session) WatchVoters() {
 
 	for {
-		if s.ExpiresAt.Before(time.Now()) {
+		if time.Now().After(s.ExpiresAt) {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
@@ -195,7 +195,7 @@ func (s *Session) WatchVoters() {
 				continue
 			}
 
-			if voter.Expires.Before(time.Now()){
+			if time.Now().After(voter.ExpiresAt) {
 				slog.Info("Voter exipred! Removing", "voter", voter.Id)
 				delete(s.Voters, voter.Id)
 			}
