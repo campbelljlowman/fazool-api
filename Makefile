@@ -53,3 +53,7 @@ redis:
 
 test:
 	go test -v ./... -coverprofile=coverage.out
+
+
+build:
+	docker build .
