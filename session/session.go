@@ -58,7 +58,7 @@ func NewSession() Session {
 }
 
 func (s *Session) WatchSpotifyCurrentlyPlaying() {
-	s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
+	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	sendUpdateFlag := false
 	addNextSongFlag := false
 
@@ -76,7 +76,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 		}
 
 		if spotifyCurrentlyPlaying == true {
-			if s.SessionInfo.CurrentlyPlaying.ID != spotifyCurrentlyPlayingSong.ID {
+			if s.SessionInfo.CurrentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
 				s.SessionInfo.CurrentlyPlaying = spotifyCurrentlyPlayingSong
 				sendUpdateFlag = true
@@ -120,7 +120,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 }
 
 func (s *Session) AdvanceQueue(force bool) error {
-	var song *model.Song
+	var song *model.SimpleSong
 
 	s.QueueMutex.Lock()
 	if len(s.SessionInfo.Queue) == 0 {
@@ -128,7 +128,7 @@ func (s *Session) AdvanceQueue(force bool) error {
 		return nil
 	}
 
-	song, s.SessionInfo.Queue = s.SessionInfo.Queue[0], s.SessionInfo.Queue[1:]
+	song, s.SessionInfo.Queue = s.SessionInfo.Queue[0].SimpleSong, s.SessionInfo.Queue[1:]
 	s.QueueMutex.Unlock()
 
 	err := s.MusicPlayer.QueueSong(song.ID)

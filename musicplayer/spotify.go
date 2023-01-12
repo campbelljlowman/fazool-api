@@ -70,11 +70,13 @@ func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error
 	}
 
 	song := &model.CurrentlyPlayingSong{
-		ID: status.Item.ID.String(),
-		Title: status.Item.Name,
-		// TODO: Loop through all artists and combine
-		Artist: status.Item.Artists[0].Name,
-		Image: status.Item.Album.Images[0].URL,
+		SimpleSong: &model.SimpleSong{
+			ID: status.Item.ID.String(),
+			Title: status.Item.Name,
+			// TODO: Loop through all artists and combine
+			Artist: status.Item.Artists[0].Name,
+			Image: status.Item.Album.Images[0].URL,
+		},
 		Playing: status.Playing,
 	}
 
@@ -133,21 +135,20 @@ func (s *SpotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
 	return playlists, nil
 }
 
-func (s *SpotifyWrapper) GetSongsInPlaylist(playlist string) ([]*model.Song, error) {
+func (s *SpotifyWrapper) GetSongsInPlaylist(playlist string) ([]*model.SimpleSong, error) {
 	playlistItems, err := s.client.GetPlaylist(context.Background(), spotify.ID(playlist))
 	if err != nil {
 		return nil, err
 	}
 
-	var songs []*model.Song
+	var songs []*model.SimpleSong
 
 	for _, song := range(playlistItems.Tracks.Tracks) {
-		s := &model.Song{
+		s := &model.SimpleSong{
 			ID: song.Track.ID.String(),
 			Title: song.Track.Name,
 			Artist: song.Track.Artists[0].Name,
 			Image: song.Track.Album.Images[0].URL,
-			Votes: 0,
 		}
 		songs = append(songs, s)
 	}
