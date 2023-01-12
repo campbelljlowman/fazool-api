@@ -53,8 +53,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	sessionInfo := &model.SessionInfo{
 		ID: sessionID,
 		CurrentlyPlaying: &model.CurrentlyPlayingSong{
-			Song:    &model.SimpleSong{},
-			Playing: false,
+			SimpleSong: &model.SimpleSong{},
+			Playing:    false,
 		},
 		Queue: nil,
 		Admin: userID,
@@ -145,17 +145,17 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	existingVoter.RefreshVoterExpiration()
 
-	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Song.Artist)
-	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.QueuedSong) bool { return s.Song.ID == song.ID })
+	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.SimpleSong.Artist)
+	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
 	session.QueueMutex.Lock()
 	if idx == -1 {
 		// add new song to queue
 		newSong := &model.QueuedSong{
-			Song: &model.SimpleSong{
+			SimpleSong: &model.SimpleSong{
 				ID:     song.ID,
-				Title:  song.Title,
-				Artist: song.Artist,
-				Image:  song.Image,
+				Title:  *song.Title,
+				Artist: *song.Artist,
+				Image:  *song.Image,
 			},
 			Votes: vote,
 		}
@@ -307,8 +307,8 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 	var queuedSongs []*model.QueuedSong
 	for _, song := range songs {
 		queuedSong := &model.QueuedSong{
-			Song:  song,
-			Votes: 0,
+			SimpleSong: song,
+			Votes:      0,
 		}
 		queuedSongs = append(queuedSongs, queuedSong)
 	}

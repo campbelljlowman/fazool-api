@@ -47,8 +47,8 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	CurrentlyPlayingSong struct {
-		Playing func(childComplexity int) int
-		Song    func(childComplexity int) int
+		Playing    func(childComplexity int) int
+		SimpleSong func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -78,8 +78,8 @@ type ComplexityRoot struct {
 	}
 
 	QueuedSong struct {
-		Song  func(childComplexity int) int
-		Votes func(childComplexity int) int
+		SimpleSong func(childComplexity int) int
+		Votes      func(childComplexity int) int
 	}
 
 	SessionInfo struct {
@@ -161,12 +161,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.CurrentlyPlayingSong.Playing(childComplexity), true
 
-	case "CurrentlyPlayingSong.song":
-		if e.complexity.CurrentlyPlayingSong.Song == nil {
+	case "CurrentlyPlayingSong.simpleSong":
+		if e.complexity.CurrentlyPlayingSong.SimpleSong == nil {
 			break
 		}
 
-		return e.complexity.CurrentlyPlayingSong.Song(childComplexity), true
+		return e.complexity.CurrentlyPlayingSong.SimpleSong(childComplexity), true
 
 	case "Mutation.createSession":
 		if e.complexity.Mutation.CreateSession == nil {
@@ -342,12 +342,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.VoterToken(childComplexity), true
 
-	case "QueuedSong.song":
-		if e.complexity.QueuedSong.Song == nil {
+	case "QueuedSong.simpleSong":
+		if e.complexity.QueuedSong.SimpleSong == nil {
 			break
 		}
 
-		return e.complexity.QueuedSong.Song(childComplexity), true
+		return e.complexity.QueuedSong.SimpleSong(childComplexity), true
 
 	case "QueuedSong.votes":
 		if e.complexity.QueuedSong.Votes == nil {
@@ -595,12 +595,12 @@ type SimpleSong {
 }
 
 type QueuedSong {
-  song: SimpleSong!
+  simpleSong: SimpleSong!
   votes: Int!
 }
 
 type CurrentlyPlayingSong {
-  song: SimpleSong!
+  simpleSong: SimpleSong!
   playing: Boolean!
 }
 
@@ -651,9 +651,9 @@ enum SongVoteAction {
 
 input SongUpdate {
   id: String!
-  title: String!
-  artist: String!
-  image: String!
+  title: String
+  artist: String
+  image: String
   vote: SongVoteDirection!
   action: SongVoteAction!
 }
@@ -970,8 +970,8 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _CurrentlyPlayingSong_song(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_CurrentlyPlayingSong_song(ctx, field)
+func (ec *executionContext) _CurrentlyPlayingSong_simpleSong(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_simpleSong(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -984,7 +984,7 @@ func (ec *executionContext) _CurrentlyPlayingSong_song(ctx context.Context, fiel
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Song, nil
+		return obj.SimpleSong, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1001,7 +1001,7 @@ func (ec *executionContext) _CurrentlyPlayingSong_song(ctx context.Context, fiel
 	return ec.marshalNSimpleSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSimpleSong(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_CurrentlyPlayingSong_song(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_simpleSong(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CurrentlyPlayingSong",
 		Field:      field,
@@ -2169,8 +2169,8 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _QueuedSong_song(ctx context.Context, field graphql.CollectedField, obj *model.QueuedSong) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_QueuedSong_song(ctx, field)
+func (ec *executionContext) _QueuedSong_simpleSong(ctx context.Context, field graphql.CollectedField, obj *model.QueuedSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QueuedSong_simpleSong(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2183,7 +2183,7 @@ func (ec *executionContext) _QueuedSong_song(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Song, nil
+		return obj.SimpleSong, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2200,7 +2200,7 @@ func (ec *executionContext) _QueuedSong_song(ctx context.Context, field graphql.
 	return ec.marshalNSimpleSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSimpleSong(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_QueuedSong_song(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_QueuedSong_simpleSong(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "QueuedSong",
 		Field:      field,
@@ -2347,8 +2347,8 @@ func (ec *executionContext) fieldContext_SessionInfo_currentlyPlaying(ctx contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "song":
-				return ec.fieldContext_CurrentlyPlayingSong_song(ctx, field)
+			case "simpleSong":
+				return ec.fieldContext_CurrentlyPlayingSong_simpleSong(ctx, field)
 			case "playing":
 				return ec.fieldContext_CurrentlyPlayingSong_playing(ctx, field)
 			}
@@ -2394,8 +2394,8 @@ func (ec *executionContext) fieldContext_SessionInfo_queue(ctx context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "song":
-				return ec.fieldContext_QueuedSong_song(ctx, field)
+			case "simpleSong":
+				return ec.fieldContext_QueuedSong_simpleSong(ctx, field)
 			case "votes":
 				return ec.fieldContext_QueuedSong_votes(ctx, field)
 			}
@@ -4976,7 +4976,7 @@ func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj in
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
-			it.Title, err = ec.unmarshalNString2string(ctx, v)
+			it.Title, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4984,7 +4984,7 @@ func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj in
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("artist"))
-			it.Artist, err = ec.unmarshalNString2string(ctx, v)
+			it.Artist, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4992,7 +4992,7 @@ func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj in
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("image"))
-			it.Image, err = ec.unmarshalNString2string(ctx, v)
+			it.Image, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -5108,9 +5108,9 @@ func (ec *executionContext) _CurrentlyPlayingSong(ctx context.Context, sel ast.S
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("CurrentlyPlayingSong")
-		case "song":
+		case "simpleSong":
 
-			out.Values[i] = ec._CurrentlyPlayingSong_song(ctx, field, obj)
+			out.Values[i] = ec._CurrentlyPlayingSong_simpleSong(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -5458,9 +5458,9 @@ func (ec *executionContext) _QueuedSong(ctx context.Context, sel ast.SelectionSe
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("QueuedSong")
-		case "song":
+		case "simpleSong":
 
-			out.Values[i] = ec._QueuedSong_song(ctx, field, obj)
+			out.Values[i] = ec._QueuedSong_simpleSong(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++

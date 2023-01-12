@@ -10,12 +10,12 @@ type SimpleSong {
 }
 
 type QueuedSong {
-  song: SimpleSong!
+  simpleSong: SimpleSong!
   votes: Int!
 }
 
 type CurrentlyPlayingSong {
-  song: SimpleSong!
+  simpleSong: SimpleSong!
   playing: Boolean!
 }
 
@@ -66,9 +66,9 @@ enum SongVoteAction {
 
 input SongUpdate {
   id: String!
-  title: String!
-  artist: String!
-  image: String!
+  title: String
+  artist: String
+  image: String
   vote: SongVoteDirection!
   action: SongVoteAction!
 }

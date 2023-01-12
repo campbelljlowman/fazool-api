@@ -70,7 +70,7 @@ func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error
 	}
 
 	song := &model.CurrentlyPlayingSong{
-		Song: &model.SimpleSong{
+		SimpleSong: &model.SimpleSong{
 			ID: status.Item.ID.String(),
 			Title: status.Item.Name,
 			// TODO: Loop through all artists and combine
