@@ -2,26 +2,27 @@
 #
 # https://gqlgen.com/getting-started/
 
-type Song {
+type SimpleSong {
   id: String!
   title: String!
   artist: String!
   image: String!
+}
+
+type QueuedSong {
+  song: SimpleSong!
   votes: Int!
 }
 
 type CurrentlyPlayingSong {
-  id: String!
-  title: String!
-  artist: String!
-  image: String!
+  song: SimpleSong!
   playing: Boolean!
 }
 
 type SessionInfo {
   id: Int!
   currentlyPlaying: CurrentlyPlayingSong
-  queue: [Song!]
+  queue: [QueuedSong!]
   admin: String!
   size: Int!
 }
@@ -65,9 +66,9 @@ enum SongVoteAction {
 
 input SongUpdate {
   id: String!
-  title: String
-  artist: String
-  image: String
+  title: String!
+  artist: String!
+  image: String!
   vote: SongVoteDirection!
   action: SongVoteAction!
 }
@@ -95,6 +96,7 @@ type Query {
   user: User!
   playlists(sessionID: Int!): [Playlist!]
   voterToken: String!
+  musicSearch(query: String!): [SimpleSong!]
 }
 
 type Mutation {

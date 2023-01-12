@@ -9,11 +9,8 @@ import (
 )
 
 type CurrentlyPlayingSong struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Artist  string `json:"artist"`
-	Image   string `json:"image"`
-	Playing bool   `json:"playing"`
+	Song    *SimpleSong `json:"song"`
+	Playing bool        `json:"playing"`
 }
 
 type NewUser struct {
@@ -29,27 +26,31 @@ type Playlist struct {
 	Image string `json:"image"`
 }
 
+type QueuedSong struct {
+	Song  *SimpleSong `json:"song"`
+	Votes int         `json:"votes"`
+}
+
 type SessionInfo struct {
 	ID               int                   `json:"id"`
 	CurrentlyPlaying *CurrentlyPlayingSong `json:"currentlyPlaying"`
-	Queue            []*Song               `json:"queue"`
+	Queue            []*QueuedSong         `json:"queue"`
 	Admin            string                `json:"admin"`
 	Size             int                   `json:"size"`
 }
 
-type Song struct {
+type SimpleSong struct {
 	ID     string `json:"id"`
 	Title  string `json:"title"`
 	Artist string `json:"artist"`
 	Image  string `json:"image"`
-	Votes  int    `json:"votes"`
 }
 
 type SongUpdate struct {
 	ID     string            `json:"id"`
-	Title  *string           `json:"title"`
-	Artist *string           `json:"artist"`
-	Image  *string           `json:"image"`
+	Title  string            `json:"title"`
+	Artist string            `json:"artist"`
+	Image  string            `json:"image"`
 	Vote   SongVoteDirection `json:"vote"`
 	Action SongVoteAction    `json:"action"`
 }

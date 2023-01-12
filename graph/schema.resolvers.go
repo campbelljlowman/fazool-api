@@ -51,11 +51,14 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	// Create session info
 	sessionInfo := &model.SessionInfo{
-		ID:               sessionID,
-		CurrentlyPlaying: nil,
-		Queue:            nil,
-		Admin:            userID,
-		Size:             sessionSize,
+		ID: sessionID,
+		CurrentlyPlaying: &model.CurrentlyPlayingSong{
+			Song:    &model.SimpleSong{},
+			Playing: false,
+		},
+		Queue: nil,
+		Admin: userID,
+		Size:  sessionSize,
 	}
 	session.SessionInfo = sessionInfo
 
@@ -142,17 +145,19 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	existingVoter.RefreshVoterExpiration()
 
-	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Artist)
-	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.Song) bool { return s.ID == song.ID })
+	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.Song.Artist)
+	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.QueuedSong) bool { return s.Song.ID == song.ID })
 	session.QueueMutex.Lock()
 	if idx == -1 {
 		// add new song to queue
-		newSong := &model.Song{
-			ID:     song.ID,
-			Title:  *song.Title,
-			Artist: *song.Artist,
-			Image:  *song.Image,
-			Votes:  vote,
+		newSong := &model.QueuedSong{
+			Song: &model.SimpleSong{
+				ID:     song.ID,
+				Title:  song.Title,
+				Artist: song.Artist,
+				Image:  song.Image,
+			},
+			Votes: vote,
 		}
 		session.SessionInfo.Queue = append(session.SessionInfo.Queue, newSong)
 	} else {
@@ -299,8 +304,16 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("Error getting songs in playlist", err)
 	}
 
+	var queuedSongs []*model.QueuedSong
+	for _, song := range songs {
+		queuedSong := &model.QueuedSong{
+			Song:  song,
+			Votes: 0,
+		}
+		queuedSongs = append(queuedSongs, queuedSong)
+	}
 	session.QueueMutex.Lock()
-	session.SessionInfo.Queue = songs
+	session.SessionInfo.Queue = queuedSongs
 	session.QueueMutex.Unlock()
 
 	return session.SessionInfo, nil
@@ -418,6 +431,11 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 	id := uuid.New()
 	return id.String(), nil
+}
+
+// MusicSearch is the resolver for the musicSearch field.
+func (r *queryResolver) MusicSearch(ctx context.Context, query string) ([]*model.SimpleSong, error) {
+	panic(fmt.Errorf("not implemented: MusicSearch - musicSearch"))
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
