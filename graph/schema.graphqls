@@ -96,7 +96,7 @@ type Query {
   user: User!
   playlists(sessionID: Int!): [Playlist!]
   voterToken: String!
-  musicSearch(query: String!): [SimpleSong!]
+  musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
 }
 
 type Mutation {

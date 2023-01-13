@@ -69,14 +69,9 @@ func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error
 		return nil, false, errors.New("Currently playing is set to true but no track is found!")
 	}
 
+	simpleSong := SpotifyFullTrackToSimpleSong(status.Item)
 	song := &model.CurrentlyPlayingSong{
-		SimpleSong: &model.SimpleSong{
-			ID: status.Item.ID.String(),
-			Title: status.Item.Name,
-			// TODO: Loop through all artists and combine
-			Artist: status.Item.Artists[0].Name,
-			Image: status.Item.Album.Images[0].URL,
-		},
+		SimpleSong: simpleSong,
 		Playing: status.Playing,
 	}
 
@@ -144,16 +139,38 @@ func (s *SpotifyWrapper) GetSongsInPlaylist(playlist string) ([]*model.SimpleSon
 	var songs []*model.SimpleSong
 
 	for _, song := range(playlistItems.Tracks.Tracks) {
-		s := &model.SimpleSong{
-			ID: song.Track.ID.String(),
-			Title: song.Track.Name,
-			Artist: song.Track.Artists[0].Name,
-			Image: song.Track.Album.Images[0].URL,
-		}
+		s := SpotifyFullTrackToSimpleSong(&song.Track)
 		songs = append(songs, s)
 	}
 
 	return songs, nil
+}
+
+func (s *SpotifyWrapper) Search(query string) ([]*model.SimpleSong, error){
+	searchResult, err := s.client.Search(context.Background(), query, spotify.SearchTypeTrack)
+	if err != nil {
+		return nil, err
+	}
+	
+	var simpleSongList []*model.SimpleSong
+	for i := 1; i <= 5; i++ {
+		track := searchResult.Tracks.Tracks[i]
+		song := SpotifyFullTrackToSimpleSong(&track)
+		simpleSongList = append(simpleSongList, song)
+	}
+
+	return simpleSongList, nil
+}
+
+func SpotifyFullTrackToSimpleSong(track *spotify.FullTrack) *model.SimpleSong {
+	song := &model.SimpleSong{
+		ID: track.ID.String(),
+		Title: track.Name,
+		// TODO: Loop through all artists and combine
+		Artist: track.Artists[0].Name,
+		Image: track.Album.Images[0].URL,
+	}
+	return song
 }
 
 

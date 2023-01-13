@@ -19,4 +19,5 @@ type MusicPlayer interface {
   TimeRemaining() (int, error)
   GetPlaylists() ([]*model.Playlist, error)
   GetSongsInPlaylist(string) ([]*model.SimpleSong, error)
+  Search(string) ([]*model.SimpleSong, error)
 }

@@ -434,8 +434,26 @@ func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 }
 
 // MusicSearch is the resolver for the musicSearch field.
-func (r *queryResolver) MusicSearch(ctx context.Context, query string) ([]*model.SimpleSong, error) {
-	panic(fmt.Errorf("not implemented: MusicSearch - musicSearch"))
+func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error) {
+	userID, _ := ctx.Value("user").(string)
+
+	session, sessionExists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+
+	if !sessionExists {
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
+	}
+
+	_, voterExists := utils.GetValueFromMutexedMap(session.Voters, userID, session.VotersMutex)
+	if !voterExists {
+		return nil, utils.LogAndReturnError(fmt.Sprintf("You're not in session %v!", sessionID), nil)
+	}
+
+	searchResult, err := session.MusicPlayer.Search(query)
+	if err != nil {
+		return nil, utils.LogAndReturnError("Error executing music search!", err)
+	}
+	
+	return searchResult, nil
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
