@@ -42,7 +42,7 @@ func (r *Resolver) WatchSessions() {
 
 		for _, s := range r.sessions{
 			if s.ExpiresAt.Before(time.Now()) {
-				r.endSession(s, s.SessionInfo.Admin)
+				r.endSession(s)
 			}
 		}
 		r.sessionsMutex.Unlock()
@@ -50,18 +50,14 @@ func (r *Resolver) WatchSessions() {
 	}
 }
 
-func (r *Resolver) endSession(session *session.Session, userID string) error {
+func (r *Resolver) endSession(session *session.Session) error {
 	slog.Info("Ending session!", "sessionID", session.SessionInfo.ID)
-	err := r.database.SetUserSession(userID, 0)
+	err := r.database.SetUserSession(session.SessionInfo.Admin, 0)
 	if err != nil {
 		return err
 	}
 
-	session.ChannelMutex.Lock()
-	for _, ch := range session.Channels {
-		close(ch)
-	}
-	session.ChannelMutex.Unlock()
+	session.CloseChannels()
 
 	delete(r.sessions, session.SessionInfo.ID)
 

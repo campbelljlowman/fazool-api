@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/constants"
@@ -17,7 +16,6 @@ import (
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
-	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 )
 
@@ -107,7 +105,7 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 		return "", utils.LogAndReturnError(fmt.Sprintf("User %v is not the admin for this session!", userID), nil)
 	}
 
-	err := r.endSession(session, userID)
+	err := r.endSession(session)
 	if err != nil {
 		return "", utils.LogAndReturnError("Error removing session for the user", err)
 	}
@@ -146,28 +144,8 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	existingVoter.RefreshVoterExpiration()
 
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.SimpleSong.Artist)
-	idx := slices.IndexFunc(session.SessionInfo.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
-	session.QueueMutex.Lock()
-	if idx == -1 {
-		// add new song to queue
-		newSong := &model.QueuedSong{
-			SimpleSong: &model.SimpleSong{
-				ID:     song.ID,
-				Title:  *song.Title,
-				Artist: *song.Artist,
-				Image:  *song.Image,
-			},
-			Votes: vote,
-		}
-		session.SessionInfo.Queue = append(session.SessionInfo.Queue, newSong)
-	} else {
-		queuedSong := session.SessionInfo.Queue[idx]
-		queuedSong.Votes += vote
-	}
 
-	// Sort queue
-	sort.Slice(session.SessionInfo.Queue, func(i, j int) bool { return session.SessionInfo.Queue[i].Votes > session.SessionInfo.Queue[j].Votes })
-	session.QueueMutex.Unlock()
+	session.UpsertQueue(song, vote)
 
 	// Update subscription
 	session.SendUpdate()
@@ -304,17 +282,16 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("Error getting songs in playlist", err)
 	}
 
-	var queuedSongs []*model.QueuedSong
+	var songsToQueue []*model.QueuedSong
 	for _, song := range songs {
-		queuedSong := &model.QueuedSong{
+		songToQueue := &model.QueuedSong{
 			SimpleSong: song,
 			Votes:      0,
 		}
-		queuedSongs = append(queuedSongs, queuedSong)
+		songsToQueue = append(songsToQueue, songToQueue)
 	}
-	session.QueueMutex.Lock()
-	session.SessionInfo.Queue = queuedSongs
-	session.QueueMutex.Unlock()
+
+	session.SetQueue(songsToQueue)
 
 	return session.SessionInfo, nil
 }
@@ -467,9 +444,7 @@ func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int
 
 	channel := make(chan *model.SessionInfo)
 
-	session.ChannelMutex.Lock()
-	session.Channels = append(session.Channels, channel)
-	session.ChannelMutex.Unlock()
+	session.AddChannel(channel)
 
 	return channel, nil
 }

@@ -1,57 +1,60 @@
 package session
 
 import (
-	"os"
+	"context"
 	"fmt"
+	"os"
+	"sort"
 	"sync"
 	"time"
-	"context"
 
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 
 	"github.com/jackc/pgx/v4/pgxpool"
-
 )
 
 type Session struct {
-	SessionInfo 		*model.SessionInfo
-	Channels 			[]chan *model.SessionInfo
-	Voters 				map[string] *voter.Voter
-	MusicPlayer			musicplayer.MusicPlayer
-	ExpiresAt			time.Time
-	BonusVotes 			map[string]map[string]int
-	ChannelMutex 		*sync.Mutex
-	QueueMutex   		*sync.Mutex
-	VotersMutex 		*sync.Mutex
-	ExpiryMutex 		*sync.Mutex
-	BonusVoteMutex 		*sync.Mutex
+	SessionInfo    *model.SessionInfo
+	channels       []chan *model.SessionInfo
+	Voters         map[string]*voter.Voter
+	MusicPlayer    musicplayer.MusicPlayer
+	ExpiresAt      time.Time
+	BonusVotes     map[string]map[string]int
+	queueMutex     *sync.Mutex
+	channelMutex   *sync.Mutex
+	VotersMutex    *sync.Mutex
+	ExpiryMutex    *sync.Mutex
+	BonusVoteMutex *sync.Mutex
 }
 
 // Session gets removed after being inactive for this long in minutes
 const sessionTimeout time.Duration = 30
+
 // Spotify gets watched by default at this frequency in milliseconds
 const spotifyWatchFrequency time.Duration = 250
+
 // Voters get watched at this frequency in seconds
 const voterWatchFrequency time.Duration = 1
 
 func NewSession() Session {
 	session := Session{
-		SessionInfo: 		nil,
-		Channels: 			nil,
-		Voters: 			make(map[string]*voter.Voter),	
-		MusicPlayer: 		nil,
-		ExpiresAt: 			time.Now().Add(sessionTimeout * time.Minute),
-		BonusVotes: 		make(map[string]map[string]int),
-		ChannelMutex: 		&sync.Mutex{},
-		QueueMutex: 		&sync.Mutex{},		
-		VotersMutex: 		&sync.Mutex{},		
-		ExpiryMutex: 		&sync.Mutex{},
-		BonusVoteMutex: 	&sync.Mutex{},
+		SessionInfo:    nil,
+		channels:       nil,
+		Voters:         make(map[string]*voter.Voter),
+		MusicPlayer:    nil,
+		ExpiresAt:      time.Now().Add(sessionTimeout * time.Minute),
+		BonusVotes:     make(map[string]map[string]int),
+		channelMutex:   &sync.Mutex{},
+		queueMutex:     &sync.Mutex{},
+		VotersMutex:    &sync.Mutex{},
+		ExpiryMutex:    &sync.Mutex{},
+		BonusVoteMutex: &sync.Mutex{},
 	}
 
 	return session
@@ -122,14 +125,14 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 func (s *Session) AdvanceQueue(force bool) error {
 	var song *model.SimpleSong
 
-	s.QueueMutex.Lock()
+	s.queueMutex.Lock()
 	if len(s.SessionInfo.Queue) == 0 {
-		s.QueueMutex.Unlock()
+		s.queueMutex.Unlock()
 		return nil
 	}
 
 	song, s.SessionInfo.Queue = s.SessionInfo.Queue[0].SimpleSong, s.SessionInfo.Queue[1:]
-	s.QueueMutex.Unlock()
+	s.queueMutex.Unlock()
 
 	err := s.MusicPlayer.QueueSong(song.ID)
 	if err != nil {
@@ -157,22 +160,22 @@ func (s *Session) SendUpdate() {
 	go func() {
 		var activeChannels []chan *model.SessionInfo
 
-		s.ChannelMutex.Lock()
-		channels := s.Channels
+		s.channelMutex.Lock()
+		channels := s.channels
 
 		for _, ch := range channels {
 			select {
-				case ch <- s.SessionInfo: // This is the actual send.
-					// Our message went through, do nothing
-					activeChannels = append(activeChannels, ch)
-				default: // This is run when our send does not work.
-					fmt.Println("Channel closed in update.")
-					// You can handle any deregistration of the channel here.
+			case ch <- s.SessionInfo: // This is the actual send.
+				// Our message went through, do nothing
+				activeChannels = append(activeChannels, ch)
+			default: // This is run when our send does not work.
+				fmt.Println("Channel closed in update.")
+				// You can handle any deregistration of the channel here.
 			}
 		}
 
-		s.Channels = activeChannels
-		s.ChannelMutex.Unlock()
+		s.channels = activeChannels
+		s.channelMutex.Unlock()
 
 		s.ExpiryMutex.Lock()
 		s.ExpiresAt = time.Now().Add(sessionTimeout * time.Minute)
@@ -190,7 +193,7 @@ func (s *Session) WatchVoters() {
 		}
 
 		s.VotersMutex.Lock()
-		for _, voter := range(s.Voters){
+		for _, voter := range s.Voters {
 			if voter.VoterType == constants.AdminVoterType {
 				continue
 			}
@@ -226,7 +229,7 @@ func (s *Session) processBonusVotes(songID string) error {
 
 	pg := database.PostgresWrapper{PostgresClient: dbPool}
 
-	for userID, votes := range(bonusVotes){
+	for userID, votes := range bonusVotes {
 		err = pg.SubtractBonusVotes(userID, votes)
 		if err != nil {
 			slog.Warn("Error updating user's bonus votes", "user", userID)
@@ -235,4 +238,49 @@ func (s *Session) processBonusVotes(songID string) error {
 
 	pg.CloseConnection()
 	return nil
+}
+
+func (s *Session) AddChannel(newChannel chan *model.SessionInfo) {
+	s.channelMutex.Lock()
+	s.channels = append(s.channels, newChannel)
+	s.channelMutex.Unlock()
+}
+
+func (s *Session) CloseChannels() {
+	s.channelMutex.Lock()
+	for _, ch := range s.channels {
+		close(ch)
+	}
+	s.channelMutex.Unlock()
+}
+
+func (s *Session) SetQueue(newQueue [] *model.QueuedSong) {
+	s.queueMutex.Lock()
+	s.SessionInfo.Queue = newQueue
+	s.queueMutex.Unlock()
+}
+
+func (s *Session) UpsertQueue(song model.SongUpdate, vote int) {
+	s.queueMutex.Lock()
+	idx := slices.IndexFunc(s.SessionInfo.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
+	if idx == -1 {
+		// add new song to queue
+		newSong := &model.QueuedSong{
+			SimpleSong: &model.SimpleSong{
+				ID:     song.ID,
+				Title:  *song.Title,
+				Artist: *song.Artist,
+				Image:  *song.Image,
+			},
+			Votes: vote,
+		}
+		s.SessionInfo.Queue = append(s.SessionInfo.Queue, newSong)
+	} else {
+		queuedSong := s.SessionInfo.Queue[idx]
+		queuedSong.Votes += vote
+	}
+
+	// Sort queue
+	sort.Slice(s.SessionInfo.Queue, func(i, j int) bool { return s.SessionInfo.Queue[i].Votes > s.SessionInfo.Queue[j].Votes })
+	s.queueMutex.Unlock()
 }
