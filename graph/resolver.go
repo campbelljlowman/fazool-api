@@ -40,9 +40,9 @@ func (r *Resolver) WatchSessions() {
 	for {
 		r.sessionsMutex.Lock()
 
-		for _, s := range r.sessions{
-			if s.ExpiresAt.Before(time.Now()) {
-				r.endSession(s)
+		for _, session := range r.sessions{
+			if session.IsExpired() {
+				r.endSession(session)
 			}
 		}
 		r.sessionsMutex.Unlock()
@@ -61,9 +61,14 @@ func (r *Resolver) endSession(session *session.Session) error {
 
 	delete(r.sessions, session.SessionInfo.ID)
 
-	session.ExpiryMutex.Lock()
-	session.ExpiresAt = time.Now()
-	session.ExpiryMutex.Unlock()
+	session.ExpireSession()
 	
 	return nil
+}
+
+func (r *Resolver) getSession(sessionID int) (*session.Session, bool) {
+	r.sessionsMutex.Lock()
+	session, exists := r.sessions[sessionID]
+	r.sessionsMutex.Unlock()
+	return session, exists
 }

@@ -96,7 +96,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
 	userID := ctx.Value("user").(string)
 
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := r.getSession(sessionID)
 	if !exists {
 		return "", utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
@@ -116,29 +116,25 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
 	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := r.getSession(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	userID := ctx.Value("user").(string)
+	userOrVoterID := ctx.Value("user").(string)
 
-	existingVoter, voterExists := utils.GetValueFromMutexedMap(session.Voters, userID, session.VotersMutex)
+	existingVoter, voterExists := session.GetVoter(userOrVoterID)
 	if !voterExists {
-		return nil, utils.LogAndReturnError(fmt.Sprintf("User not in active voters! User: %v", userID), nil)
+		return nil, utils.LogAndReturnError(fmt.Sprintf("User not in active voters! User: %v", userOrVoterID), nil)
 	}
 
 	vote, isBonusVote, err := existingVoter.GetVoteAmountAndType(song.ID, &song.Vote, &song.Action)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error processing vote", err)
 	}
+	slog.Info("IS bonus vote?", "bonus-vote", isBonusVote)
 	if isBonusVote {
-		session.BonusVoteMutex.Lock()
-		if _, exists := session.BonusVotes[song.ID][existingVoter.Id]; !exists {
-			session.BonusVotes[song.ID] = make(map[string]int)
-		}
-		session.BonusVotes[song.ID][existingVoter.Id] += vote
-		session.BonusVoteMutex.Unlock()
+		session.AddBonusVote(song.ID, existingVoter.ID, vote)
 	}
 
 	existingVoter.RefreshVoterExpiration()
@@ -155,7 +151,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := r.getSession(sessionID)
 
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
@@ -268,7 +264,7 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("No userID found on token for setting playlist", nil)
 	}
 
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := r.getSession(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
@@ -297,11 +293,11 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 }
 
 // Session is the resolver for the session field.
-func (r *queryResolver) Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error) {
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, *sessionID, r.sessionsMutex)
+func (r *queryResolver) Session(ctx context.Context, sessionID int) (*model.SessionInfo, error) {
+	session, exists := r.getSession(sessionID)
 
 	if !exists {
-		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", *sessionID), nil)
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
 	return session.SessionInfo, nil
@@ -316,20 +312,19 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogAndReturnError("No userID found on token for adding Spotify token", nil)
 	}
 
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
-
+	session, exists := r.getSession(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	existingVoter, exists := utils.GetValueFromMutexedMap(session.Voters, userID, session.VotersMutex)
+	existingVoter, exists := session.GetVoter(userID)
 
 	if exists {
-		slog.Info("return existing voter", "voter", existingVoter.Id)
+		slog.Info("return existing voter", "voter", existingVoter.ID)
 		return existingVoter.GetVoterInfo(), nil
 	}
 
-	if len(session.Voters) >= session.SessionInfo.Size {
+	if session.IsFull() {
 		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}
 
@@ -358,9 +353,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}
 
-	session.VotersMutex.Lock()
-	session.Voters[userID] = newVoter
-	session.VotersMutex.Unlock()
+	session.AddVoter(userID, newVoter)
 
 	return newVoter.GetVoterInfo(), nil
 }
@@ -387,7 +380,7 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 		return nil, utils.LogAndReturnError("No userID found on token for getting playlists", nil)
 	}
 
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := r.getSession(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
@@ -412,15 +405,15 @@ func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 
 // MusicSearch is the resolver for the musicSearch field.
 func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error) {
-	userID, _ := ctx.Value("user").(string)
+	userOrVoterID, _ := ctx.Value("user").(string)
 
-	session, sessionExists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, sessionExists := r.getSession(sessionID)
 
 	if !sessionExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	_, voterExists := utils.GetValueFromMutexedMap(session.Voters, userID, session.VotersMutex)
+	_, voterExists := session.GetVoter(userOrVoterID)
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("You're not in session %v!", sessionID), nil)
 	}
@@ -429,14 +422,14 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error executing music search!", err)
 	}
-	
+
 	return searchResult, nil
 }
 
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
 	// slog.Info("Subscribing to session")
-	session, exists := utils.GetValueFromMutexedMap(r.sessions, sessionID, r.sessionsMutex)
+	session, exists := r.getSession(sessionID)
 
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)

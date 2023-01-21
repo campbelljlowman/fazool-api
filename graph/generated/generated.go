@@ -71,7 +71,7 @@ type ComplexityRoot struct {
 	Query struct {
 		MusicSearch func(childComplexity int, sessionID int, query string) int
 		Playlists   func(childComplexity int, sessionID int) int
-		Session     func(childComplexity int, sessionID *int) int
+		Session     func(childComplexity int, sessionID int) int
 		User        func(childComplexity int) int
 		Voter       func(childComplexity int, sessionID int) int
 		VoterToken  func(childComplexity int) int
@@ -128,7 +128,7 @@ type MutationResolver interface {
 	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error)
 }
 type QueryResolver interface {
-	Session(ctx context.Context, sessionID *int) (*model.SessionInfo, error)
+	Session(ctx context.Context, sessionID int) (*model.SessionInfo, error)
 	Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error)
 	User(ctx context.Context) (*model.User, error)
 	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
@@ -314,7 +314,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Session(childComplexity, args["sessionID"].(*int)), true
+		return e.complexity.Query.Session(childComplexity, args["sessionID"].(int)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -676,7 +676,7 @@ input SpotifyCreds {
 }
 
 type Query {
-  session(sessionID: Int): SessionInfo
+  session(sessionID: Int!): SessionInfo
   voter(sessionID: Int!): VoterInfo!
   user: User!
   playlists(sessionID: Int!): [Playlist!]
@@ -899,10 +899,10 @@ func (ec *executionContext) field_Query_playlists_args(ctx context.Context, rawA
 func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *int
+	var arg0 int
 	if tmp, ok := rawArgs["sessionID"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
-		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1712,7 +1712,7 @@ func (ec *executionContext) _Query_session(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Session(rctx, fc.Args["sessionID"].(*int))
+		return ec.resolvers.Query().Session(rctx, fc.Args["sessionID"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
