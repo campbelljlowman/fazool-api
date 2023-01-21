@@ -69,7 +69,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		MusicSearch func(childComplexity int, query string) int
+		MusicSearch func(childComplexity int, sessionID int, query string) int
 		Playlists   func(childComplexity int, sessionID int) int
 		Session     func(childComplexity int, sessionID *int) int
 		User        func(childComplexity int) int
@@ -133,7 +133,7 @@ type QueryResolver interface {
 	User(ctx context.Context) (*model.User, error)
 	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
 	VoterToken(ctx context.Context) (string, error)
-	MusicSearch(ctx context.Context, query string) ([]*model.SimpleSong, error)
+	MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error)
 }
 type SubscriptionResolver interface {
 	SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error)
@@ -290,7 +290,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.MusicSearch(childComplexity, args["query"].(string)), true
+		return e.complexity.Query.MusicSearch(childComplexity, args["sessionID"].(int), args["query"].(string)), true
 
 	case "Query.playlists":
 		if e.complexity.Query.Playlists == nil {
@@ -681,7 +681,7 @@ type Query {
   user: User!
   playlists(sessionID: Int!): [Playlist!]
   voterToken: String!
-  musicSearch(query: String!): [SimpleSong!]
+  musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
 }
 
 type Mutation {
@@ -860,15 +860,24 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_musicSearch_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["query"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["query"] = arg0
+	args["sessionID"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["query"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["query"] = arg1
 	return args, nil
 }
 
@@ -1992,7 +2001,7 @@ func (ec *executionContext) _Query_musicSearch(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().MusicSearch(rctx, fc.Args["query"].(string))
+		return ec.resolvers.Query().MusicSearch(rctx, fc.Args["sessionID"].(int), fc.Args["query"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
