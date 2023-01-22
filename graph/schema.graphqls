@@ -91,7 +91,7 @@ input SpotifyCreds {
 }
 
 type Query {
-  session(sessionID: Int): SessionInfo
+  session(sessionID: Int!): SessionInfo
   voter(sessionID: Int!): VoterInfo!
   user: User!
   playlists(sessionID: Int!): [Playlist!]

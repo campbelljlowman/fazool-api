@@ -7,7 +7,6 @@ import (
 	"errors"
 	"math/big"
 	"net/mail"
-	"sync"
 
 	"golang.org/x/exp/slog"
 )
@@ -42,11 +41,4 @@ func LogAndReturnError(msg string, err error) error {
 		slog.Warn(msg)
 	}
 	return errors.New(msg)
-}
-
-func GetValueFromMutexedMap[T any, V comparable](m map[V]*T, key V, mutex *sync.Mutex) (*T, bool){
-	mutex.Lock()
-	value, exists := m[key]
-	mutex.Unlock()
-	return value, exists
 }

@@ -1,57 +1,61 @@
 package session
 
 import (
-	"os"
+	"context"
 	"fmt"
+	"os"
+	"sort"
 	"sync"
 	"time"
-	"context"
 
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 
 	"github.com/jackc/pgx/v4/pgxpool"
-
 )
 
 type Session struct {
-	SessionInfo 		*model.SessionInfo
-	Channels 			[]chan *model.SessionInfo
-	Voters 				map[string] *voter.Voter
-	MusicPlayer			musicplayer.MusicPlayer
-	ExpiresAt			time.Time
-	BonusVotes 			map[string]map[string]int
-	ChannelMutex 		*sync.Mutex
-	QueueMutex   		*sync.Mutex
-	VotersMutex 		*sync.Mutex
-	ExpiryMutex 		*sync.Mutex
-	BonusVoteMutex 		*sync.Mutex
+	SessionInfo    *model.SessionInfo
+	channels       []chan *model.SessionInfo
+	voters         map[string]*voter.Voter
+	MusicPlayer    musicplayer.MusicPlayer
+	expiresAt      time.Time
+	// Map of [song][user][votes]
+	bonusVotes     map[string]map[string]int
+	queueMutex     *sync.Mutex
+	channelMutex   *sync.Mutex
+	votersMutex    *sync.Mutex
+	expiryMutex    *sync.Mutex
+	bonusVoteMutex *sync.Mutex
 }
 
 // Session gets removed after being inactive for this long in minutes
 const sessionTimeout time.Duration = 30
+
 // Spotify gets watched by default at this frequency in milliseconds
 const spotifyWatchFrequency time.Duration = 250
+
 // Voters get watched at this frequency in seconds
 const voterWatchFrequency time.Duration = 1
 
 func NewSession() Session {
 	session := Session{
-		SessionInfo: 		nil,
-		Channels: 			nil,
-		Voters: 			make(map[string]*voter.Voter),	
-		MusicPlayer: 		nil,
-		ExpiresAt: 			time.Now().Add(sessionTimeout * time.Minute),
-		BonusVotes: 		make(map[string]map[string]int),
-		ChannelMutex: 		&sync.Mutex{},
-		QueueMutex: 		&sync.Mutex{},		
-		VotersMutex: 		&sync.Mutex{},		
-		ExpiryMutex: 		&sync.Mutex{},
-		BonusVoteMutex: 	&sync.Mutex{},
+		SessionInfo:    nil,
+		channels:       nil,
+		voters:         make(map[string]*voter.Voter),
+		MusicPlayer:    nil,
+		expiresAt:      time.Now().Add(sessionTimeout * time.Minute),
+		bonusVotes:     make(map[string]map[string]int),
+		channelMutex:   &sync.Mutex{},
+		queueMutex:     &sync.Mutex{},
+		votersMutex:    &sync.Mutex{},
+		expiryMutex:    &sync.Mutex{},
+		bonusVoteMutex: &sync.Mutex{},
 	}
 
 	return session
@@ -63,7 +67,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	addNextSongFlag := false
 
 	for {
-		if time.Now().After(s.ExpiresAt) {
+		if time.Now().After(s.expiresAt) {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
@@ -122,14 +126,14 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 func (s *Session) AdvanceQueue(force bool) error {
 	var song *model.SimpleSong
 
-	s.QueueMutex.Lock()
+	s.queueMutex.Lock()
 	if len(s.SessionInfo.Queue) == 0 {
-		s.QueueMutex.Unlock()
+		s.queueMutex.Unlock()
 		return nil
 	}
 
 	song, s.SessionInfo.Queue = s.SessionInfo.Queue[0].SimpleSong, s.SessionInfo.Queue[1:]
-	s.QueueMutex.Unlock()
+	s.queueMutex.Unlock()
 
 	err := s.MusicPlayer.QueueSong(song.ID)
 	if err != nil {
@@ -157,26 +161,26 @@ func (s *Session) SendUpdate() {
 	go func() {
 		var activeChannels []chan *model.SessionInfo
 
-		s.ChannelMutex.Lock()
-		channels := s.Channels
+		s.channelMutex.Lock()
+		channels := s.channels
 
 		for _, ch := range channels {
 			select {
-				case ch <- s.SessionInfo: // This is the actual send.
-					// Our message went through, do nothing
-					activeChannels = append(activeChannels, ch)
-				default: // This is run when our send does not work.
-					fmt.Println("Channel closed in update.")
-					// You can handle any deregistration of the channel here.
+			case ch <- s.SessionInfo: // This is the actual send.
+				// Our message went through, do nothing
+				activeChannels = append(activeChannels, ch)
+			default: // This is run when our send does not work.
+				fmt.Println("Channel closed in update.")
+				// You can handle any deregistration of the channel here.
 			}
 		}
 
-		s.Channels = activeChannels
-		s.ChannelMutex.Unlock()
+		s.channels = activeChannels
+		s.channelMutex.Unlock()
 
-		s.ExpiryMutex.Lock()
-		s.ExpiresAt = time.Now().Add(sessionTimeout * time.Minute)
-		s.ExpiryMutex.Unlock()
+		s.expiryMutex.Lock()
+		s.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
+		s.expiryMutex.Unlock()
 	}()
 }
 
@@ -184,24 +188,24 @@ func (s *Session) SendUpdate() {
 func (s *Session) WatchVoters() {
 
 	for {
-		if time.Now().After(s.ExpiresAt) {
+		if time.Now().After(s.expiresAt) {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
 
-		s.VotersMutex.Lock()
-		for _, voter := range(s.Voters){
+		s.votersMutex.Lock()
+		for _, voter := range s.voters {
 			if voter.VoterType == constants.AdminVoterType {
 				continue
 			}
 
 			if time.Now().After(voter.ExpiresAt) {
-				slog.Info("Voter exipred! Removing", "voter", voter.Id)
-				delete(s.Voters, voter.Id)
+				slog.Info("Voter exipred! Removing", "voter", voter.ID)
+				delete(s.voters, voter.ID)
 			}
 
 		}
-		s.VotersMutex.Unlock()
+		s.votersMutex.Unlock()
 
 		time.Sleep(voterWatchFrequency * time.Second)
 	}
@@ -209,10 +213,10 @@ func (s *Session) WatchVoters() {
 
 // TODO: This code hasn't been tested
 func (s *Session) processBonusVotes(songID string) error {
-	s.BonusVoteMutex.Lock()
-	bonusVotes, exists := s.BonusVotes[songID]
-	delete(s.BonusVotes, songID)
-	s.BonusVoteMutex.Unlock()
+	s.bonusVoteMutex.Lock()
+	bonusVotes, exists := s.bonusVotes[songID]
+	delete(s.bonusVotes, songID)
+	s.bonusVoteMutex.Unlock()
 	if !exists {
 		return nil
 	}
@@ -226,7 +230,7 @@ func (s *Session) processBonusVotes(songID string) error {
 
 	pg := database.PostgresWrapper{PostgresClient: dbPool}
 
-	for userID, votes := range(bonusVotes){
+	for userID, votes := range bonusVotes {
 		err = pg.SubtractBonusVotes(userID, votes)
 		if err != nil {
 			slog.Warn("Error updating user's bonus votes", "user", userID)
@@ -235,4 +239,94 @@ func (s *Session) processBonusVotes(songID string) error {
 
 	pg.CloseConnection()
 	return nil
+}
+
+func (s *Session) AddChannel(newChannel chan *model.SessionInfo) {
+	s.channelMutex.Lock()
+	s.channels = append(s.channels, newChannel)
+	s.channelMutex.Unlock()
+}
+
+func (s *Session) CloseChannels() {
+	s.channelMutex.Lock()
+	for _, ch := range s.channels {
+		close(ch)
+	}
+	s.channelMutex.Unlock()
+}
+
+func (s *Session) SetQueue(newQueue [] *model.QueuedSong) {
+	s.queueMutex.Lock()
+	s.SessionInfo.Queue = newQueue
+	s.queueMutex.Unlock()
+}
+
+func (s *Session) UpsertQueue(song model.SongUpdate, vote int) {
+	s.queueMutex.Lock()
+	idx := slices.IndexFunc(s.SessionInfo.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
+	if idx == -1 {
+		// add new song to queue
+		newSong := &model.QueuedSong{
+			SimpleSong: &model.SimpleSong{
+				ID:     song.ID,
+				Title:  *song.Title,
+				Artist: *song.Artist,
+				Image:  *song.Image,
+			},
+			Votes: vote,
+		}
+		s.SessionInfo.Queue = append(s.SessionInfo.Queue, newSong)
+	} else {
+		queuedSong := s.SessionInfo.Queue[idx]
+		queuedSong.Votes += vote
+	}
+
+	// Sort queue
+	sort.Slice(s.SessionInfo.Queue, func(i, j int) bool { return s.SessionInfo.Queue[i].Votes > s.SessionInfo.Queue[j].Votes })
+	s.queueMutex.Unlock()
+}
+
+func (s *Session) AddVoter(voterID string, newVoter *voter.Voter){
+	s.votersMutex.Lock()
+	s.voters[voterID] = newVoter
+	s.votersMutex.Unlock()
+}
+
+func (s *Session) GetVoter(voterID string) (*voter.Voter, bool){
+	s.votersMutex.Lock()
+	voter, exists := s.voters[voterID]
+	s.votersMutex.Unlock()
+	return voter, exists
+} 
+
+func (s *Session) IsFull() bool {
+	isFull := false
+	s.votersMutex.Lock()
+	if len(s.voters) >= s.SessionInfo.Size {
+		isFull = true
+	}
+	s.votersMutex.Unlock()
+	return isFull
+}
+
+func (s *Session) ExpireSession() {
+	s.expiryMutex.Lock()
+	s.expiresAt = time.Now()
+	s.expiryMutex.Unlock()
+}
+
+func (s *Session) IsExpired() bool {
+	s.expiryMutex.Lock()
+	isExpired := s.expiresAt.Before(time.Now())
+	s.expiryMutex.Unlock()
+	return isExpired
+}
+
+func (s *Session) AddBonusVote(songID, voterID string, vote int) {
+	s.bonusVoteMutex.Lock()
+	if _, exists := s.bonusVotes[songID][voterID]; !exists {
+		s.bonusVotes[songID] = make(map[string]int)
+	}
+	s.bonusVotes[songID][voterID] += vote
+	s.bonusVoteMutex.Unlock()
 }

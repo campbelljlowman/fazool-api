@@ -40,9 +40,9 @@ func (r *Resolver) WatchSessions() {
 	for {
 		r.sessionsMutex.Lock()
 
-		for _, s := range r.sessions{
-			if s.ExpiresAt.Before(time.Now()) {
-				r.endSession(s, s.SessionInfo.Admin)
+		for _, session := range r.sessions{
+			if session.IsExpired() {
+				r.endSession(session)
 			}
 		}
 		r.sessionsMutex.Unlock()
@@ -50,24 +50,25 @@ func (r *Resolver) WatchSessions() {
 	}
 }
 
-func (r *Resolver) endSession(session *session.Session, userID string) error {
+func (r *Resolver) endSession(session *session.Session) error {
 	slog.Info("Ending session!", "sessionID", session.SessionInfo.ID)
-	err := r.database.SetUserSession(userID, 0)
+	err := r.database.SetUserSession(session.SessionInfo.Admin, 0)
 	if err != nil {
 		return err
 	}
 
-	session.ChannelMutex.Lock()
-	for _, ch := range session.Channels {
-		close(ch)
-	}
-	session.ChannelMutex.Unlock()
+	session.CloseChannels()
 
 	delete(r.sessions, session.SessionInfo.ID)
 
-	session.ExpiryMutex.Lock()
-	session.ExpiresAt = time.Now()
-	session.ExpiryMutex.Unlock()
+	session.ExpireSession()
 	
 	return nil
+}
+
+func (r *Resolver) getSession(sessionID int) (*session.Session, bool) {
+	r.sessionsMutex.Lock()
+	session, exists := r.sessions[sessionID]
+	r.sessionsMutex.Unlock()
+	return session, exists
 }
