@@ -132,7 +132,8 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error processing vote", err)
 	}
-	slog.Info("IS bonus vote?", "bonus-vote", isBonusVote)
+
+	// TODO: Remove bonus votes if applicable?
 	if isBonusVote {
 		session.AddBonusVote(song.ID, existingVoter.ID, vote)
 	}
