@@ -95,7 +95,6 @@ type Query {
   voter(sessionID: Int!): VoterInfo!
   user: User!
   playlists(sessionID: Int!): [Playlist!]
-  voterToken: String!
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
 }
 
@@ -109,6 +108,7 @@ type Mutation {
   # Users
   createUser(newUser: NewUser!): String!
   login(userLogin: UserLogin!): String!
+  joinVoters: String!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!

@@ -129,7 +129,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-
+	
 	existingVoter, voterExists := session.GetVoter(voterID)
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Voter not in active voters! Voter: %v", voterID), nil)
@@ -163,12 +163,12 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	if accountID == "" {
 		return nil, utils.LogAndReturnError("Account ID is required to update currently playing song", nil)
 	}
-	
+
 	session, exists := r.getSession(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
-	
+
 	if accountID != session.SessionInfo.Admin {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
@@ -200,7 +200,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser
 	// Get this from new user request!
 	accountLevel := constants.RegularAccountLevel
 	voterLevel := constants.RegularVoterType
-	
+
 	isVaildEmail := utils.ValidateEmail(newUser.Email)
 	if !isVaildEmail {
 		return "", utils.LogAndReturnError("Invalid email format", nil)
@@ -248,6 +248,12 @@ func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin)
 	}
 
 	return jwtToken, nil
+}
+
+// JoinVoters is the resolver for the joinVoters field.
+func (r *mutationResolver) JoinVoters(ctx context.Context) (string, error) {
+	voterToken := uuid.New()
+	return voterToken.String(), nil
 }
 
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
@@ -414,12 +420,6 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 	}
 
 	return playlists, nil
-}
-
-// VoterToken is the resolver for the voterToken field.
-func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
-	voterToken := uuid.New()
-	return voterToken.String(), nil
 }
 
 // MusicSearch is the resolver for the musicSearch field.

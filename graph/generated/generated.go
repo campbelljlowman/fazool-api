@@ -55,6 +55,7 @@ type ComplexityRoot struct {
 		CreateSession          func(childComplexity int) int
 		CreateUser             func(childComplexity int, newUser model.NewUser) int
 		EndSession             func(childComplexity int, sessionID int) int
+		JoinVoters             func(childComplexity int) int
 		Login                  func(childComplexity int, userLogin model.UserLogin) int
 		SetPlaylist            func(childComplexity int, sessionID int, playlist string) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
@@ -74,7 +75,6 @@ type ComplexityRoot struct {
 		Session     func(childComplexity int, sessionID int) int
 		User        func(childComplexity int) int
 		Voter       func(childComplexity int, sessionID int) int
-		VoterToken  func(childComplexity int) int
 	}
 
 	QueuedSong struct {
@@ -124,6 +124,7 @@ type MutationResolver interface {
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error)
 	CreateUser(ctx context.Context, newUser model.NewUser) (string, error)
 	Login(ctx context.Context, userLogin model.UserLogin) (string, error)
+	JoinVoters(ctx context.Context) (string, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error)
 	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error)
 }
@@ -132,7 +133,6 @@ type QueryResolver interface {
 	Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error)
 	User(ctx context.Context) (*model.User, error)
 	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
-	VoterToken(ctx context.Context) (string, error)
 	MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error)
 }
 type SubscriptionResolver interface {
@@ -198,6 +198,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.EndSession(childComplexity, args["sessionID"].(int)), true
+
+	case "Mutation.joinVoters":
+		if e.complexity.Mutation.JoinVoters == nil {
+			break
+		}
+
+		return e.complexity.Mutation.JoinVoters(childComplexity), true
 
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
@@ -334,13 +341,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Voter(childComplexity, args["sessionID"].(int)), true
-
-	case "Query.voterToken":
-		if e.complexity.Query.VoterToken == nil {
-			break
-		}
-
-		return e.complexity.Query.VoterToken(childComplexity), true
 
 	case "QueuedSong.simpleSong":
 		if e.complexity.QueuedSong.SimpleSong == nil {
@@ -680,7 +680,6 @@ type Query {
   voter(sessionID: Int!): VoterInfo!
   user: User!
   playlists(sessionID: Int!): [Playlist!]
-  voterToken: String!
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
 }
 
@@ -694,6 +693,7 @@ type Mutation {
   # Users
   createUser(newUser: NewUser!): String!
   login(userLogin: UserLogin!): String!
+  joinVoters: String!
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
@@ -1432,6 +1432,50 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_joinVoters(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_joinVoters(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().JoinVoters(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_joinVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_upsertSpotifyToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_upsertSpotifyToken(ctx, field)
 	if err != nil {
@@ -1939,50 +1983,6 @@ func (ec *executionContext) fieldContext_Query_playlists(ctx context.Context, fi
 	if fc.Args, err = ec.field_Query_playlists_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_voterToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_voterToken(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().VoterToken(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_voterToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
 	}
 	return fc, nil
 }
@@ -5215,6 +5215,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "joinVoters":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_joinVoters(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "upsertSpotifyToken":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -5381,29 +5390,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_playlists(ctx, field)
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
-		case "voterToken":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_voterToken(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
 				return res
 			}
 
