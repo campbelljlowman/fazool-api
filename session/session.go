@@ -324,6 +324,7 @@ func (s *Session) IsExpired() bool {
 
 func (s *Session) AddBonusVote(songID, voterID string, vote int) {
 	s.bonusVoteMutex.Lock()
+	// TODO: Make bonus votes a map of voterID and amount
 	if _, exists := s.bonusVotes[songID][voterID]; !exists {
 		s.bonusVotes[songID] = make(map[string]int)
 	}

@@ -128,21 +128,21 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogAndReturnError(fmt.Sprintf("User not in active voters! User: %v", userOrVoterID), nil)
 	}
 
-	vote, isBonusVote, err := existingVoter.GetVoteAmountAndType(song.ID, &song.Vote, &song.Action)
+	voteAmount, isBonusVote, err := existingVoter.CalculateAndProcessVote(song.ID, &song.Vote, &song.Action)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error processing vote", err)
 	}
 
 	// TODO: Remove bonus votes if applicable?
 	if isBonusVote {
-		session.AddBonusVote(song.ID, existingVoter.ID, vote)
+		session.AddBonusVote(song.ID, existingVoter.ID, voteAmount)
 	}
 
 	existingVoter.RefreshVoterExpiration()
 
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.SimpleSong.Artist)
 
-	session.UpsertQueue(song, vote)
+	session.UpsertQueue(song, voteAmount)
 
 	// Update subscription
 	session.SendUpdate()
