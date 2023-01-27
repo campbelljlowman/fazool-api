@@ -13,12 +13,12 @@ type Voter struct {
 	ID string
 	VoterType string
 	ExpiresAt time.Time
-	SongsUpVoted map[string]struct{}
-	SongsDownVoted map[string]struct{}
-	BonusVotes int
+	songsUpVoted map[string]struct{}
+	songsDownVoted map[string]struct{}
+	bonusVotes int
 }
 
-var empty struct{}
+var emptyStructValue struct{}
 const regularVoterDurationInMinutes time.Duration = 15
 const priviledgedVoterDurationInMinutes time.Duration = 15
 var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
@@ -33,25 +33,25 @@ func NewVoter(ID, voterType string, bonusVotes int) (*Voter, error) {
 		ID: ID,
 		VoterType: voterType,
 		ExpiresAt: time.Now().Add(getVoterDuration(voterType) * time.Minute),
-		SongsUpVoted: make(map[string]struct{}),
-		SongsDownVoted: make(map[string]struct{}),
-		BonusVotes: bonusVotes,
+		songsUpVoted: make(map[string]struct{}),
+		songsDownVoted: make(map[string]struct{}),
+		bonusVotes: bonusVotes,
 	}
 	return &v, nil
 }
 
 func (v *Voter) GetVoterInfo() *model.VoterInfo {
-	songsUpVotedList := make([]string, len(v.SongsUpVoted))
-	songsDownVotedList := make([]string, len(v.SongsDownVoted))
+	songsUpVotedList := make([]string, len(v.songsUpVoted))
+	songsDownVotedList := make([]string, len(v.songsDownVoted))
 
 	i := 0
-	for k := range v.SongsUpVoted {
+	for k := range v.songsUpVoted {
 		songsUpVotedList[i] = k
 		i++
 	}
 
 	i = 0
-	for k := range v.SongsDownVoted {
+	for k := range v.songsDownVoted {
 		songsDownVotedList[i] = k
 		i++
 	}
@@ -60,68 +60,84 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 		Type: v.VoterType,
 		SongsUpVoted: songsUpVotedList,
 		SongsDownVoted: songsDownVotedList,
-		BonusVotes: &v.BonusVotes,
+		BonusVotes: &v.bonusVotes,
 	}
 
 	return &voter
 }
 
-func (v *Voter) GetVoteAmountAndType(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
+func (v *Voter) CalculateAndProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
 	switch {
-	case action.String() == "ADD" && direction.String() == "UP":
-		voteAdjustment := 0
-		if v.VoterType != constants.AdminVoterType {
-			if _, exists := v.SongsUpVoted[song]; exists {
-				if v.BonusVotes <= 0 {
-					return 0, false, errors.New("You've already voted for this song!")
-				} else {
-					// Handle bonus votes
-					v.BonusVotes -= 1
-					return 1, true, nil
-				}
-			}
-
-			if _, exists := v.SongsDownVoted[song]; exists {
-				delete(v.SongsDownVoted, song)
-				// If song was downvoted and is being upvoted, vote needs to be double
-				voteAdjustment = 1
-			}
-		}
-
-		v.SongsUpVoted[song] = empty
-		return voteAdjustment + getVoteValue(v.VoterType), false, nil
-	case action.String() == "ADD" && direction.String() == "DOWN":
-		voteAdjustment := 0
-		if v.VoterType != constants.AdminVoterType {
-			if _, exists := v.SongsDownVoted[song]; exists {
-				return 0, false, errors.New("You've already voted for this song!")
-			}
-
-			if _, exists := v.SongsUpVoted[song]; exists {
-				delete(v.SongsUpVoted, song)
-				// If song was downvoted and is being upvoted, vote needs to be double
-				voteAdjustment = getVoteValue(v.VoterType)
-			}
-		}
-
-		v.SongsDownVoted[song] = empty
-		return -(voteAdjustment + 1), false, nil
-	case action.String() == "REMOVE" && direction.String() == "UP":
-		delete(v.SongsUpVoted, song)
-		return -getVoteValue(v.VoterType), false, nil
-	case action.String() == "REMOVE" && direction.String() == "DOWN":
-		delete(v.SongsDownVoted, song)
-		return 1, false, nil
+	case *action == model.SongVoteActionAdd && *direction == model.SongVoteDirectionUp:
+		return v.calculateAndAddUpVote(song)
+	case *action == model.SongVoteActionAdd && *direction == model.SongVoteDirectionDown:
+		return v.calculateAndAddDownVote(song)
+	case *action == model.SongVoteActionRemove && *direction == model.SongVoteDirectionUp:
+		return v.calculateAndRemoveUpVote(song)
+	case *action == model.SongVoteActionRemove && *direction == model.SongVoteDirectionDown:
+		return v.calculateAndRemoveDownVote(song)
 	}
 
 	return 0, false, fmt.Errorf("Song vote inputs aren't valid!")
+}
+
+func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error){
+	voteAdjustment := 0
+	if v.VoterType != constants.AdminVoterType {
+		if _, exists := v.songsUpVoted[song]; exists {
+			if v.bonusVotes <= 0 {
+				return 0, false, errors.New("You've already voted for this song!")
+			} else {
+				// Handle bonus votes
+				v.bonusVotes -= 1
+				return 1, true, nil
+			}
+		}
+
+		if _, exists := v.songsDownVoted[song]; exists {
+			// If song was downvoted and is being upvoted, vote needs to be double
+			voteAdjustment = 1
+		}
+	}
+	
+	delete(v.songsDownVoted, song)
+	v.songsUpVoted[song] = emptyStructValue
+	return voteAdjustment + getVoteAmountFromType(v.VoterType), false, nil
+}
+
+func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
+	voteAdjustment := 0
+	if v.VoterType != constants.AdminVoterType {
+		if _, exists := v.songsDownVoted[song]; exists {
+			return 0, false, errors.New("You've already voted for this song!")
+		}
+
+		if _, exists := v.songsUpVoted[song]; exists {
+			// If song was downvoted and is being upvoted, vote needs to be double
+			voteAdjustment = getVoteAmountFromType(v.VoterType)
+		}
+	}
+	
+	delete(v.songsUpVoted, song)
+	v.songsDownVoted[song] = emptyStructValue
+	return -(voteAdjustment + 1), false, nil
+}
+
+func (v *Voter) calculateAndRemoveUpVote(song string) (int, bool, error) {
+	delete(v.songsUpVoted, song)
+	return -getVoteAmountFromType(v.VoterType), false, nil
+}
+
+func (v *Voter) calculateAndRemoveDownVote(song string) (int, bool, error) {
+	delete(v.songsDownVoted, song)
+	return 1, false, nil
 }
 
 func (v *Voter) RefreshVoterExpiration() {
 	v.ExpiresAt = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
 }
 
-func getVoteValue (voterType string) int {
+func getVoteAmountFromType (voterType string) int {
 	if voterType == constants.PrivilegedVoterType {
 		return 2
 	}
