@@ -230,10 +230,10 @@ func (s *Session) processBonusVotes(songID string) error {
 
 	pg := database.PostgresWrapper{PostgresClient: dbPool}
 
-	for userID, votes := range bonusVotes {
-		err = pg.SubtractBonusVotes(userID, votes)
+	for accountID, votes := range bonusVotes {
+		err = pg.SubtractBonusVotes(accountID, votes)
 		if err != nil {
-			slog.Warn("Error updating user's bonus votes", "user", userID)
+			slog.Warn("Error updating user's bonus votes", "user", accountID)
 		}
 	}
 
