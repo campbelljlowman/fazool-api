@@ -13,6 +13,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"github.com/campbelljlowman/fazool-api/utils"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 
@@ -25,7 +26,7 @@ type Session struct {
 	voters         map[string]*voter.Voter
 	MusicPlayer    musicplayer.MusicPlayer
 	expiresAt      time.Time
-	// Map of [song][user][votes]
+	// Map of [song][user][votes] -> change to struct of [song]{user, vote}
 	bonusVotes     map[string]map[string]int
 	queueMutex     *sync.Mutex
 	channelMutex   *sync.Mutex
@@ -43,9 +44,25 @@ const spotifyWatchFrequency time.Duration = 250
 // Voters get watched at this frequency in seconds
 const voterWatchFrequency time.Duration = 1
 
-func NewSession() Session {
+func NewSession(userID string, sessionSize int) (*Session, error) {
+	sessionID, err := utils.GenerateSessionID()
+	if err != nil {
+		return nil, utils.LogAndReturnError("Error generating session ID", err)
+	}
+
+	sessionInfo := &model.SessionInfo{
+		ID: sessionID,
+		CurrentlyPlaying: &model.CurrentlyPlayingSong{
+			SimpleSong: &model.SimpleSong{},
+			Playing:    false,
+		},
+		Queue: nil,
+		Admin: userID,
+		Size:  sessionSize,
+	}
+
 	session := Session{
-		SessionInfo:    nil,
+		SessionInfo:    sessionInfo,
 		channels:       nil,
 		voters:         make(map[string]*voter.Voter),
 		MusicPlayer:    nil,
@@ -58,11 +75,10 @@ func NewSession() Session {
 		bonusVoteMutex: &sync.Mutex{},
 	}
 
-	return session
+	return &session, nil
 }
 
 func (s *Session) WatchSpotifyCurrentlyPlaying() {
-	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	sendUpdateFlag := false
 	addNextSongFlag := false
 

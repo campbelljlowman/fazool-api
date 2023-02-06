@@ -36,32 +36,15 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 		sessionSize = 50
 	}
 
-	sessionID, err := utils.GenerateSessionID()
+	session, err := session.NewSession(userID, sessionSize)
 	if err != nil {
-		return nil, utils.LogAndReturnError("Error generating session ID", err)
+		return nil, utils.LogAndReturnError("Error creating new session", err)
 	}
 
-	session := session.NewSession()
-
-	r.sessionsMutex.Lock()
-	r.sessions[sessionID] = &session
-	r.sessionsMutex.Unlock()
-
-	// Create session info
-	sessionInfo := &model.SessionInfo{
-		ID: sessionID,
-		CurrentlyPlaying: &model.CurrentlyPlayingSong{
-			SimpleSong: &model.SimpleSong{},
-			Playing:    false,
-		},
-		Queue: nil,
-		Admin: userID,
-		Size:  sessionSize,
-	}
-	session.SessionInfo = sessionInfo
+	r.addSession(session)
 
 	// TODO: Maybe combine these two sets to a single db function and query
-	err = r.database.SetUserSession(userID, sessionID)
+	err = r.database.SetUserSession(userID, session.SessionInfo.ID)
 
 	refreshToken, err := r.database.GetSpotifyRefreshToken(userID)
 	if err != nil {
@@ -86,7 +69,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 
 	user := &model.User{
 		ID:        userID,
-		SessionID: &sessionID,
+		SessionID: &session.SessionInfo.ID,
 	}
 
 	return user, nil

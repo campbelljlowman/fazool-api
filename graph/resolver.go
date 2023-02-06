@@ -72,3 +72,9 @@ func (r *Resolver) getSession(sessionID int) (*session.Session, bool) {
 	r.sessionsMutex.Unlock()
 	return session, exists
 }
+
+func (r *Resolver) addSession(session *session.Session) {
+	r.sessionsMutex.Lock()
+	r.sessions[session.SessionInfo.ID] = session
+	r.sessionsMutex.Unlock()
+}
