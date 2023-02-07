@@ -3,6 +3,7 @@ package api
 import (
 	"strings"
 	"context"
+	"errors"
 
 	"golang.org/x/exp/slog"
 	
@@ -12,42 +13,60 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func jwtAuthMiddleware() gin.HandlerFunc {
+func getAccountIDMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authString := c.Request.Header.Get("Authentication")
-
-		if authString == "" {
-			slog.Debug("No Authentication header passed on request!")
+		accountAuthenticationValue, err := parseAuthenticationHeader("AccountAuthentication", c)
+		if err != nil {
+			slog.Debug("Account authentication header wasn't parsed", "error", err)
 			return
 		}
 
-		var tokenString string
-		if len(strings.Split(authString, " ")) == 2 {
-			tokenString = strings.Split(authString, " ")[1]
-		} else {
-			slog.Debug("No value passed after Bearer")
+		accountID, err := auth.GetAccountIDFromJWT(accountAuthenticationValue)
+		if err != nil {
+			slog.Debug("Account authentication passed isn't valid")
 			return
 		}
 
-		user := ""
-		// Try to parse token as UUID
-		_, err := uuid.Parse(tokenString)
-		if err == nil {
-			user = tokenString
-		}
-
-		// Try to parse userID from token
-		userID, err := auth.VerifyJWT(tokenString)
-		if err == nil {
-			user = userID
-		}
-
-		if userID == "" {
-			slog.Debug("Request made with no user or voter token")
-		}
-
-		ctx1 := context.WithValue(c.Request.Context(), "user", user)
+		ctx1 := context.WithValue(c.Request.Context(), "accountID", accountID)
 		c.Request = c.Request.WithContext(ctx1)
 		c.Next()
 	}
+}
+
+func getVoterIDMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+	voterAuthenticationValue, err := parseAuthenticationHeader("VoterAuthentication", c)
+	if err != nil {
+		slog.Debug("Voter authentication header wasn't parsed", "error", err)
+		return
+	}
+
+	_, err = uuid.Parse(voterAuthenticationValue)
+	if err != nil {
+		slog.Debug("Voter authentication passed isn't a valid")
+		return
+	}
+
+	voterID := voterAuthenticationValue
+
+	ctx1 := context.WithValue(c.Request.Context(), "voterID", voterID)
+	c.Request = c.Request.WithContext(ctx1)
+	c.Next()
+	}
+}
+
+func parseAuthenticationHeader(header string, c *gin.Context) (string, error) {
+	authenticationRaw := c.Request.Header.Get(header)
+
+	if authenticationRaw == "" {
+		return "", errors.New("No authentication header passed on request")
+	}
+
+	if len(strings.Split(authenticationRaw, " ")) != 2 {
+		return "", errors.New("Incorrect number of spaces in authentication raw string")
+	} 
+
+	authenticationValue := strings.Split(authenticationRaw, " ")[1]	
+
+	return authenticationValue, nil
 }

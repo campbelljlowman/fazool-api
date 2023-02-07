@@ -19,9 +19,11 @@ func InitializeRoutes() *gin.Engine {
 	router := gin.Default()
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
-	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "authentication")
+	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "AccountAuthentication")
+	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "VoterAuthentication")
 	router.Use(cors.New(corsConfig))
-	router.Use(jwtAuthMiddleware())
+	router.Use(getAccountIDMiddleware())
+	router.Use(getVoterIDMiddleware())
 
 	router.GET("/hc", healthCheck)
 
