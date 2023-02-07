@@ -52,7 +52,7 @@ func (r *Resolver) WatchSessions() {
 
 func (r *Resolver) endSession(session *session.Session) error {
 	slog.Info("Ending session!", "sessionID", session.SessionInfo.ID)
-	err := r.database.SetUserSession(session.SessionInfo.Admin, 0)
+	err := r.database.SetAccountSession(session.SessionInfo.Admin, 0)
 	if err != nil {
 		return err
 	}

@@ -27,7 +27,7 @@ type SessionInfo {
   size: Int!
 }
 
-type User {
+type Account {
   id: String!
   firstName: String
   lastName: String
@@ -73,14 +73,14 @@ input SongUpdate {
   action: SongVoteAction!
 }
 
-input NewUser {
+input NewAccount {
   firstName: String!
   lastName: String!
   email: String!
   password: String!
 }
 
-input UserLogin {
+input AccountLogin {
   email: String!
   password: String!
 }
@@ -93,25 +93,25 @@ input SpotifyCreds {
 type Query {
   session(sessionID: Int!): SessionInfo
   voter(sessionID: Int!): VoterInfo!
-  user: User!
+  account: Account!
   playlists(sessionID: Int!): [Playlist!]
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
 }
 
 type Mutation {
   # Sessions
-  createSession: User!
+  createSession: Account!
   endSession(sessionID: Int!): String!
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
 
-  # Users
-  createUser(newUser: NewUser!): String!
-  login(userLogin: UserLogin!): String!
+  # Account
+  createAccount(newAccount: NewAccount!): String!
+  login(accountLogin: AccountLogin!): String!
   joinVoters: String!
 
   # Spotify
-  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): User!
+  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
 }
 

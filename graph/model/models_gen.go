@@ -8,12 +8,25 @@ import (
 	"strconv"
 )
 
+type Account struct {
+	ID        string  `json:"id"`
+	FirstName *string `json:"firstName"`
+	LastName  *string `json:"lastName"`
+	Email     *string `json:"email"`
+	SessionID *int    `json:"sessionID"`
+}
+
+type AccountLogin struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type CurrentlyPlayingSong struct {
 	SimpleSong *SimpleSong `json:"simpleSong"`
 	Playing    bool        `json:"playing"`
 }
 
-type NewUser struct {
+type NewAccount struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
@@ -58,19 +71,6 @@ type SongUpdate struct {
 type SpotifyCreds struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`
-}
-
-type User struct {
-	ID        string  `json:"id"`
-	FirstName *string `json:"firstName"`
-	LastName  *string `json:"lastName"`
-	Email     *string `json:"email"`
-	SessionID *int    `json:"sessionID"`
-}
-
-type UserLogin struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
 }
 
 type VoterInfo struct {

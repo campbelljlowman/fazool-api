@@ -25,7 +25,7 @@ type Session struct {
 	voters         map[string]*voter.Voter
 	MusicPlayer    musicplayer.MusicPlayer
 	expiresAt      time.Time
-	// Map of [song][user][votes]
+	// Map of [song][voter][votes]
 	bonusVotes     map[string]map[string]int
 	queueMutex     *sync.Mutex
 	channelMutex   *sync.Mutex
@@ -233,7 +233,7 @@ func (s *Session) processBonusVotes(songID string) error {
 	for accountID, votes := range bonusVotes {
 		err = pg.SubtractBonusVotes(accountID, votes)
 		if err != nil {
-			slog.Warn("Error updating user's bonus votes", "user", accountID)
+			slog.Warn("Error updating account's bonus votes", "account", accountID)
 		}
 	}
 

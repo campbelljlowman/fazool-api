@@ -26,9 +26,9 @@ func NewPostgresClient() *PostgresWrapper {
 	}
 
 	queryString := fmt.Sprintf(
-	`CREATE TABLE IF NOT EXISTS public.user
+	`CREATE TABLE IF NOT EXISTS public.accounts
 	(
-		user_id       			int GENERATED ALWAYS AS IDENTITY primary key,
+		account_id       			int GENERATED ALWAYS AS IDENTITY primary key,
 		first_name    			varchar(100) not null,
 		last_name     			varchar(100) not null,
 		email 		 			varchar(100) not null,
@@ -41,7 +41,7 @@ func NewPostgresClient() *PostgresWrapper {
 		spotify_refresh_token 	varchar(150)
 	);
 
-	UPDATE public.user
+	UPDATE public.accounts
 	SET session_id = 0;
 	`)
 
@@ -55,32 +55,32 @@ func NewPostgresClient() *PostgresWrapper {
 	return &pg
 }
 
-func (p *PostgresWrapper) GetUserByEmail(userEmail string) (*model.User, error) {
+func (p *PostgresWrapper) GetAccountByEmail(accountEmail string) (*model.Account, error) {
 	queryString := fmt.Sprintf(
-	`SELECT user_id::VARCHAR, first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.user WHERE email = '%v'`,
-	userEmail)
+	`SELECT account_id::VARCHAR, first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.accounts WHERE email = '%v'`,
+	accountEmail)
 	var sessionID int
-	var userID, firstName, lastName, email string
-	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &firstName, &lastName, &email, &sessionID)
+	var accountID, firstName, lastName, email string
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&accountID, &firstName, &lastName, &email, &sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	user := &model.User{
-		ID:        userID,
+	account := &model.Account{
+		ID:        accountID,
 		FirstName: &firstName,
 		LastName:  &lastName,
 		Email:     &email,
 		SessionID: &sessionID,
 	}
 
-	return user, nil
+	return account, nil
 }
 
-func (p *PostgresWrapper) GetUserByID(userID string) (*model.User, error) {
+func (p *PostgresWrapper) GetAccountByID(accountID string) (*model.Account, error) {
 	queryString := fmt.Sprintf(
-	`SELECT first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.user WHERE user_id = '%v'`,
-	userID)
+	`SELECT first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.accounts WHERE account_id = '%v'`,
+	accountID)
 	slog.Debug("Query string:", "query-string", queryString)
 
 	var sessionID int
@@ -90,36 +90,36 @@ func (p *PostgresWrapper) GetUserByID(userID string) (*model.User, error) {
 		return nil, err
 	}
 
-	user := &model.User{
-		ID:        userID,
+	account := &model.Account{
+		ID:        accountID,
 		FirstName: &firstName,
 		LastName:  &lastName,
 		Email:     &email,
 		SessionID: &sessionID,
 	}
 
-	return user, nil
+	return account, nil
 }
 
-func (p *PostgresWrapper) GetUserLoginValues(userEmail string) (string, string, error) {
+func (p *PostgresWrapper) GetAccountLoginValues(accountEmail string) (string, string, error) {
 	queryString := fmt.Sprintf(
-	`SELECT user_id::VARCHAR, pass_hash FROM public.user WHERE email = '%v'`,
-	userEmail)
+	`SELECT account_id::VARCHAR, pass_hash FROM public.accounts WHERE email = '%v'`,
+	accountEmail)
 	slog.Debug("Query string:", "query-string", queryString)
 
-	var userID, password string
-	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID, &password)
+	var accountID, password string
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&accountID, &password)
 	if err != nil {
 		return "", "", err
 	}
 
-	return userID, password, nil
+	return accountID, password, nil
 }
 
-func (p *PostgresWrapper) GetSpotifyRefreshToken(userID string) (string, error) {
+func (p *PostgresWrapper) GetSpotifyRefreshToken(accountID string) (string, error) {
 	queryString := fmt.Sprintf(
-	`SELECT spotify_refresh_token FROM public.user WHERE user_id = '%v'`,
-	userID)
+	`SELECT spotify_refresh_token FROM public.accounts WHERE account_id = '%v'`,
+	accountID)
 	var spotifyRefreshToken string
 	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&spotifyRefreshToken)
 	if err != nil {
@@ -129,10 +129,10 @@ func (p *PostgresWrapper) GetSpotifyRefreshToken(userID string) (string, error) 
 	return spotifyRefreshToken, nil
 }
 
-func (p *PostgresWrapper) GetAccountLevel(userID string) (string, error){
+func (p *PostgresWrapper) GetAccountLevel(accountID string) (string, error){
 	queryString := fmt.Sprintf(
-		`SELECT account_level FROM public.user WHERE user_id = '%v'`,
-	userID)
+		`SELECT account_level FROM public.accounts WHERE account_id = '%v'`,
+	accountID)
 	var accountLevel string
 	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&accountLevel)
 	if err != nil {
@@ -142,10 +142,10 @@ func (p *PostgresWrapper) GetAccountLevel(userID string) (string, error){
 	return accountLevel, nil
 }
 
-func (p *PostgresWrapper) GetVoterValues(userID string) (string, int, error){
+func (p *PostgresWrapper) GetVoterValues(accountID string) (string, int, error){
 	queryString := fmt.Sprintf(
-		`SELECT voter_level, bonus_votes FROM public.user WHERE user_id = '%v'`,
-	userID)
+		`SELECT voter_level, bonus_votes FROM public.accounts WHERE account_id = '%v'`,
+	accountID)
 	var voterLevel string
 	var bonusVotes int
 	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&voterLevel, &bonusVotes)
@@ -156,11 +156,11 @@ func (p *PostgresWrapper) GetVoterValues(userID string) (string, int, error){
 	return voterLevel, bonusVotes, nil	
 }
 
-func (p *PostgresWrapper) SetUserSession(userID string, sessionID int) error {
+func (p *PostgresWrapper) SetAccountSession(accountID string, sessionID int) error {
 	queryString := fmt.Sprintf(
-	`UPDATE public.user
+	`UPDATE public.accounts
 	SET session_id = %v
-	WHERE user_id = %v;`, sessionID, userID)
+	WHERE account_id = %v;`, sessionID, accountID)
 
 	commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
 
@@ -168,16 +168,16 @@ func (p *PostgresWrapper) SetUserSession(userID string, sessionID int) error {
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("User %v not found to update", userID)
+		return fmt.Errorf("Account %v not found to update", accountID)
 	}
 	return nil
 }
 
-func (p *PostgresWrapper) SetSpotifyAccessToken(userID, AccessToken string) error {
+func (p *PostgresWrapper) SetSpotifyAccessToken(accountID, AccessToken string) error {
 	queryString := fmt.Sprintf(
-	`UPDATE public.user
+	`UPDATE public.accounts
 	SET spotify_access_token = '%v'
-	WHERE user_id = %v;`, AccessToken, userID)
+	WHERE account_id = %v;`, AccessToken, accountID)
 
 	commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
 
@@ -185,16 +185,16 @@ func (p *PostgresWrapper) SetSpotifyAccessToken(userID, AccessToken string) erro
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("User %v not found to update", userID)
+		return fmt.Errorf("Account %v not found to update", accountID)
 	}
 	return nil
 }
 
-func (p *PostgresWrapper) SetSpotifyRefreshToken(userID, RefreshToken string) error {
+func (p *PostgresWrapper) SetSpotifyRefreshToken(accountID, RefreshToken string) error {
 	queryString := fmt.Sprintf(
-	`UPDATE public.user
+	`UPDATE public.accounts
 	SET spotify_refresh_token = '%v'
-	WHERE user_id = %v;`, RefreshToken, userID)
+	WHERE account_id = %v;`, RefreshToken, accountID)
 
 	commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
 
@@ -202,16 +202,16 @@ func (p *PostgresWrapper) SetSpotifyRefreshToken(userID, RefreshToken string) er
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("User %v not found to update", userID)
+		return fmt.Errorf("Account %v not found to update", accountID)
 	}
 	return nil
 }
 
-func (p *PostgresWrapper) SubtractBonusVotes(userID string, bonusVotes int) error {
+func (p *PostgresWrapper) SubtractBonusVotes(accountID string, bonusVotes int) error {
 	queryString := fmt.Sprintf(
-		`UPDATE public.user
+		`UPDATE public.accounts
 		SET bonus_votes = bonus_votes - '%v'
-		WHERE user_id = %v;`, bonusVotes, userID)
+		WHERE account_id = %v;`, bonusVotes, accountID)
 	
 		commandTag, err := p.PostgresClient.Exec(context.Background(), queryString)
 	
@@ -219,14 +219,14 @@ func (p *PostgresWrapper) SubtractBonusVotes(userID string, bonusVotes int) erro
 			return err
 		}
 		if commandTag.RowsAffected() != 1 {
-			return fmt.Errorf("User %v not found to update", userID)
+			return fmt.Errorf("Account %v not found to update", accountID)
 		}
 		return nil
 }
 
 
 func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
-	queryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.user WHERE email = '%v' LIMIT 1);", email)
+	queryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.accounts WHERE email = '%v' LIMIT 1);", email)
 	var emailExists bool
 	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&emailExists)
 	if err != nil {
@@ -236,20 +236,20 @@ func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 	return emailExists, nil
 }
 
-func (p *PostgresWrapper) AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) {
+func (p *PostgresWrapper) AddAccountToDatabase(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) {
 	queryString := fmt.Sprintf(
-	`INSERT INTO public.user(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
+	`INSERT INTO public.accounts(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
 	VALUES ('%v', '%v', '%v', '%v', '%v', '%v', '%v')
-	RETURNING user_id::VARCHAR;`,
-	newUser.FirstName, newUser.LastName, newUser.Email, passwordHash, account_level, voter_level, bonusVotes)
+	RETURNING account_id::VARCHAR;`,
+	newAccount.FirstName, newAccount.LastName, newAccount.Email, passwordHash, account_level, voter_level, bonusVotes)
 
-	var userID string
-	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&userID)
+	var accountID string
+	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&accountID)
 	if err != nil {
 		return "", err
 	}
 
-	return userID, nil
+	return accountID, nil
 }
 
 func (p *PostgresWrapper) CloseConnection() {
