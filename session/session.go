@@ -123,7 +123,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	}
 }
 
-func (s *Session) AdvanceQueue(force bool) error {
+func (s *Session) AdvanceQueue(force bool) error { 
 	var song *model.SimpleSong
 
 	s.queueMutex.Lock()
