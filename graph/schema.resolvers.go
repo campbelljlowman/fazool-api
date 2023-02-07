@@ -450,11 +450,6 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 
 // SessionUpdated is the resolver for the sessionUpdated field.
 func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
-	voterID, _ := ctx.Value("voterID").(string)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID required for searching for music", nil)
-	}
-
 	session, exists := r.getSession(sessionID)
 
 	if !exists {
