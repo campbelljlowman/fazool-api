@@ -20,7 +20,7 @@ import (
 )
 
 // CreateSession is the resolver for the createSession field.
-func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, error) {
+func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(string)
 	if accountID == "" {
 		return nil, utils.LogAndReturnError("Account ID is required to create session", nil)
@@ -61,7 +61,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	session.SessionInfo = sessionInfo
 
 	// TODO: Maybe combine these two sets to a single db function and query
-	err = r.database.SetUserSession(accountID, sessionID)
+	err = r.database.SetAccountSession(accountID, sessionID)
 
 	refreshToken, err := r.database.GetSpotifyRefreshToken(accountID)
 	if err != nil {
@@ -84,12 +84,12 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.User, erro
 	go session.WatchSpotifyCurrentlyPlaying()
 	go session.WatchVoters()
 
-	user := &model.User{
+	account := &model.Account{
 		ID:        accountID,
 		SessionID: &sessionID,
 	}
 
-	return user, nil
+	return account, nil
 }
 
 // EndSession is the resolver for the endSession field.
@@ -129,7 +129,6 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	
 	existingVoter, voterExists := session.GetVoter(voterID)
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Voter not in active voters! Voter: %v", voterID), nil)
@@ -195,50 +194,50 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	return session.SessionInfo, nil
 }
 
-// CreateUser is the resolver for the createUser field.
-func (r *mutationResolver) CreateUser(ctx context.Context, newUser model.NewUser) (string, error) {
-	// Get this from new user request!
+// CreateAccount is the resolver for the createAccount field.
+func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error) {
+	// Get this from new account request!
 	accountLevel := constants.RegularAccountLevel
 	voterLevel := constants.RegularVoterType
 
-	isVaildEmail := utils.ValidateEmail(newUser.Email)
+	isVaildEmail := utils.ValidateEmail(newAccount.Email)
 	if !isVaildEmail {
 		return "", utils.LogAndReturnError("Invalid email format", nil)
 	}
 
-	emailExists, err := r.database.CheckIfEmailExists(newUser.Email)
+	emailExists, err := r.database.CheckIfEmailExists(newAccount.Email)
 
 	if err != nil {
 		return "", utils.LogAndReturnError("Error searching for email in database", err)
 	}
 
 	if emailExists {
-		return "", utils.LogAndReturnError("User with this email already exists!", nil)
+		return "", utils.LogAndReturnError("Account with this email already exists!", nil)
 	}
 
-	passwordHash := utils.HashHelper(newUser.Password)
+	passwordHash := utils.HashHelper(newAccount.Password)
 
-	accountID, err := r.database.AddUserToDatabase(newUser, passwordHash, accountLevel, voterLevel, 0)
+	accountID, err := r.database.AddAccountToDatabase(newAccount, passwordHash, accountLevel, voterLevel, 0)
 	if err != nil {
-		return "", utils.LogAndReturnError("Error adding user to database", err)
+		return "", utils.LogAndReturnError("Error adding account to database", err)
 	}
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
 	if err != nil {
-		return "", utils.LogAndReturnError("Error creating user token", err)
+		return "", utils.LogAndReturnError("Error creating account token", err)
 	}
 
 	return jwtToken, nil
 }
 
 // Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, userLogin model.UserLogin) (string, error) {
-	accountID, accountPassword, err := r.database.GetUserLoginValues(userLogin.Email)
+func (r *mutationResolver) Login(ctx context.Context, accountLogin model.AccountLogin) (string, error) {
+	accountID, accountPassword, err := r.database.GetAccountLoginValues(accountLogin.Email)
 	if err != nil {
 		return "", utils.LogAndReturnError("Error getting account login info from database", err)
 	}
 
-	if utils.HashHelper(userLogin.Password) != accountPassword {
+	if utils.HashHelper(accountLogin.Password) != accountPassword {
 		return "", utils.LogAndReturnError("Invalid Login Credentials!", nil)
 	}
 
@@ -257,7 +256,7 @@ func (r *mutationResolver) JoinVoters(ctx context.Context) (string, error) {
 }
 
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
-func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.User, error) {
+func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(string)
 	if accountID == "" {
 		return nil, utils.LogAndReturnError("Account ID required for adding Spotify token", nil)
@@ -276,7 +275,7 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 		return nil, utils.LogAndReturnError("Error setting Spotify refresh token in database", err)
 	}
 
-	return &model.User{ID: accountID}, nil
+	return &model.Account{ID: accountID}, nil
 }
 
 // SetPlaylist is the resolver for the setPlaylist field.
@@ -383,19 +382,19 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	return newVoter.GetVoterInfo(), nil
 }
 
-// User is the resolver for the user field.
-func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
+// Account is the resolver for the account field.
+func (r *queryResolver) Account(ctx context.Context) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(string)
 	if accountID == "" {
-		return nil, utils.LogAndReturnError("No account found on token for getting user", nil)
+		return nil, utils.LogAndReturnError("No account found on token for getting account", nil)
 	}
 
-	user, err := r.database.GetUserByID(accountID)
+	account, err := r.database.GetAccountByID(accountID)
 	if err != nil {
-		return nil, utils.LogAndReturnError("Error getting user from database", err)
+		return nil, utils.LogAndReturnError("Error getting account from database", err)
 	}
 
-	return user, nil
+	return account, nil
 }
 
 // Playlists is the resolver for the playlists field.

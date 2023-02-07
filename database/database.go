@@ -5,21 +5,21 @@ import (
 )
 
 type Database interface {
-	GetUserByEmail(userEmail string) (*model.User, error)
-	GetUserByID(userID string) (*model.User, error)
-	GetUserLoginValues(userEmail string) (string, string, error)
-	GetSpotifyRefreshToken(userID string) (string, error)
-	GetAccountLevel(userID string) (string, error)
-	GetVoterValues(userID string) (string, int, error)
+	GetAccountByEmail(accountEmail string) (*model.Account, error)
+	GetAccountByID(accountID string) (*model.Account, error)
+	GetAccountLoginValues(accountEmail string) (string, string, error)
+	GetSpotifyRefreshToken(accountID string) (string, error)
+	GetAccountLevel(accountID string) (string, error)
+	GetVoterValues(accountID string) (string, int, error)
 
-	SetUserSession(userID string, sessionID int) error
-	SetSpotifyAccessToken(userID, AccessToken string) error
-	SetSpotifyRefreshToken(userID, RefreshToken string) error
-	SubtractBonusVotes(userID string, bonusVotes int) error
+	SetAccountSession(accountID string, sessionID int) error
+	SetSpotifyAccessToken(accountID, AccessToken string) error
+	SetSpotifyRefreshToken(accountID, RefreshToken string) error
+	SubtractBonusVotes(accountID string, bonusVotes int) error
 
 	CheckIfEmailExists(email string) (bool, error)
 
-	AddUserToDatabase(newUser model.NewUser, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) 
+	AddAccountToDatabase(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) 
 
 	CloseConnection()
 }
