@@ -14,7 +14,8 @@ var GetVoterInfoTests = []struct {
 	expectedOutputVoter model.VoterInfo
 }{
 	{Voter{
-		ID: "asdf",
+		VoterID: "asdf",
+		AccountID: "asdf",
 		VoterType: constants.RegularVoterType,
 		ExpiresAt: time.Now(),
 		songsUpVoted: map[string]struct{}{"song1": emptyStructValue},
@@ -102,7 +103,7 @@ var calculateAndAddUpVoteTests = []struct {
 }
 func TestCalculateAndAddUpVote(t *testing.T){
 	for _, testCase := range(calculateAndAddUpVoteTests) {
-		voter, _ := NewVoter("ID1", testCase.voterType, testCase.bonusVotes)
+		voter, _ := NewVoter("voterID", "accoundID", testCase.voterType, testCase.bonusVotes)
 		voter.songsUpVoted = testCase.songsUpVoted
 		voter.songsDownVoted = testCase.songsDownVoted
 
@@ -158,7 +159,7 @@ var calculateAndAddDownVoteTests = []struct {
 
 func TestCalculateAndAddDownVote(t *testing.T){
 	for _, testCase := range(calculateAndAddDownVoteTests) {
-		voter, _ := NewVoter("ID1", testCase.voterType, 0)
+		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
 		voter.songsUpVoted = testCase.songsUpVoted
 		voter.songsDownVoted = testCase.songsDownVoted
 
@@ -204,7 +205,7 @@ var calculateAndRemoveUpVoteTests = []struct {
 }
 func TestCalculateAndRemoveUpVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveUpVoteTests) {
-		voter, _ := NewVoter("ID1", testCase.voterType, 0)
+		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
 		voter.songsUpVoted = testCase.songsUpVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndRemoveUpVote(testCase.songVotingFor)
@@ -243,7 +244,7 @@ var calculateAndRemoveDownVoteTests = []struct {
 }
 func TestCalculateAndRemoveDownVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveDownVoteTests) {
-		voter, _ := NewVoter("ID1", testCase.voterType, 0)
+		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
 		voter.songsDownVoted = testCase.songsDownVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndRemoveDownVote(testCase.songVotingFor)
@@ -280,10 +281,10 @@ var GetVoteAmountFromTypeTests = []struct {
 }
 func TestGetVoteAmountFromType(t *testing.T){
 	for _, testCase := range(GetVoteAmountFromTypeTests) {
-		voteAmount := getVoteAmountFromType(testCase.voterType)
+		voteAmount := getNumberOfVotesFromType(testCase.voterType)
 
 		if voteAmount != testCase.expectedVoteAmount{
-			t.Errorf("getVoteAmountFromType() failed! Wanted vote amount: %v, got %v", testCase.expectedVoteAmount, voteAmount)
+			t.Errorf("getNumberOfVotesFromType() failed! Wanted vote amount: %v, got %v", testCase.expectedVoteAmount, voteAmount)
 		}
 	}
 }
