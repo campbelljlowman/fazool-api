@@ -134,21 +134,21 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Voter not in active voters! Voter: %v", voterID), nil)
 	}
 
-	voteAmount, isBonusVote, err := existingVoter.CalculateAndProcessVote(song.ID, &song.Vote, &song.Action)
+	numberOfVotes, isBonusVote, err := existingVoter.CalculateAndProcessVote(song.ID, &song.Vote, &song.Action)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error processing vote", err)
 	}
 
 	// TODO: Remove bonus votes if applicable?
 	if isBonusVote {
-		session.AddBonusVote(song.ID, existingVoter.ID, voteAmount)
+		session.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes)
 	}
 
 	existingVoter.RefreshVoterExpiration()
 
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.SimpleSong.Artist)
 
-	session.UpsertQueue(song, voteAmount)
+	session.UpsertQueue(song, numberOfVotes)
 
 	// Update subscription
 	session.SendUpdate()
@@ -219,7 +219,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 
 	accountID, err := r.database.AddAccountToDatabase(newAccount, passwordHash, accountLevel, voterLevel, 0)
 	if err != nil {
-		return "", utils.LogAndReturnError("Error adding account to database", err)
+		return "", utils.LogAndReturnError("Error ing account to database", err)
 	}
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
@@ -345,7 +345,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	existingVoter, exists := session.GetVoter(voterID)
 
 	if exists {
-		slog.Info("Return existing voter", "voter", existingVoter.ID)
+		slog.Info("Return existing voter", "voter", existingVoter.VoterID)
 		return existingVoter.GetVoterInfo(), nil
 	}
 
@@ -372,7 +372,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	}
 
 	slog.Info("Generating new voter", "voter", voterID)
-	newVoter, err := voter.NewVoter(voterID, voterType, bonusVotes)
+	newVoter, err := voter.NewVoter(voterID, accountID, voterType, bonusVotes)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}

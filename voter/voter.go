@@ -10,7 +10,8 @@ import (
 )
 
 type Voter struct {
-	ID string
+	VoterID string
+	AccountID string
 	VoterType string
 	ExpiresAt time.Time
 	songsUpVoted map[string]struct{}
@@ -24,13 +25,14 @@ const priviledgedVoterDurationInMinutes time.Duration = 15
 var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
 
 
-func NewVoter(ID, voterType string, bonusVotes int) (*Voter, error) {
+func NewVoter(voterID, accountID, voterType string, bonusVotes int) (*Voter, error) {
 	if !contains(validVoterTypes, voterType) {
 		return nil, fmt.Errorf("Invalid voter type passed!")
 	}
 
 	v := Voter{
-		ID: ID,
+		VoterID: voterID,
+		AccountID: accountID,
 		VoterType: voterType,
 		ExpiresAt: time.Now().Add(getVoterDuration(voterType) * time.Minute),
 		songsUpVoted: make(map[string]struct{}),
@@ -102,7 +104,7 @@ func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error){
 	
 	delete(v.songsDownVoted, song)
 	v.songsUpVoted[song] = emptyStructValue
-	return voteAdjustment + getVoteAmountFromType(v.VoterType), false, nil
+	return voteAdjustment + getNumberOfVotesFromType(v.VoterType), false, nil
 }
 
 func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
@@ -114,7 +116,7 @@ func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
 
 		if _, exists := v.songsUpVoted[song]; exists {
 			// If song was downvoted and is being upvoted, vote needs to be double
-			voteAdjustment = getVoteAmountFromType(v.VoterType)
+			voteAdjustment = getNumberOfVotesFromType(v.VoterType)
 		}
 	}
 	
@@ -125,7 +127,7 @@ func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
 
 func (v *Voter) calculateAndRemoveUpVote(song string) (int, bool, error) {
 	delete(v.songsUpVoted, song)
-	return -getVoteAmountFromType(v.VoterType), false, nil
+	return -getNumberOfVotesFromType(v.VoterType), false, nil
 }
 
 func (v *Voter) calculateAndRemoveDownVote(song string) (int, bool, error) {
@@ -137,7 +139,7 @@ func (v *Voter) RefreshVoterExpiration() {
 	v.ExpiresAt = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
 }
 
-func getVoteAmountFromType (voterType string) int {
+func getNumberOfVotesFromType (voterType string) int {
 	if voterType == constants.PrivilegedVoterType {
 		return 2
 	}

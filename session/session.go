@@ -25,7 +25,7 @@ type Session struct {
 	voters         map[string]*voter.Voter
 	MusicPlayer    musicplayer.MusicPlayer
 	expiresAt      time.Time
-	// Map of [song][voter][votes]
+	// Map of [song][account][votes]
 	bonusVotes     map[string]map[string]int
 	queueMutex     *sync.Mutex
 	channelMutex   *sync.Mutex
@@ -200,8 +200,8 @@ func (s *Session) WatchVoters() {
 			}
 
 			if time.Now().After(voter.ExpiresAt) {
-				slog.Info("Voter exipred! Removing", "voter", voter.ID)
-				delete(s.voters, voter.ID)
+				slog.Info("Voter exipred! Removing", "voter", voter.VoterID)
+				delete(s.voters, voter.VoterID)
 			}
 
 		}
@@ -322,12 +322,11 @@ func (s *Session) IsExpired() bool {
 	return isExpired
 }
 
-func (s *Session) AddBonusVote(songID, voterID string, vote int) {
+func (s *Session) AddBonusVote(songID, accountID string, numberOfVotes int) {
 	s.bonusVoteMutex.Lock()
-	// TODO: Make bonus votes a map of voterID and amount
-	if _, exists := s.bonusVotes[songID][voterID]; !exists {
+	if _, exists := s.bonusVotes[songID][accountID]; !exists {
 		s.bonusVotes[songID] = make(map[string]int)
 	}
-	s.bonusVotes[songID][voterID] += vote
+	s.bonusVotes[songID][accountID] += numberOfVotes
 	s.bonusVoteMutex.Unlock()
 }
