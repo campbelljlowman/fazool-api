@@ -150,8 +150,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	session.UpsertQueue(song, numberOfVotes)
 
-	// Update subscription
-	session.SendUpdate()
+	session.UpdateCache()
 
 	return session.SessionInfo, nil
 }
@@ -188,7 +187,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		if err != nil {
 			return nil, utils.LogAndReturnError("Error advancing queue", err)
 		}
-		session.SendUpdate()
+		session.UpdateCache()
 	}
 
 	return session.SessionInfo, nil
@@ -447,30 +446,11 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 	return searchResult, nil
 }
 
-// SessionUpdated is the resolver for the sessionUpdated field.
-func (r *subscriptionResolver) SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error) {
-	session, exists := r.getSession(sessionID)
-
-	if !exists {
-		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
-	}
-
-	channel := make(chan *model.SessionInfo)
-
-	session.AddChannel(channel)
-
-	return channel, nil
-}
-
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
-// Subscription returns generated.SubscriptionResolver implementation.
-func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
-
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type subscriptionResolver struct{ *Resolver }

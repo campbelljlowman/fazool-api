@@ -114,7 +114,3 @@ type Mutation {
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
 }
-
-type Subscription {
-  sessionUpdated(sessionID: Int!): SessionInfo!
-}

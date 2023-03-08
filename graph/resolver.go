@@ -57,8 +57,6 @@ func (r *Resolver) endSession(session *session.Session) error {
 		return err
 	}
 
-	session.CloseChannels()
-
 	delete(r.sessions, session.SessionInfo.ID)
 
 	session.ExpireSession()

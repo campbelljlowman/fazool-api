@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sort"
 	"sync"
@@ -21,14 +20,12 @@ import (
 
 type Session struct {
 	SessionInfo    *model.SessionInfo
-	channels       []chan *model.SessionInfo
 	voters         map[string]*voter.Voter
 	MusicPlayer    musicplayer.MusicPlayer
 	expiresAt      time.Time
 	// Map of [song][account][votes]
 	bonusVotes     map[string]map[string]int
 	queueMutex     *sync.Mutex
-	channelMutex   *sync.Mutex
 	votersMutex    *sync.Mutex
 	expiryMutex    *sync.Mutex
 	bonusVoteMutex *sync.Mutex
@@ -46,12 +43,10 @@ const voterWatchFrequency time.Duration = 1
 func NewSession() Session {
 	session := Session{
 		SessionInfo:    nil,
-		channels:       nil,
 		voters:         make(map[string]*voter.Voter),
 		MusicPlayer:    nil,
 		expiresAt:      time.Now().Add(sessionTimeout * time.Minute),
 		bonusVotes:     make(map[string]map[string]int),
-		channelMutex:   &sync.Mutex{},
 		queueMutex:     &sync.Mutex{},
 		votersMutex:    &sync.Mutex{},
 		expiryMutex:    &sync.Mutex{},
@@ -63,7 +58,7 @@ func NewSession() Session {
 
 func (s *Session) WatchSpotifyCurrentlyPlaying() {
 	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
-	sendUpdateFlag := false
+	updateCacheFlag := false
 	addNextSongFlag := false
 
 	for {
@@ -72,7 +67,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 			return
 		}
 
-		sendUpdateFlag = false
+		updateCacheFlag = false
 		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := s.MusicPlayer.CurrentSong()
 		if err != nil {
 			slog.Warn("Error getting music player state", "error", err)
@@ -83,12 +78,12 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 			if s.SessionInfo.CurrentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
 				s.SessionInfo.CurrentlyPlaying = spotifyCurrentlyPlayingSong
-				sendUpdateFlag = true
+				updateCacheFlag = true
 				addNextSongFlag = true
 			} else if s.SessionInfo.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
 				// If same song is paused and then played, set the new state
 				s.SessionInfo.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
-				sendUpdateFlag = true
+				updateCacheFlag = true
 			}
 
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
@@ -103,19 +98,19 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 			if timeLeft < 5000 && addNextSongFlag {
 				s.AdvanceQueue(false)
 
-				sendUpdateFlag = true
+				updateCacheFlag = true
 				addNextSongFlag = false
 			}
 		} else {
 			// Change currently playing to false if music gets paused
 			if s.SessionInfo.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
 				s.SessionInfo.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
-				sendUpdateFlag = true
+				updateCacheFlag = true
 			}
 		}
 
-		if sendUpdateFlag {
-			s.SendUpdate()
+		if updateCacheFlag {
+			s.UpdateCache()
 		}
 
 		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
@@ -157,31 +152,11 @@ func (s *Session) AdvanceQueue(force bool) error {
 	return nil
 }
 
-func (s *Session) SendUpdate() {
-	go func() {
-		var activeChannels []chan *model.SessionInfo
-
-		s.channelMutex.Lock()
-		channels := s.channels
-
-		for _, ch := range channels {
-			select {
-			case ch <- s.SessionInfo: // This is the actual send.
-				// Our message went through, do nothing
-				activeChannels = append(activeChannels, ch)
-			default: // This is run when our send does not work.
-				fmt.Println("Channel closed in update.")
-				// You can handle any deregistration of the channel here.
-			}
-		}
-
-		s.channels = activeChannels
-		s.channelMutex.Unlock()
-
-		s.expiryMutex.Lock()
-		s.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
-		s.expiryMutex.Unlock()
-	}()
+func (s *Session) UpdateCache() {
+	// TODO: make it update the cache
+	s.expiryMutex.Lock()
+	s.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
+	s.expiryMutex.Unlock()
 }
 
 // TODO: Write function that watches voters and removes any inactive ones
@@ -239,20 +214,6 @@ func (s *Session) processBonusVotes(songID string) error {
 
 	pg.CloseConnection()
 	return nil
-}
-
-func (s *Session) AddChannel(newChannel chan *model.SessionInfo) {
-	s.channelMutex.Lock()
-	s.channels = append(s.channels, newChannel)
-	s.channelMutex.Unlock()
-}
-
-func (s *Session) CloseChannels() {
-	s.channelMutex.Lock()
-	for _, ch := range s.channels {
-		close(ch)
-	}
-	s.channelMutex.Unlock()
 }
 
 func (s *Session) SetQueue(newQueue [] *model.QueuedSong) {

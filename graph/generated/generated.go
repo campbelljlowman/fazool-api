@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -39,7 +38,6 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
-	Subscription() SubscriptionResolver
 }
 
 type DirectiveRoot struct {
@@ -105,10 +103,6 @@ type ComplexityRoot struct {
 		Title  func(childComplexity int) int
 	}
 
-	Subscription struct {
-		SessionUpdated func(childComplexity int, sessionID int) int
-	}
-
 	VoterInfo struct {
 		BonusVotes     func(childComplexity int) int
 		SongsDownVoted func(childComplexity int) int
@@ -134,9 +128,6 @@ type QueryResolver interface {
 	Account(ctx context.Context) (*model.Account, error)
 	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
 	MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error)
-}
-type SubscriptionResolver interface {
-	SessionUpdated(ctx context.Context, sessionID int) (<-chan *model.SessionInfo, error)
 }
 
 type executableSchema struct {
@@ -454,18 +445,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SimpleSong.Title(childComplexity), true
 
-	case "Subscription.sessionUpdated":
-		if e.complexity.Subscription.SessionUpdated == nil {
-			break
-		}
-
-		args, err := ec.field_Subscription_sessionUpdated_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Subscription.SessionUpdated(childComplexity, args["sessionID"].(int)), true
-
 	case "VoterInfo.bonusVotes":
 		if e.complexity.VoterInfo.BonusVotes == nil {
 			break
@@ -534,23 +513,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
 			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
 			var buf bytes.Buffer
-			data.MarshalGQL(&buf)
-
-			return &graphql.Response{
-				Data: buf.Bytes(),
-			}
-		}
-	case ast.Subscription:
-		next := ec._Subscription(ctx, rc.Operation.SelectionSet)
-
-		var buf bytes.Buffer
-		return func(ctx context.Context) *graphql.Response {
-			buf.Reset()
-			data := next(ctx)
-
-			if data == nil {
-				return nil
-			}
 			data.MarshalGQL(&buf)
 
 			return &graphql.Response{
@@ -698,10 +660,6 @@ type Mutation {
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
-}
-
-type Subscription {
-  sessionUpdated(sessionID: Int!): SessionInfo!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -912,21 +870,6 @@ func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArg
 }
 
 func (ec *executionContext) field_Query_voter_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["sessionID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sessionID"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Subscription_sessionUpdated_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -2882,87 +2825,6 @@ func (ec *executionContext) fieldContext_SimpleSong_image(ctx context.Context, f
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Subscription_sessionUpdated(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	fc, err := ec.fieldContext_Subscription_sessionUpdated(ctx, field)
-	if err != nil {
-		return nil
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = nil
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().SessionUpdated(rctx, fc.Args["sessionID"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return nil
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return nil
-	}
-	return func(ctx context.Context) graphql.Marshaler {
-		select {
-		case res, ok := <-resTmp.(<-chan *model.SessionInfo):
-			if !ok {
-				return nil
-			}
-			return graphql.WriterFunc(func(w io.Writer) {
-				w.Write([]byte{'{'})
-				graphql.MarshalString(field.Alias).MarshalGQL(w)
-				w.Write([]byte{':'})
-				ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res).MarshalGQL(w)
-				w.Write([]byte{'}'})
-			})
-		case <-ctx.Done():
-			return nil
-		}
-	}
-}
-
-func (ec *executionContext) fieldContext_Subscription_sessionUpdated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Subscription",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_SessionInfo_id(ctx, field)
-			case "currentlyPlaying":
-				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
-			case "queue":
-				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "admin":
-				return ec.fieldContext_SessionInfo_admin(ctx, field)
-			case "size":
-				return ec.fieldContext_SessionInfo_size(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Subscription_sessionUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -5619,26 +5481,6 @@ func (ec *executionContext) _SimpleSong(ctx context.Context, sel ast.SelectionSe
 		return graphql.Null
 	}
 	return out
-}
-
-var subscriptionImplementors = []string{"Subscription"}
-
-func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
-	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
-		Object: "Subscription",
-	})
-	if len(fields) != 1 {
-		ec.Errorf(ctx, "must subscribe to exactly one stream")
-		return nil
-	}
-
-	switch fields[0].Name {
-	case "sessionUpdated":
-		return ec._Subscription_sessionUpdated(ctx, fields[0])
-	default:
-		panic("unknown field " + strconv.Quote(fields[0].Name))
-	}
 }
 
 var voterInfoImplementors = []string{"VoterInfo"}
