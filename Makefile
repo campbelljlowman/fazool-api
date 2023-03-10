@@ -57,3 +57,6 @@ test:
 
 build:
 	docker build .
+
+regen-graphql:
+	go get github.com/99designs/gqlgen@v0.17.15 && go run github.com/99designs/gqlgen generate

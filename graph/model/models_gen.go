@@ -49,7 +49,8 @@ type SessionInfo struct {
 	CurrentlyPlaying *CurrentlyPlayingSong `json:"currentlyPlaying"`
 	Queue            []*QueuedSong         `json:"queue"`
 	Admin            string                `json:"admin"`
-	Size             int                   `json:"size"`
+	NumberOfVoters   int                   `json:"numberOfVoters"`
+	MaximumVoters    int                   `json:"maximumVoters"`
 }
 
 type SimpleSong struct {

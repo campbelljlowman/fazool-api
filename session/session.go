@@ -8,7 +8,6 @@ import (
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
-	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
@@ -17,10 +16,8 @@ import (
 
 type Session struct {
 	SessionInfo    *model.SessionInfo
-	voters         map[string]*voter.Voter
 	MusicPlayer    musicplayer.MusicPlayer
 	queueMutex     *sync.Mutex
-	votersMutex    *sync.Mutex
 	sc 				*SessionCache
 }
 
@@ -53,17 +50,16 @@ func NewSession(accountID, accountLevel string, sc *SessionCache) (*Session, int
 		},
 		Queue: nil,
 		Admin: accountID,
-		Size:  sessionSize,
+		NumberOfVoters: 0,
+		MaximumVoters:  sessionSize,
 	}
 
-	sc.CreateSession(sessionID)
+	sc.CreateSession(sessionID, sessionSize, accountID)
 
 	session := Session{
 		SessionInfo:    sessionInfo,
-		voters:         make(map[string]*voter.Voter),
 		MusicPlayer:    nil,
 		queueMutex:     &sync.Mutex{},
-		votersMutex:    &sync.Mutex{},
 		sc: 			sc,
 	}
 
@@ -76,7 +72,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying(sessionID int) {
 	addNextSongFlag := false
 
 	for {
-		if s.sc.IsExpired(sessionID) {
+		if s.sc.IsSessionExpired(sessionID) {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
@@ -166,32 +162,6 @@ func (s *Session) AdvanceQueue(force bool) error {
 	return nil
 }
 
-// TODO: Write function that watches voters and removes any inactive ones
-func (s *Session) WatchVoters(sessionID int) {
-
-	for {
-		if s.sc.IsExpired(sessionID) {
-			slog.Info("Session has expired, ending session voter watcher", "session_id", s.SessionInfo.ID)
-			return
-		}
-
-		s.votersMutex.Lock()
-		for _, voter := range s.voters {
-			if voter.VoterType == constants.AdminVoterType {
-				continue
-			}
-
-			if time.Now().After(voter.ExpiresAt) {
-				slog.Info("Voter exipred! Removing", "voter", voter.VoterID)
-				delete(s.voters, voter.VoterID)
-			}
-
-		}
-		s.votersMutex.Unlock()
-
-		time.Sleep(voterWatchFrequency * time.Second)
-	}
-}
 
 func (s *Session) SetQueue(newQueue [] *model.QueuedSong) {
 	s.queueMutex.Lock()
@@ -222,27 +192,4 @@ func (s *Session) UpsertQueue(song model.SongUpdate, vote int) {
 	// Sort queue
 	sort.Slice(s.SessionInfo.Queue, func(i, j int) bool { return s.SessionInfo.Queue[i].Votes > s.SessionInfo.Queue[j].Votes })
 	s.queueMutex.Unlock()
-}
-
-func (s *Session) AddVoter(voterID string, newVoter *voter.Voter){
-	s.votersMutex.Lock()
-	s.voters[voterID] = newVoter
-	s.votersMutex.Unlock()
-}
-
-func (s *Session) GetVoter(voterID string) (*voter.Voter, bool){
-	s.votersMutex.Lock()
-	voter, exists := s.voters[voterID]
-	s.votersMutex.Unlock()
-	return voter, exists
-} 
-
-func (s *Session) IsFull() bool {
-	isFull := false
-	s.votersMutex.Lock()
-	if len(s.voters) >= s.SessionInfo.Size {
-		isFull = true
-	}
-	s.votersMutex.Unlock()
-	return isFull
 }

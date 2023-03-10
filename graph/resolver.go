@@ -1,6 +1,5 @@
 package graph
 
-//go:generate go get github.com/99designs/gqlgen@v0.17.15 && go run github.com/99designs/gqlgen generate
 import (
 	"sync"
 	"time"
@@ -40,7 +39,7 @@ func (r *Resolver) WatchSessions() {
 		r.sessionsMutex.Lock()
 
 		for _, session := range r.sessions{
-			if r.sessionCache.IsExpired(session.SessionInfo.ID) {
+			if r.sessionCache.IsSessionExpired(session.SessionInfo.ID) {
 				r.endSession(session)
 			}
 		}

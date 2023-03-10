@@ -24,7 +24,8 @@ type SessionInfo {
   currentlyPlaying: CurrentlyPlayingSong
   queue: [QueuedSong!]
   admin: String!
-  size: Int!
+  numberOfVoters: Int!
+  maximumVoters: Int!
 }
 
 type Account {

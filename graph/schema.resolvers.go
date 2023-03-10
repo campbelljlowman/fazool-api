@@ -59,7 +59,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	session.MusicPlayer = client
 
 	go session.WatchSpotifyCurrentlyPlaying(sessionID)
-	go session.WatchVoters(sessionID)
+	// TODO: Add this to scheduler
+	// go session.WatchVoters(sessionID)
 
 	account := &model.Account{
 		ID:        accountID,
@@ -106,7 +107,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	existingVoter, voterExists := session.GetVoter(voterID)
+	existingVoter, voterExists := r.sessionCache.GetVoterInSession(sessionID, voterID)
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Voter not in active voters! Voter: %v", voterID), nil)
 	}
@@ -318,14 +319,14 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	existingVoter, exists := session.GetVoter(voterID)
+	existingVoter, exists := r.sessionCache.GetVoterInSession(sessionID, voterID)
 
 	if exists {
 		slog.Info("Return existing voter", "voter", existingVoter.VoterID)
 		return existingVoter.GetVoterInfo(), nil
 	}
 
-	if session.IsFull() {
+	if r.sessionCache.IsSessionFull(sessionID) {
 		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}
 
@@ -353,7 +354,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}
 
-	session.AddVoter(voterID, newVoter)
+	r.sessionCache.AddVoterToSession(sessionID, voterID, newVoter)
 
 	return newVoter.GetVoterInfo(), nil
 }
@@ -410,7 +411,7 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	_, voterExists := session.GetVoter(voterID)
+	_, voterExists := r.sessionCache.GetVoterInSession(sessionID, voterID)
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("You're not in session %v!", sessionID), nil)
 	}

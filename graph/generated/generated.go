@@ -92,8 +92,9 @@ type ComplexityRoot struct {
 		Admin            func(childComplexity int) int
 		CurrentlyPlaying func(childComplexity int) int
 		ID               func(childComplexity int) int
+		MaximumVoters    func(childComplexity int) int
+		NumberOfVoters   func(childComplexity int) int
 		Queue            func(childComplexity int) int
-		Size             func(childComplexity int) int
 	}
 
 	SimpleSong struct {
@@ -403,19 +404,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SessionInfo.ID(childComplexity), true
 
+	case "SessionInfo.maximumVoters":
+		if e.complexity.SessionInfo.MaximumVoters == nil {
+			break
+		}
+
+		return e.complexity.SessionInfo.MaximumVoters(childComplexity), true
+
+	case "SessionInfo.numberOfVoters":
+		if e.complexity.SessionInfo.NumberOfVoters == nil {
+			break
+		}
+
+		return e.complexity.SessionInfo.NumberOfVoters(childComplexity), true
+
 	case "SessionInfo.queue":
 		if e.complexity.SessionInfo.Queue == nil {
 			break
 		}
 
 		return e.complexity.SessionInfo.Queue(childComplexity), true
-
-	case "SessionInfo.size":
-		if e.complexity.SessionInfo.Size == nil {
-			break
-		}
-
-		return e.complexity.SessionInfo.Size(childComplexity), true
 
 	case "SimpleSong.artist":
 		if e.complexity.SimpleSong.Artist == nil {
@@ -571,7 +579,8 @@ type SessionInfo {
   currentlyPlaying: CurrentlyPlayingSong
   queue: [QueuedSong!]
   admin: String!
-  size: Int!
+  numberOfVoters: Int!
+  maximumVoters: Int!
 }
 
 type Account {
@@ -1386,8 +1395,10 @@ func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Contex
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "admin":
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
-			case "size":
-				return ec.fieldContext_SessionInfo_size(ctx, field)
+			case "numberOfVoters":
+				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
+			case "maximumVoters":
+				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -1453,8 +1464,10 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "admin":
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
-			case "size":
-				return ec.fieldContext_SessionInfo_size(ctx, field)
+			case "numberOfVoters":
+				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
+			case "maximumVoters":
+				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -1741,8 +1754,10 @@ func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Contex
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "admin":
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
-			case "size":
-				return ec.fieldContext_SessionInfo_size(ctx, field)
+			case "numberOfVoters":
+				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
+			case "maximumVoters":
+				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -1937,8 +1952,10 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
 			case "admin":
 				return ec.fieldContext_SessionInfo_admin(ctx, field)
-			case "size":
-				return ec.fieldContext_SessionInfo_size(ctx, field)
+			case "numberOfVoters":
+				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
+			case "maximumVoters":
+				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
 		},
@@ -2609,8 +2626,8 @@ func (ec *executionContext) fieldContext_SessionInfo_admin(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionInfo_size(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_size(ctx, field)
+func (ec *executionContext) _SessionInfo_numberOfVoters(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2623,7 +2640,7 @@ func (ec *executionContext) _SessionInfo_size(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Size, nil
+		return obj.NumberOfVoters, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2640,7 +2657,51 @@ func (ec *executionContext) _SessionInfo_size(ctx context.Context, field graphql
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SessionInfo_size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionInfo_numberOfVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SessionInfo_maximumVoters(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MaximumVoters, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SessionInfo_maximumVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SessionInfo",
 		Field:      field,
@@ -5416,9 +5477,16 @@ func (ec *executionContext) _SessionInfo(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "size":
+		case "numberOfVoters":
 
-			out.Values[i] = ec._SessionInfo_size(ctx, field, obj)
+			out.Values[i] = ec._SessionInfo_numberOfVoters(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "maximumVoters":
+
+			out.Values[i] = ec._SessionInfo_maximumVoters(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
