@@ -12,6 +12,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"github.com/campbelljlowman/fazool-api/utils"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 
@@ -22,13 +23,14 @@ type Session struct {
 	SessionInfo    *model.SessionInfo
 	voters         map[string]*voter.Voter
 	MusicPlayer    musicplayer.MusicPlayer
-	expiresAt      time.Time
+	// expiresAt      time.Time
 	// Map of [song][account][votes]
 	bonusVotes     map[string]map[string]int
 	queueMutex     *sync.Mutex
 	votersMutex    *sync.Mutex
-	expiryMutex    *sync.Mutex
+	// expiryMutex    *sync.Mutex
 	bonusVoteMutex *sync.Mutex
+	sc 				*SessionCache
 }
 
 // Session gets removed after being inactive for this long in minutes
@@ -40,29 +42,52 @@ const spotifyWatchFrequency time.Duration = 250
 // Voters get watched at this frequency in seconds
 const voterWatchFrequency time.Duration = 1
 
-func NewSession() Session {
+func NewSession(accountID, accountLevel string, sc *SessionCache) (*Session, int, error) {
+	sessionID, err := utils.GenerateSessionID()
+	if err != nil {
+		return nil, 0, utils.LogAndReturnError("Error generating session ID", err)
+	}
+
+	sessionSize := 0
+	if accountLevel == constants.RegularAccountLevel {
+		sessionSize = 50
+	}
+
+	// Create session info
+	sessionInfo := &model.SessionInfo{
+		ID: sessionID,
+		CurrentlyPlaying: &model.CurrentlyPlayingSong{
+			SimpleSong: &model.SimpleSong{},
+			Playing:    false,
+		},
+		Queue: nil,
+		Admin: accountID,
+		Size:  sessionSize,
+	}
+
+	sc.CreateSession(sessionID)
+
 	session := Session{
-		SessionInfo:    nil,
+		SessionInfo:    sessionInfo,
 		voters:         make(map[string]*voter.Voter),
 		MusicPlayer:    nil,
-		expiresAt:      time.Now().Add(sessionTimeout * time.Minute),
 		bonusVotes:     make(map[string]map[string]int),
 		queueMutex:     &sync.Mutex{},
 		votersMutex:    &sync.Mutex{},
-		expiryMutex:    &sync.Mutex{},
 		bonusVoteMutex: &sync.Mutex{},
+		sc: 			sc,
 	}
 
-	return session
+	return &session, sessionID, nil
 }
 
-func (s *Session) WatchSpotifyCurrentlyPlaying() {
+func (s *Session) WatchSpotifyCurrentlyPlaying(sessionID int) {
 	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	updateCacheFlag := false
 	addNextSongFlag := false
 
 	for {
-		if time.Now().After(s.expiresAt) {
+		if s.sc.IsExpired(sessionID) {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
@@ -110,7 +135,7 @@ func (s *Session) WatchSpotifyCurrentlyPlaying() {
 		}
 
 		if updateCacheFlag {
-			s.UpdateCache()
+			s.sc.RefreshSession(s.SessionInfo.ID)
 		}
 
 		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
@@ -152,18 +177,11 @@ func (s *Session) AdvanceQueue(force bool) error {
 	return nil
 }
 
-func (s *Session) UpdateCache() {
-	// TODO: make it update the cache
-	s.expiryMutex.Lock()
-	s.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
-	s.expiryMutex.Unlock()
-}
-
 // TODO: Write function that watches voters and removes any inactive ones
-func (s *Session) WatchVoters() {
+func (s *Session) WatchVoters(sessionID int) {
 
 	for {
-		if time.Now().After(s.expiresAt) {
+		if s.sc.IsExpired(sessionID) {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", s.SessionInfo.ID)
 			return
 		}
@@ -268,19 +286,6 @@ func (s *Session) IsFull() bool {
 	}
 	s.votersMutex.Unlock()
 	return isFull
-}
-
-func (s *Session) ExpireSession() {
-	s.expiryMutex.Lock()
-	s.expiresAt = time.Now()
-	s.expiryMutex.Unlock()
-}
-
-func (s *Session) IsExpired() bool {
-	s.expiryMutex.Lock()
-	isExpired := s.expiresAt.Before(time.Now())
-	s.expiryMutex.Unlock()
-	return isExpired
 }
 
 func (s *Session) AddBonusVote(songID, accountID string, numberOfVotes int) {

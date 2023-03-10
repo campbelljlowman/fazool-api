@@ -31,34 +31,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 		return nil, utils.LogAndReturnError("Error getting account level from database", nil)
 	}
 
-	sessionSize := 0
-	if accountLevel == constants.RegularAccountLevel {
-		sessionSize = 50
-	}
-
-	sessionID, err := utils.GenerateSessionID()
-	if err != nil {
-		return nil, utils.LogAndReturnError("Error generating session ID", err)
-	}
-
-	session := session.NewSession()
+	session, sessionID, err := session.NewSession(accountID, accountLevel, r.sessionCache)
 
 	r.sessionsMutex.Lock()
-	r.sessions[sessionID] = &session
+	r.sessions[sessionID] = session
 	r.sessionsMutex.Unlock()
-
-	// Create session info
-	sessionInfo := &model.SessionInfo{
-		ID: sessionID,
-		CurrentlyPlaying: &model.CurrentlyPlayingSong{
-			SimpleSong: &model.SimpleSong{},
-			Playing:    false,
-		},
-		Queue: nil,
-		Admin: accountID,
-		Size:  sessionSize,
-	}
-	session.SessionInfo = sessionInfo
 
 	// TODO: Maybe combine these two sets to a single db function and query
 	err = r.database.SetAccountSession(accountID, sessionID)
@@ -81,8 +58,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	client := musicplayer.NewSpotifyClient(spotifyToken)
 	session.MusicPlayer = client
 
-	go session.WatchSpotifyCurrentlyPlaying()
-	go session.WatchVoters()
+	go session.WatchSpotifyCurrentlyPlaying(sessionID)
+	go session.WatchVoters(sessionID)
 
 	account := &model.Account{
 		ID:        accountID,
@@ -150,7 +127,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	session.UpsertQueue(song, numberOfVotes)
 
-	session.UpdateCache()
+	r.sessionCache.RefreshSession(sessionID)
 
 	return session.SessionInfo, nil
 }
@@ -187,7 +164,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		if err != nil {
 			return nil, utils.LogAndReturnError("Error advancing queue", err)
 		}
-		session.UpdateCache()
+		r.sessionCache.RefreshSession(sessionID)
 	}
 
 	return session.SessionInfo, nil

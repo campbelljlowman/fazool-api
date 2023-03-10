@@ -9,7 +9,6 @@ import (
 	"github.com/campbelljlowman/fazool-api/session"
 	"golang.org/x/exp/slog"
 
-	"github.com/go-redis/redis/v8"
 )
 
 // This file will not be regenerated automatically.
@@ -24,15 +23,15 @@ type Resolver struct {
 	sessionsMutex 	*sync.Mutex
 	database 		database.Database
 	// TODO: Change this to cache and wrap Redis in an interface
-	redisClient    *redis.Client
+	sessionCache    *session.SessionCache
 }
 
-func NewResolver(database database.Database, redisClient *redis.Client) *Resolver {
+func NewResolver(database database.Database, sessionCache *session.SessionCache) *Resolver {
 	return &Resolver{
 		sessions:      	make(map[int]*session.Session),
 		sessionsMutex:  &sync.Mutex{},
 		database: 		database,
-		redisClient:    redisClient,
+		sessionCache: sessionCache,	
 	}
 }
 
@@ -41,7 +40,7 @@ func (r *Resolver) WatchSessions() {
 		r.sessionsMutex.Lock()
 
 		for _, session := range r.sessions{
-			if session.IsExpired() {
+			if r.sessionCache.IsExpired(session.SessionInfo.ID) {
 				r.endSession(session)
 			}
 		}
@@ -59,7 +58,7 @@ func (r *Resolver) endSession(session *session.Session) error {
 
 	delete(r.sessions, session.SessionInfo.ID)
 
-	session.ExpireSession()
+	r.sessionCache.ExpireSession(session.SessionInfo.ID)
 	
 	return nil
 }
