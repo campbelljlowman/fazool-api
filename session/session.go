@@ -1,14 +1,11 @@
 package session
 
 import (
-	"context"
-	"os"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/campbelljlowman/fazool-api/constants"
-	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/voter"
@@ -16,20 +13,14 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 
-	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type Session struct {
 	SessionInfo    *model.SessionInfo
 	voters         map[string]*voter.Voter
 	MusicPlayer    musicplayer.MusicPlayer
-	// expiresAt      time.Time
-	// Map of [song][account][votes]
-	bonusVotes     map[string]map[string]int
 	queueMutex     *sync.Mutex
 	votersMutex    *sync.Mutex
-	// expiryMutex    *sync.Mutex
-	bonusVoteMutex *sync.Mutex
 	sc 				*SessionCache
 }
 
@@ -71,10 +62,8 @@ func NewSession(accountID, accountLevel string, sc *SessionCache) (*Session, int
 		SessionInfo:    sessionInfo,
 		voters:         make(map[string]*voter.Voter),
 		MusicPlayer:    nil,
-		bonusVotes:     make(map[string]map[string]int),
 		queueMutex:     &sync.Mutex{},
 		votersMutex:    &sync.Mutex{},
-		bonusVoteMutex: &sync.Mutex{},
 		sc: 			sc,
 	}
 
@@ -160,7 +149,7 @@ func (s *Session) AdvanceQueue(force bool) error {
 		return err
 	}
 
-	err = s.processBonusVotes(song.ID)
+	err = s.sc.processBonusVotes(s.SessionInfo.ID, song.ID)
 	if err != nil {
 		return err
 	}
@@ -202,36 +191,6 @@ func (s *Session) WatchVoters(sessionID int) {
 
 		time.Sleep(voterWatchFrequency * time.Second)
 	}
-}
-
-// TODO: This code hasn't been tested
-func (s *Session) processBonusVotes(songID string) error {
-	s.bonusVoteMutex.Lock()
-	bonusVotes, exists := s.bonusVotes[songID]
-	delete(s.bonusVotes, songID)
-	s.bonusVoteMutex.Unlock()
-	if !exists {
-		return nil
-	}
-
-	databaseURL := os.Getenv("POSTRGRES_URL")
-
-	dbPool, err := pgxpool.Connect(context.Background(), databaseURL)
-	if err != nil {
-		return err
-	}
-
-	pg := database.PostgresWrapper{PostgresClient: dbPool}
-
-	for accountID, votes := range bonusVotes {
-		err = pg.SubtractBonusVotes(accountID, votes)
-		if err != nil {
-			slog.Warn("Error updating account's bonus votes", "account", accountID)
-		}
-	}
-
-	pg.CloseConnection()
-	return nil
 }
 
 func (s *Session) SetQueue(newQueue [] *model.QueuedSong) {
@@ -286,13 +245,4 @@ func (s *Session) IsFull() bool {
 	}
 	s.votersMutex.Unlock()
 	return isFull
-}
-
-func (s *Session) AddBonusVote(songID, accountID string, numberOfVotes int) {
-	s.bonusVoteMutex.Lock()
-	if _, exists := s.bonusVotes[songID][accountID]; !exists {
-		s.bonusVotes[songID] = make(map[string]int)
-	}
-	s.bonusVotes[songID][accountID] += numberOfVotes
-	s.bonusVoteMutex.Unlock()
 }

@@ -118,7 +118,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	// TODO: Remove bonus votes if applicable?
 	if isBonusVote {
-		session.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes)
+		r.sessionCache.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes, sessionID)
 	}
 
 	existingVoter.RefreshVoterExpiration()
