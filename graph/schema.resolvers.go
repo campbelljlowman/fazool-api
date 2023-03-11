@@ -123,6 +123,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	}
 
 	existingVoter.RefreshVoterExpiration()
+	r.sessionCache.UpsertVoterToSession(sessionID, existingVoter)
 
 	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.SimpleSong.Artist)
 
@@ -348,13 +349,14 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		}
 	}
 
-	slog.Info("Generating new voter", "voter", voterID)
+	slog.Info("Generating new voter", "voter", voterID, "bonus-votes", bonusVotes)
 	newVoter, err := voter.NewVoter(voterID, accountID, voterType, bonusVotes)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}
 
-	r.sessionCache.AddVoterToSession(sessionID, voterID, newVoter)
+	slog.Info("New voter created:", "voter", newVoter)
+	r.sessionCache.UpsertVoterToSession(sessionID, newVoter)
 
 	return newVoter.GetVoterInfo(), nil
 }

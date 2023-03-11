@@ -182,19 +182,18 @@ func (sc *SessionCache) CheckVotersExpirations(sessionID int) {
 	}
 }
 
-func (sc *SessionCache) AddVoterToSession(sessionID int, voterID string, newVoter *voter.Voter){
+func (sc *SessionCache) UpsertVoterToSession(sessionID int, newVoter *voter.Voter){
+	slog.Info("Adding Voter:", "newVoter", newVoter)
 	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
 	votersMutex.Lock()
 
 	var voters map[string] *voter.Voter
 	sc.get(getVotersKey(sessionID), &voters)
-	slog.Info("Voters:", "voters", voters)
-	voters[voterID] = newVoter
+	voters[newVoter.VoterID] = newVoter
 	sc.set(getVotersKey(sessionID), voters)
 
 	votersMutex.Unlock()
 }
-
 
 func (sc *SessionCache) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
 	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
@@ -202,9 +201,10 @@ func (sc *SessionCache) GetVoterInSession(sessionID int, voterID string) (*voter
 
 	var voters map[string] *voter.Voter
 	sc.get(getVotersKey(sessionID), &voters)
-	votersMutex.Lock()
 	voter, exists := voters[voterID]
+	slog.Info("existing voter", "voter", voter)
 	votersMutex.Unlock()
+
 	return voter, exists
 }
 
@@ -212,10 +212,11 @@ func (sc *SessionCache) IsSessionFull(sessionID int) bool {
 	isFull := false
 
 	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
-	votersMutex.Lock()
 
+	votersMutex.Lock()
 	var voters map[string] *voter.Voter
 	sc.get(getVotersKey(sessionID), &voters)
+	votersMutex.Unlock()
 
 	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "maximumVoters").Result()
 	if err != nil {
@@ -231,7 +232,6 @@ func (sc *SessionCache) IsSessionFull(sessionID int) bool {
 	if len(voters) >= sessionMaximumVotersInt {
 		isFull = true
 	}
-	votersMutex.Unlock()
 	return isFull
 }
 
