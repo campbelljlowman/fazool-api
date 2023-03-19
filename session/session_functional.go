@@ -45,8 +45,12 @@ func (sc *SessionCache) InitVoterMap(sessionID int) {
 	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
 	voters := make(map[string]*voter.Voter)
 	votersMutex.Lock()
-	sc.set(getVotersKey(sessionID), voters)
+	err := sc.setStructToRedis(getVotersKey(sessionID), voters)
 	votersMutex.Unlock()
+
+	if err != nil {
+		slog.Warn("Error setting session voters", "error", err)
+	}
 }
 
 func (sc *SessionCache) ExpireSession(sessionID int) {
@@ -54,7 +58,7 @@ func (sc *SessionCache) ExpireSession(sessionID int) {
 
 	expiryMutex.Lock()
 	expiresAt := time.Now()
-	err := sc.set(getExpiryKey(sessionID), expiresAt)
+	err := sc.setStructToRedis(getExpiryKey(sessionID), expiresAt)
 	expiryMutex.Unlock()
 
 	if err != nil {
@@ -63,17 +67,10 @@ func (sc *SessionCache) ExpireSession(sessionID int) {
 }
 
 func (sc *SessionCache) IsSessionExpired(sessionID int) bool {
-	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
-	
-	expiryMutex.Lock()
-	var expiresAt time.Time
-	err := sc.get(getExpiryKey(sessionID), &expiresAt)
+	expiresAt, expiryMutex := sc.lockAndGetSessionExpiry(sessionID)
+
 	expiryMutex.Unlock()
 
-	if err != nil {
-		slog.Warn("Error getting session's expiration", "error", err)
-		return false
-	}
 	isExpired := expiresAt.Before(time.Now())
 
 	return isExpired
@@ -82,26 +79,26 @@ func (sc *SessionCache) IsSessionExpired(sessionID int) bool {
 func (sc *SessionCache) RefreshSession(sessionID int) {
 	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
 	expiryMutex.Lock()
+
 	expiresAt := time.Now().Add(sessionTimeout * time.Minute)
-	err := sc.set(getExpiryKey(sessionID), expiresAt)
+	err := sc.setStructToRedis(getExpiryKey(sessionID), expiresAt)
+
+	expiryMutex.Unlock()
+
 	if err != nil {
 		slog.Warn("Error refreshing session", "error", err)
 	}
-	expiryMutex.Unlock()
 }
 
 func (sc *SessionCache) AddBonusVote(songID, accountID string, numberOfVotes, sessionID int) {
-	bonusVoteMutex := sc.redsync.NewMutex(getBonusVoteMutexKey(sessionID))
-	// Map of [song][account][votes]
-	var bonusVotes map[string]map[string]int
+	bonusVotes, bonusVoteMutex := sc.lockAndGetBonusVotes(sessionID)
 
-	bonusVoteMutex.Lock()
-	sc.get(getBonusVoteKey(sessionID), &bonusVotes)
 	if _, exists := bonusVotes[songID][accountID]; !exists {
 		bonusVotes[songID] = make(map[string]int)
 	}
 	bonusVotes[songID][accountID] += numberOfVotes
-	err := sc.set(getBonusVoteKey(sessionID), bonusVotes)
+
+	err := sc.setStructToRedis(getBonusVoteKey(sessionID), bonusVotes)
 	bonusVoteMutex.Unlock()
 
 	if err != nil {
@@ -112,19 +109,18 @@ func (sc *SessionCache) AddBonusVote(songID, accountID string, numberOfVotes, se
 
 // TODO: This code hasn't been tested
 func (sc *SessionCache) processBonusVotes(sessionID int, songID string) error {
-	bonusVoteMutex := sc.redsync.NewMutex(getBonusVoteMutexKey(sessionID))
-	// Map of [song][account][votes]
-	var sessionBonusVotes map[string]map[string]int
-
-
-	bonusVoteMutex.Lock()
-	sc.get(getBonusVoteKey(sessionID), &sessionBonusVotes)
+	sessionBonusVotes, bonusVoteMutex := sc.lockAndGetBonusVotes(sessionID)
 
 	songBonusVotes, exists := sessionBonusVotes[songID]
 	delete(sessionBonusVotes, songID)
 
-	sc.set(getBonusVoteKey(sessionID), sessionBonusVotes)
+	err :=	sc.setStructToRedis(getBonusVoteKey(sessionID), sessionBonusVotes)
+
 	bonusVoteMutex.Unlock()
+
+	if err != nil {
+		slog.Warn("Error setting session Expiration", "error", err)
+	}
 
 	if !exists {
 		return nil
@@ -159,11 +155,8 @@ func (sc *SessionCache) CheckVotersExpirations(sessionID int) {
 			return
 		}
 
-		votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
-		votersMutex.Lock()
+		voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
 
-		var voters map[string] *voter.Voter
-		sc.get(getVotersKey(sessionID), &voters)
 		for _, voter := range voters {
 			if voter.VoterType == constants.AdminVoterType {
 				continue
@@ -175,34 +168,34 @@ func (sc *SessionCache) CheckVotersExpirations(sessionID int) {
 			}
 
 		}
-		sc.set(getVotersKey(sessionID), voters)
+		err := sc.setStructToRedis(getVotersKey(sessionID), voters)
+
 		votersMutex.Unlock()
+
+		if err != nil {
+			slog.Warn("Error setting session voters", "error", err)
+		}
 
 		time.Sleep(voterWatchFrequency * time.Second)
 	}
 }
 
 func (sc *SessionCache) UpsertVoterToSession(sessionID int, newVoter *voter.Voter){
-	slog.Info("Adding Voter:", "newVoter", newVoter)
-	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
-	votersMutex.Lock()
-
-	var voters map[string] *voter.Voter
-	sc.get(getVotersKey(sessionID), &voters)
+	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
 	voters[newVoter.VoterID] = newVoter
-	sc.set(getVotersKey(sessionID), voters)
+	err := sc.setStructToRedis(getVotersKey(sessionID), voters)
 
 	votersMutex.Unlock()
+
+	if err != nil {
+		slog.Warn("Error setting session voters", "error", err)
+	}
 }
 
 func (sc *SessionCache) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
-	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
-	votersMutex.Lock()
-
-	var voters map[string] *voter.Voter
-	sc.get(getVotersKey(sessionID), &voters)
+	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
 	voter, exists := voters[voterID]
-	slog.Info("existing voter", "voter", voter)
+
 	votersMutex.Unlock()
 
 	return voter, exists
@@ -211,11 +204,8 @@ func (sc *SessionCache) GetVoterInSession(sessionID int, voterID string) (*voter
 func (sc *SessionCache) IsSessionFull(sessionID int) bool {
 	isFull := false
 
-	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
+	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
 
-	votersMutex.Lock()
-	var voters map[string] *voter.Voter
-	sc.get(getVotersKey(sessionID), &voters)
 	votersMutex.Unlock()
 
 	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "maximumVoters").Result()
@@ -236,7 +226,7 @@ func (sc *SessionCache) IsSessionFull(sessionID int) bool {
 }
 
 
-func (sc *SessionCache) get(key string, dest interface{}) error {
+func (sc *SessionCache) getStructFromRedis(key string, dest interface{}) error {
     result, err := sc.redisClient.Get(context.Background(), key).Result()
     if err != nil {
     	return err
@@ -248,7 +238,7 @@ func (sc *SessionCache) get(key string, dest interface{}) error {
     return nil
 }
 
-func (sc *SessionCache) set(key string, value interface{}) error {
+func (sc *SessionCache) setStructToRedis(key string, value interface{}) error {
 	valueString, err := json.Marshal(value)
     if err != nil {
        return err
@@ -256,8 +246,47 @@ func (sc *SessionCache) set(key string, value interface{}) error {
     return sc.redisClient.Set(context.Background(), key, string(valueString), 0).Err()
 }
 
-func getBonusVoteMutexKey(sessionID int) string {
-	return fmt.Sprintf("bonus-vote-mutex-%d", sessionID)
+func (sc *SessionCache) lockAndGetBonusVotes(sessionID int) (map[string]map[string]int, *redsync.Mutex) {
+	bonusVoteMutex := sc.redsync.NewMutex(fmt.Sprintf("bonus-vote-mutex-%d", sessionID))
+	// Map of [song][account][votes]
+	var bonusVotes map[string]map[string]int
+
+	bonusVoteMutex.Lock()
+	err := sc.getStructFromRedis(getBonusVoteKey(sessionID), &bonusVotes)
+
+	if err != nil {
+		slog.Warn("Error getting session bonus votes", "error", err)
+	}
+
+	return bonusVotes, bonusVoteMutex
+}
+
+func (sc *SessionCache) lockAndGetAllVotersInSession(sessionID int) (map[string]*voter.Voter, *redsync.Mutex) {
+	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
+	votersMutex.Lock()
+
+	var voters map[string] *voter.Voter
+	err := sc.getStructFromRedis(getVotersKey(sessionID), &voters)
+
+	if err != nil {
+		slog.Warn("Error getting session voters", "error", err)
+	}
+
+	return voters, votersMutex
+}
+
+func (sc *SessionCache) lockAndGetSessionExpiry(sessionID int) (time.Time, *redsync.Mutex) {
+	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
+	
+	expiryMutex.Lock()
+	var expiresAt time.Time
+	err := sc.getStructFromRedis(getExpiryKey(sessionID), &expiresAt)
+
+	if err != nil {
+		slog.Warn("Error getting session expiration", "error", err)
+	}
+
+	return expiresAt, expiryMutex
 }
 
 func getBonusVoteKey(sessionID int) string {
