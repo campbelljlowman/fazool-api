@@ -59,7 +59,7 @@ func (sc *Session) lockAndGetAllVotersInSession(sessionID int) (map[string]*vote
 	return voters, votersMutex
 }
 
-func (sc *Session) GetNumberOfVoters(sessionID int) int {
+func (sc *Session) getNumberOfVoters(sessionID int) int {
 	voterCountMutex := sc.redsync.NewMutex(getVoterCountMutexKey(sessionID))
 	voterCountMutex.Lock()
 

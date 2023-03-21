@@ -9,7 +9,7 @@ import (
 
 )
 
-func (sc *Session) SetSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
+func (sc *Session) setSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
 	sc.redisClient.HSet(context.Background(),  getSessionConfigKey(sessionID), "sessionID", sessionID, "maximumVoters", maximumVoters, "adminAccountID", adminAccountID)
 }
 
@@ -22,7 +22,7 @@ func (sc *Session) GetSessionAdmin(sessionID int) string {
 	return sessionMaximumVoters
 }
 
-func (sc *Session) GetSessionMaximumVoters(sessionID int) int {
+func (sc *Session) getSessionMaximumVoters(sessionID int) int {
 	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "maximumVoters").Result()
 	if err != nil {
 		slog.Warn("Error getting session maximum voters", "error", err)

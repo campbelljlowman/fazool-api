@@ -55,9 +55,9 @@ func (sc *Session) CreateSession(adminAccountID, accountLevel string) (int, erro
 		maximumVoters = 50
 	}
 
-	sc.RefreshSession(sessionID)
+	sc.refreshSession(sessionID)
 	sc.initVoterMap(sessionID)
-	sc.SetSessionConfig(sessionID, maximumVoters, adminAccountID)
+	sc.setSessionConfig(sessionID, maximumVoters, adminAccountID)
 	sc.initQueue(sessionID)
 	sc.initCurrentlyPlaying(sessionID)
 
@@ -111,7 +111,7 @@ func (sc *Session) processBonusVotes(sessionID int, songID string) error {
 func (sc *Session) CheckVotersExpirations(sessionID int) {
 
 	for {
-		if sc.IsSessionExpired(sessionID) {
+		if sc.isSessionExpired(sessionID) {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", sessionID)
 			// TODO: Deregister this check from the scheduler
 			return
@@ -145,9 +145,9 @@ func (sc *Session) CheckVotersExpirations(sessionID int) {
 func (sc *Session) IsSessionFull(sessionID int) bool {
 	isFull := false
 
-	voterCount := sc.GetNumberOfVoters(sessionID)
+	voterCount := sc.getNumberOfVoters(sessionID)
 
-	sessionMaximumVoters := sc.GetSessionMaximumVoters(sessionID)
+	sessionMaximumVoters := sc.getSessionMaximumVoters(sessionID)
 
 	if voterCount >= sessionMaximumVoters {
 		isFull = true
@@ -187,6 +187,7 @@ func (sc *Session) AdvanceQueue(sessionID int, force bool, musicPlayer musicplay
 		return err
 	}
 
+	sc.refreshSession(sessionID)
 	return nil
 }
 
@@ -213,21 +214,22 @@ func (sc *Session) UpsertQueue(sessionID int, vote int, song model.SongUpdate) {
 	// Sort queue
 	sort.Slice(queue, func(i, j int) bool { return queue[i].Votes > queue[j].Votes })
 	sc.setAndUnlockQueue(sessionID, queue, queueMutex)
+	sc.refreshSession(sessionID)
 }
 
 
 func (sc *Session) WatchSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer) {
 	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
-	updateCacheFlag := false
+	updateSessionFlag := false
 	addNextSongFlag := false
 
 	for {
-		if sc.IsSessionExpired(sessionID) {
+		if sc.isSessionExpired(sessionID) {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", sessionID)
 			return
 		}
 
-		updateCacheFlag = false
+		updateSessionFlag = false
 		spotifyCurrentlyPlayingSong, isSpotifyCurrentlyPlaying, err := musicPlayer.CurrentSong()
 		if err != nil {
 			slog.Warn("Error getting music player state", "error", err)
@@ -239,12 +241,12 @@ func (sc *Session) WatchSpotifyCurrentlyPlaying(sessionID int, musicPlayer music
 			if currentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
 				currentlyPlaying = spotifyCurrentlyPlayingSong
-				updateCacheFlag = true
+				updateSessionFlag = true
 				addNextSongFlag = true
 			} else if currentlyPlaying.Playing != isSpotifyCurrentlyPlaying {
 				// If same song is paused and then played, set the new state
 				currentlyPlaying.Playing = isSpotifyCurrentlyPlaying
-				updateCacheFlag = true
+				updateSessionFlag = true
 			}
 
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
@@ -259,20 +261,22 @@ func (sc *Session) WatchSpotifyCurrentlyPlaying(sessionID int, musicPlayer music
 			if timeLeft < 5000 && addNextSongFlag {
 				sc.AdvanceQueue(sessionID, false, musicPlayer)
 
-				updateCacheFlag = true
+				updateSessionFlag = true
 				addNextSongFlag = false
 			}
 		} else {
 			// Change currently playing to false if music gets paused
 			if currentlyPlaying.Playing != isSpotifyCurrentlyPlaying {
 				currentlyPlaying.Playing = isSpotifyCurrentlyPlaying
-				updateCacheFlag = true
+				updateSessionFlag = true
 			}
 		}
-		sc.setAndUnlockCurrentlyPlaying(sessionID, currentlyPlaying, currentlyPlayingMutex)
 
-		if updateCacheFlag {
-			sc.RefreshSession(sessionID)
+		if updateSessionFlag {
+			sc.setAndUnlockCurrentlyPlaying(sessionID, currentlyPlaying, currentlyPlayingMutex)
+			sc.refreshSession(sessionID)
+		} else {
+			currentlyPlayingMutex.Unlock()
 		}
 
 		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
@@ -284,11 +288,11 @@ func (sc *Session) WatchSpotifyCurrentlyPlaying(sessionID int, musicPlayer music
 func (sc *Session) GetSessionInfo(sessionID int) *model.SessionInfo {
 	sessionInfo := &model.SessionInfo{
 		ID: sessionID,
-		CurrentlyPlaying: sc.GetCurrentlyPlaying(sessionID),
-		Queue: sc.GetQueue(sessionID),
+		CurrentlyPlaying: sc.getCurrentlyPlaying(sessionID),
+		Queue: sc.getQueue(sessionID),
 		Admin: sc.GetSessionAdmin(sessionID),
-		NumberOfVoters: sc.GetNumberOfVoters(sessionID),
-		MaximumVoters: sc.GetSessionMaximumVoters(sessionID),
+		NumberOfVoters: sc.getNumberOfVoters(sessionID),
+		MaximumVoters: sc.getSessionMaximumVoters(sessionID),
 	}
 
 	return sessionInfo

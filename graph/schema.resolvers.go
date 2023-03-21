@@ -122,8 +122,6 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	r.session.UpsertQueue(sessionID, numberOfVotes, song)
 
-	r.session.RefreshSession(sessionID)
-
 	return r.session.GetSessionInfo(sessionID), nil
 }
 
@@ -161,7 +159,6 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		if err != nil {
 			return nil, utils.LogAndReturnError("Error advancing queue", err)
 		}
-		r.session.RefreshSession(sessionID)
 	}
 
 	return r.session.GetSessionInfo(sessionID), nil

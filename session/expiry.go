@@ -9,7 +9,7 @@ import (
 
 )
 
-func (sc *Session) ExpireSession(sessionID int) {
+func (sc *Session) expireSession(sessionID int) {
 	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
 
 	expiryMutex.Lock()
@@ -22,7 +22,7 @@ func (sc *Session) ExpireSession(sessionID int) {
 	}
 }
 
-func (sc *Session) IsSessionExpired(sessionID int) bool {
+func (sc *Session) isSessionExpired(sessionID int) bool {
 	expiresAt, expiryMutex := sc.lockAndGetSessionExpiry(sessionID)
 
 	expiryMutex.Unlock()
@@ -32,7 +32,7 @@ func (sc *Session) IsSessionExpired(sessionID int) bool {
 	return isExpired
 }
 
-func (sc *Session) RefreshSession(sessionID int) {
+func (sc *Session) refreshSession(sessionID int) {
 	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
 	expiryMutex.Lock()
 

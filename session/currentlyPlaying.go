@@ -22,7 +22,7 @@ func (sc *Session) initCurrentlyPlaying(sessionID int) {
 	currentlyPlayingMutex.Unlock()
 }
 
-func (sc *Session) GetCurrentlyPlaying(sessionID int) *model.CurrentlyPlayingSong {
+func (sc *Session) getCurrentlyPlaying(sessionID int) *model.CurrentlyPlayingSong {
 	currentlyPlaying, currentlyPlayingMutex := sc.lockAndGetCurrentlyPlaying(sessionID)
 	currentlyPlayingMutex.Unlock()
 	return currentlyPlaying

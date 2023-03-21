@@ -15,7 +15,7 @@ func (sc *Session) initQueue(sessionID int) {
 	sc.SetQueue(sessionID, queue)
 }
 
-func (sc *Session) GetQueue(sessionID int) []*model.QueuedSong {
+func (sc *Session) getQueue(sessionID int) []*model.QueuedSong {
 	queue, queueMutex := sc.lockAndGetQueue(sessionID)
 	queueMutex.Unlock()
 
