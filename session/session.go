@@ -22,6 +22,10 @@ import (
 	"github.com/campbelljlowman/fazool-api/utils"
 )
 
+
+// Sessions get watched at this frequency in seconds
+const sessionWatchFrequency time.Duration = 10
+
 // Session gets removed after being inactive for this long in minutes
 const sessionTimeout time.Duration = 30
 
@@ -65,8 +69,16 @@ func (sc *Session) CreateSession(adminAccountID, accountLevel string) (int, erro
 }
 
 // TODO: This code hasn't been tested
-func (sc *Session) EndSession(sessionID int) {
+func (sc *Session) endSession(sessionID int) {
+// Delete all keys from Redis
+// Remove schedulers
+}
 
+func (sc *Session) CheckSessionExpiry(sessionID int) {
+	isSessionExpired := sc.isSessionExpired(sessionID)
+	if isSessionExpired == true {
+		sc.endSession(sessionID)
+	}
 }
 
 // TODO: This code hasn't been tested
@@ -218,7 +230,7 @@ func (sc *Session) UpsertQueue(sessionID int, vote int, song model.SongUpdate) {
 }
 
 
-func (sc *Session) WatchSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer) {
+func (sc *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer) {
 	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	updateSessionFlag := false
 	addNextSongFlag := false

@@ -53,7 +53,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	client := musicplayer.NewSpotifyClient(spotifyToken)
 	r.musicPlayers[sessionID] = client
 
-	go r.session.WatchSpotifyCurrentlyPlaying(sessionID, client)
+	go r.session.CheckSpotifyCurrentlyPlaying(sessionID, client)
 	// TODO: Add this to scheduler, and make this only run once
 	go r.session.CheckVotersExpirations(sessionID)
 
