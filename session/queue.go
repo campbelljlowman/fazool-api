@@ -26,8 +26,7 @@ func (sc *Session) SetQueue(sessionID int, newQueue [] *model.QueuedSong) {
 	queueMutex := sc.redsync.NewMutex(getQueueMutexKey(sessionID))
 	queueMutex.Lock()
 
-	sc.setStructToRedis(getQueueKey(sessionID), newQueue)
-	queueMutex.Unlock()
+	sc.setAndUnlockQueue(sessionID, newQueue, queueMutex)
 }
 
 func (sc *Session) lockAndGetQueue(sessionID int) ([]*model.QueuedSong, *redsync.Mutex) {
