@@ -39,7 +39,7 @@ func InitializeRoutes() *gin.Engine {
 	redisClient := cache.GetRedisClient()
 	redisPool := goredis.NewPool(redisClient) 
 	redSync := redsync.New(redisPool)
-	sessionCache := session.NewSessionCache(redSync, redisClient)
+	sessionCache := session.NewSessionClient(redSync, redisClient)
 	r := graph.NewResolver(pgClient, sessionCache)
 	// go r.WatchSessions()
 	srv := graph.NewGraphQLServer(r)

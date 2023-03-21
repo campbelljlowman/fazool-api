@@ -9,7 +9,7 @@ import (
 )
 
 
-func (sc *SessionCache) AddBonusVote(songID, accountID string, numberOfVotes, sessionID int) {
+func (sc *Session) AddBonusVote(songID, accountID string, numberOfVotes, sessionID int) {
 	bonusVotes, bonusVoteMutex := sc.lockAndGetBonusVotes(sessionID)
 
 	if _, exists := bonusVotes[songID][accountID]; !exists {
@@ -26,7 +26,7 @@ func (sc *SessionCache) AddBonusVote(songID, accountID string, numberOfVotes, se
 }
 
 
-func (sc *SessionCache) lockAndGetBonusVotes(sessionID int) (map[string]map[string]int, *redsync.Mutex) {
+func (sc *Session) lockAndGetBonusVotes(sessionID int) (map[string]map[string]int, *redsync.Mutex) {
 	bonusVoteMutex := sc.redsync.NewMutex(fmt.Sprintf("bonus-vote-mutex-%d", sessionID))
 	// Map of [song][account][votes]
 	var bonusVotes map[string]map[string]int

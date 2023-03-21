@@ -9,11 +9,11 @@ import (
 
 )
 
-func (sc *SessionCache) SetSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
+func (sc *Session) SetSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
 	sc.redisClient.HSet(context.Background(),  getSessionConfigKey(sessionID), "sessionID", sessionID, "maximumVoters", maximumVoters, "adminAccountID", adminAccountID)
 }
 
-func (sc *SessionCache) GetSessionAdmin(sessionID int) string {
+func (sc *Session) GetSessionAdmin(sessionID int) string {
 	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "adminAccountID").Result()
 	if err != nil {
 		slog.Warn("Error getting session admin", "error", err)
@@ -22,7 +22,7 @@ func (sc *SessionCache) GetSessionAdmin(sessionID int) string {
 	return sessionMaximumVoters
 }
 
-func (sc *SessionCache) GetSessionMaximumVoters(sessionID int) int {
+func (sc *Session) GetSessionMaximumVoters(sessionID int) int {
 	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "maximumVoters").Result()
 	if err != nil {
 		slog.Warn("Error getting session maximum voters", "error", err)
@@ -33,6 +33,15 @@ func (sc *SessionCache) GetSessionMaximumVoters(sessionID int) int {
 	}
 
 	return sessionMaximumVotersInt
+}
+
+func (sc *Session) DoesSessionExist(sessionID int) bool {
+	_, err := sc.redisClient.HGetAll(context.Background(), getSessionConfigKey(sessionID)).Result()
+	if err != nil {
+		slog.Warn("Error getting session config", "error", err)
+		return false
+	}
+	return true
 }
 
 func getSessionConfigKey(sessionID int) string {

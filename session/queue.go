@@ -10,19 +10,19 @@ import (
 
 )
 
-func (sc *SessionCache) InitQueue(sessionID int) {
+func (sc *Session) initQueue(sessionID int) {
 	var queue []*model.QueuedSong
 	sc.SetQueue(sessionID, queue)
 }
 
-func (sc *SessionCache) GetQueue(sessionID int) []*model.QueuedSong {
+func (sc *Session) GetQueue(sessionID int) []*model.QueuedSong {
 	queue, queueMutex := sc.lockAndGetQueue(sessionID)
 	queueMutex.Unlock()
 
 	return queue
 }
 
-func (sc *SessionCache) SetQueue(sessionID int, newQueue [] *model.QueuedSong) {
+func (sc *Session) SetQueue(sessionID int, newQueue [] *model.QueuedSong) {
 	queueMutex := sc.redsync.NewMutex(getQueueMutexKey(sessionID))
 	queueMutex.Lock()
 
@@ -30,7 +30,7 @@ func (sc *SessionCache) SetQueue(sessionID int, newQueue [] *model.QueuedSong) {
 	queueMutex.Unlock()
 }
 
-func (sc *SessionCache) lockAndGetQueue(sessionID int) ([]*model.QueuedSong, *redsync.Mutex) {
+func (sc *Session) lockAndGetQueue(sessionID int) ([]*model.QueuedSong, *redsync.Mutex) {
 	queueMutex := sc.redsync.NewMutex(getQueueMutexKey(sessionID))
 	queueMutex.Lock()
 
@@ -44,7 +44,7 @@ func (sc *SessionCache) lockAndGetQueue(sessionID int) ([]*model.QueuedSong, *re
 	return queue, queueMutex
 }
 
-func (sc *SessionCache) setAndUnlockQueue(sessionID int, newQueue [] *model.QueuedSong, queueMutex *redsync.Mutex) {
+func (sc *Session) setAndUnlockQueue(sessionID int, newQueue [] *model.QueuedSong, queueMutex *redsync.Mutex) {
 	sc.setStructToRedis(getQueueKey(sessionID), newQueue)
 	queueMutex.Unlock()
 }

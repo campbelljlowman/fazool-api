@@ -10,7 +10,7 @@ import (
 
 )
 
-func (sc *SessionCache) InitVoterMap(sessionID int) {
+func (sc *Session) initVoterMap(sessionID int) {
 	voters := make(map[string]*voter.Voter)
 	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
 	votersMutex.Lock()
@@ -22,7 +22,7 @@ func (sc *SessionCache) InitVoterMap(sessionID int) {
 	}
 }
 
-func (sc *SessionCache) UpsertVoterInSession(sessionID int, newVoter *voter.Voter){
+func (sc *Session) UpsertVoterInSession(sessionID int, newVoter *voter.Voter){
 	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
 	voters[newVoter.VoterID] = newVoter
 	err := sc.setStructToRedis(getVotersKey(sessionID), voters)
@@ -36,7 +36,7 @@ func (sc *SessionCache) UpsertVoterInSession(sessionID int, newVoter *voter.Vote
 	sc.setNumberOfVoters(sessionID, len(voters))
 }
 
-func (sc *SessionCache) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
+func (sc *Session) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
 	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
 	voter, exists := voters[voterID]
 
@@ -45,7 +45,7 @@ func (sc *SessionCache) GetVoterInSession(sessionID int, voterID string) (*voter
 	return voter, exists
 }
 
-func (sc *SessionCache) lockAndGetAllVotersInSession(sessionID int) (map[string]*voter.Voter, *redsync.Mutex) {
+func (sc *Session) lockAndGetAllVotersInSession(sessionID int) (map[string]*voter.Voter, *redsync.Mutex) {
 	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
 	votersMutex.Lock()
 
@@ -59,7 +59,7 @@ func (sc *SessionCache) lockAndGetAllVotersInSession(sessionID int) (map[string]
 	return voters, votersMutex
 }
 
-func (sc *SessionCache) GetNumberOfVoters(sessionID int) int {
+func (sc *Session) GetNumberOfVoters(sessionID int) int {
 	voterCountMutex := sc.redsync.NewMutex(getVoterCountMutexKey(sessionID))
 	voterCountMutex.Lock()
 
@@ -75,7 +75,7 @@ func (sc *SessionCache) GetNumberOfVoters(sessionID int) int {
 	return voterCount	
 }
 
-func (sc *SessionCache) setNumberOfVoters(sessionID, voterCount int) {
+func (sc *Session) setNumberOfVoters(sessionID, voterCount int) {
 	voterCountMutex := sc.redsync.NewMutex(getVoterCountMutexKey(sessionID))
 	voterCountMutex.Lock()
 
