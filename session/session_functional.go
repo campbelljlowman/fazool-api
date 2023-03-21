@@ -3,19 +3,22 @@ package session
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
-	"strconv"
 	"time"
+	"sort"
+
 
 	"github.com/go-redsync/redsync/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slog"
+	"golang.org/x/exp/slices"
+
 
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/database"
-	"github.com/campbelljlowman/fazool-api/voter"
+	"github.com/campbelljlowman/fazool-api/graph/model"
+	"github.com/campbelljlowman/fazool-api/musicplayer"
 )
 
 type SessionCache struct {
@@ -35,77 +38,8 @@ func (sc *SessionCache) CreateSession(sessionID, maximumVoters int, adminAccount
 	sc.RefreshSession(sessionID)
 	sc.InitVoterMap(sessionID)
 	sc.SetSessionConfig(sessionID, maximumVoters, adminAccountID)
+	sc.InitQueue(sessionID)
 }
-
-func (sc *SessionCache) SetSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
-	sc.redisClient.HSet(context.Background(),  getSessionConfigKey(sessionID), "sessionID", sessionID, "maximumVoters", maximumVoters, "adminAccountID", adminAccountID)
-}
-
-func (sc *SessionCache) InitVoterMap(sessionID int) {
-	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
-	voters := make(map[string]*voter.Voter)
-	votersMutex.Lock()
-	err := sc.setStructToRedis(getVotersKey(sessionID), voters)
-	votersMutex.Unlock()
-
-	if err != nil {
-		slog.Warn("Error setting session voters", "error", err)
-	}
-}
-
-func (sc *SessionCache) ExpireSession(sessionID int) {
-	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
-
-	expiryMutex.Lock()
-	expiresAt := time.Now()
-	err := sc.setStructToRedis(getExpiryKey(sessionID), expiresAt)
-	expiryMutex.Unlock()
-
-	if err != nil {
-		slog.Warn("Error setting session Expiration", "error", err)
-	}
-}
-
-func (sc *SessionCache) IsSessionExpired(sessionID int) bool {
-	expiresAt, expiryMutex := sc.lockAndGetSessionExpiry(sessionID)
-
-	expiryMutex.Unlock()
-
-	isExpired := expiresAt.Before(time.Now())
-
-	return isExpired
-}
-
-func (sc *SessionCache) RefreshSession(sessionID int) {
-	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
-	expiryMutex.Lock()
-
-	expiresAt := time.Now().Add(sessionTimeout * time.Minute)
-	err := sc.setStructToRedis(getExpiryKey(sessionID), expiresAt)
-
-	expiryMutex.Unlock()
-
-	if err != nil {
-		slog.Warn("Error refreshing session", "error", err)
-	}
-}
-
-func (sc *SessionCache) AddBonusVote(songID, accountID string, numberOfVotes, sessionID int) {
-	bonusVotes, bonusVoteMutex := sc.lockAndGetBonusVotes(sessionID)
-
-	if _, exists := bonusVotes[songID][accountID]; !exists {
-		bonusVotes[songID] = make(map[string]int)
-	}
-	bonusVotes[songID][accountID] += numberOfVotes
-
-	err := sc.setStructToRedis(getBonusVoteKey(sessionID), bonusVotes)
-	bonusVoteMutex.Unlock()
-
-	if err != nil {
-		slog.Warn("Error updating bonus votes", "error", err)
-	}
-}
-
 
 // TODO: This code hasn't been tested
 func (sc *SessionCache) processBonusVotes(sessionID int, songID string) error {
@@ -180,52 +114,91 @@ func (sc *SessionCache) CheckVotersExpirations(sessionID int) {
 	}
 }
 
-func (sc *SessionCache) UpsertVoterToSession(sessionID int, newVoter *voter.Voter){
-	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
-	voters[newVoter.VoterID] = newVoter
-	err := sc.setStructToRedis(getVotersKey(sessionID), voters)
-
-	votersMutex.Unlock()
-
-	if err != nil {
-		slog.Warn("Error setting session voters", "error", err)
-	}
-}
-
-func (sc *SessionCache) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
-	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
-	voter, exists := voters[voterID]
-
-	votersMutex.Unlock()
-
-	return voter, exists
-}
-
 func (sc *SessionCache) IsSessionFull(sessionID int) bool {
 	isFull := false
 
-	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
+	voterCount := sc.GetNumberOfVoters(sessionID)
 
-	votersMutex.Unlock()
+	sessionMaximumVoters := sc.GetSessionMaximumVoters(sessionID)
 
-	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "maximumVoters").Result()
-	if err != nil {
-		slog.Warn("Error getting sessions maximum voters", "error", err)
-		return true
-	}
-	sessionMaximumVotersInt, err := strconv.Atoi(sessionMaximumVoters)
-	if err != nil {
-		slog.Warn("Error converting maximum voters from string to int", "error", err)
-		return true
-	}
-
-	if len(voters) >= sessionMaximumVotersInt {
+	if voterCount >= sessionMaximumVoters {
 		isFull = true
 	}
 	return isFull
 }
 
+func (sc *SessionCache) AdvanceQueue(sessionID int, force bool, musicPlayer musicplayer.MusicPlayer) error { 
+	var song *model.SimpleSong
 
+	queue, queueMutex := sc.lockAndGetQueue(sessionID)
+	if len(queue) == 0 {
+		queueMutex.Unlock()
+		return nil
+	}
+
+	song, queue = queue[0].SimpleSong, queue[1:]
+	sc.setAndUnlockQueue(sessionID, queue, queueMutex)
+	queueMutex.Unlock()
+
+	err := musicPlayer.QueueSong(song.ID)
+	if err != nil {
+		return err
+	}
+
+	err = sc.processBonusVotes(sessionID, song.ID)
+	if err != nil {
+		return err
+	}
+
+	if !force {
+		return nil
+	}
+
+	err = musicPlayer.Next()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sc *SessionCache) UpsertQueue(sessionID int, vote int, song model.SongUpdate) {
+	queue, queueMutex := sc.lockAndGetQueue(sessionID)
+	idx := slices.IndexFunc(queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
+	if idx == -1 {
+		// add new song to queue
+		newSong := &model.QueuedSong{
+			SimpleSong: &model.SimpleSong{
+				ID:     song.ID,
+				Title:  *song.Title,
+				Artist: *song.Artist,
+				Image:  *song.Image,
+			},
+			Votes: vote,
+		}
+		queue = append(queue, newSong)
+	} else {
+		queuedSong := queue[idx]
+		queuedSong.Votes += vote
+	}
+
+	// Sort queue
+	sort.Slice(queue, func(i, j int) bool { return queue[i].Votes > queue[j].Votes })
+	sc.setAndUnlockQueue(sessionID, queue, queueMutex)
+}
+
+func (sc *SessionCache) GetSessionInfo(sessionID int) *model.SessionInfo {
+	sessionInfo := &model.SessionInfo{
+		ID: sessionID,
+		// CurrentlyPlaying: session.SessionInfo.CurrentlyPlaying,
+		Queue: sc.GetQueue(sessionID),
+		Admin: sc.GetSessionAdmin(sessionID),
+		NumberOfVoters: sc.GetNumberOfVoters(sessionID),
+		MaximumVoters: sc.GetSessionMaximumVoters(sessionID),
+	}
+
+	return sessionInfo
+}
 func (sc *SessionCache) getStructFromRedis(key string, dest interface{}) error {
     result, err := sc.redisClient.Get(context.Background(), key).Result()
     if err != nil {
@@ -244,71 +217,4 @@ func (sc *SessionCache) setStructToRedis(key string, value interface{}) error {
        return err
     }
     return sc.redisClient.Set(context.Background(), key, string(valueString), 0).Err()
-}
-
-func (sc *SessionCache) lockAndGetBonusVotes(sessionID int) (map[string]map[string]int, *redsync.Mutex) {
-	bonusVoteMutex := sc.redsync.NewMutex(fmt.Sprintf("bonus-vote-mutex-%d", sessionID))
-	// Map of [song][account][votes]
-	var bonusVotes map[string]map[string]int
-
-	bonusVoteMutex.Lock()
-	err := sc.getStructFromRedis(getBonusVoteKey(sessionID), &bonusVotes)
-
-	if err != nil {
-		slog.Warn("Error getting session bonus votes", "error", err)
-	}
-
-	return bonusVotes, bonusVoteMutex
-}
-
-func (sc *SessionCache) lockAndGetAllVotersInSession(sessionID int) (map[string]*voter.Voter, *redsync.Mutex) {
-	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
-	votersMutex.Lock()
-
-	var voters map[string] *voter.Voter
-	err := sc.getStructFromRedis(getVotersKey(sessionID), &voters)
-
-	if err != nil {
-		slog.Warn("Error getting session voters", "error", err)
-	}
-
-	return voters, votersMutex
-}
-
-func (sc *SessionCache) lockAndGetSessionExpiry(sessionID int) (time.Time, *redsync.Mutex) {
-	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
-	
-	expiryMutex.Lock()
-	var expiresAt time.Time
-	err := sc.getStructFromRedis(getExpiryKey(sessionID), &expiresAt)
-
-	if err != nil {
-		slog.Warn("Error getting session expiration", "error", err)
-	}
-
-	return expiresAt, expiryMutex
-}
-
-func getBonusVoteKey(sessionID int) string {
-	return fmt.Sprintf("bonus-vote-%d", sessionID)
-}
-
-func getExpiryMutexKey(sessionID int) string {
-	return fmt.Sprintf("expiry-mutex-%d", sessionID)
-}
-
-func getExpiryKey(sessionID int) string {
-	return fmt.Sprintf("expiry-%d", sessionID)
-}
-
-func getVotersMutexKey(sessionID int) string {
-	return fmt.Sprintf("voters-mutex-%d", sessionID)
-}
-
-func getVotersKey(sessionID int) string {
-	return fmt.Sprintf("voters-%d", sessionID)
-}
-
-func getSessionConfigKey(sessionID int) string {
-	return fmt.Sprintf("session-config-%d", sessionID)
 }

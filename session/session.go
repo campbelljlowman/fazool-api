@@ -1,7 +1,6 @@
 package session
 
 import (
-	"sort"
 	"sync"
 	"time"
 
@@ -9,14 +8,12 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/utils"
-	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 
 )
 
 type Session struct {
 	SessionInfo    *model.SessionInfo
-	MusicPlayer    musicplayer.MusicPlayer
 	queueMutex     *sync.Mutex
 	sc 				*SessionCache
 }
@@ -43,42 +40,35 @@ func NewSession(accountID, accountLevel string, sc *SessionCache) (*Session, int
 
 	// Create session info
 	sessionInfo := &model.SessionInfo{
-		ID: sessionID,
 		CurrentlyPlaying: &model.CurrentlyPlayingSong{
 			SimpleSong: &model.SimpleSong{},
 			Playing:    false,
 		},
-		Queue: nil,
-		Admin: accountID,
-		NumberOfVoters: 0,
-		MaximumVoters:  sessionSize,
 	}
 
 	sc.CreateSession(sessionID, sessionSize, accountID)
 
 	session := Session{
 		SessionInfo:    sessionInfo,
-		MusicPlayer:    nil,
-		queueMutex:     &sync.Mutex{},
 		sc: 			sc,
 	}
 
 	return &session, sessionID, nil
 }
 
-func (s *Session) WatchSpotifyCurrentlyPlaying(sessionID int) {
+func (s *Session) WatchSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer) {
 	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	updateCacheFlag := false
 	addNextSongFlag := false
 
 	for {
 		if s.sc.IsSessionExpired(sessionID) {
-			slog.Info("Session has expired, ending session spotify watcher", "session_id", s.SessionInfo.ID)
+			slog.Info("Session has expired, ending session spotify watcher", "session_id", sessionID)
 			return
 		}
 
 		updateCacheFlag = false
-		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := s.MusicPlayer.CurrentSong()
+		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := musicPlayer.CurrentSong()
 		if err != nil {
 			slog.Warn("Error getting music player state", "error", err)
 			continue
@@ -99,14 +89,14 @@ func (s *Session) WatchSpotifyCurrentlyPlaying(sessionID int) {
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
 			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's
 			// Safe to add song
-			timeLeft, err := s.MusicPlayer.TimeRemaining()
+			timeLeft, err := musicPlayer.TimeRemaining()
 			if err != nil {
 				slog.Warn("Error getting song time remaining", "error", err)
 				continue
 			}
 
 			if timeLeft < 5000 && addNextSongFlag {
-				s.AdvanceQueue(false)
+				s.sc.AdvanceQueue(sessionID, false, musicPlayer)
 
 				updateCacheFlag = true
 				addNextSongFlag = false
@@ -120,76 +110,10 @@ func (s *Session) WatchSpotifyCurrentlyPlaying(sessionID int) {
 		}
 
 		if updateCacheFlag {
-			s.sc.RefreshSession(s.SessionInfo.ID)
+			s.sc.RefreshSession(sessionID)
 		}
 
 		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
 		time.Sleep(spotifyWatchFrequency * time.Millisecond)
 	}
-}
-
-func (s *Session) AdvanceQueue(force bool) error { 
-	var song *model.SimpleSong
-
-	s.queueMutex.Lock()
-	if len(s.SessionInfo.Queue) == 0 {
-		s.queueMutex.Unlock()
-		return nil
-	}
-
-	song, s.SessionInfo.Queue = s.SessionInfo.Queue[0].SimpleSong, s.SessionInfo.Queue[1:]
-	s.queueMutex.Unlock()
-
-	err := s.MusicPlayer.QueueSong(song.ID)
-	if err != nil {
-		return err
-	}
-
-	err = s.sc.processBonusVotes(s.SessionInfo.ID, song.ID)
-	if err != nil {
-		return err
-	}
-
-	if !force {
-		return nil
-	}
-
-	err = s.MusicPlayer.Next()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-
-func (s *Session) SetQueue(newQueue [] *model.QueuedSong) {
-	s.queueMutex.Lock()
-	s.SessionInfo.Queue = newQueue
-	s.queueMutex.Unlock()
-}
-
-func (s *Session) UpsertQueue(song model.SongUpdate, vote int) {
-	s.queueMutex.Lock()
-	idx := slices.IndexFunc(s.SessionInfo.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
-	if idx == -1 {
-		// add new song to queue
-		newSong := &model.QueuedSong{
-			SimpleSong: &model.SimpleSong{
-				ID:     song.ID,
-				Title:  *song.Title,
-				Artist: *song.Artist,
-				Image:  *song.Image,
-			},
-			Votes: vote,
-		}
-		s.SessionInfo.Queue = append(s.SessionInfo.Queue, newSong)
-	} else {
-		queuedSong := s.SessionInfo.Queue[idx]
-		queuedSong.Votes += vote
-	}
-
-	// Sort queue
-	sort.Slice(s.SessionInfo.Queue, func(i, j int) bool { return s.SessionInfo.Queue[i].Votes > s.SessionInfo.Queue[j].Votes })
-	s.queueMutex.Unlock()
 }

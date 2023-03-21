@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/campbelljlowman/fazool-api/database"
+	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/session"
-	"golang.org/x/exp/slog"
-
+	// "golang.org/x/exp/slog"
 )
 
 // This file will not be regenerated automatically.
@@ -19,6 +19,7 @@ const sessionWatchFrequency time.Duration = 10
 
 type Resolver struct {
 	sessions 		map[int]*session.Session
+	musicPlayers	map[int]musicplayer.MusicPlayer
 	sessionsMutex 	*sync.Mutex
 	database 		database.Database
 	// TODO: Change this to cache and wrap Redis in an interface
@@ -28,39 +29,40 @@ type Resolver struct {
 func NewResolver(database database.Database, sessionCache *session.SessionCache) *Resolver {
 	return &Resolver{
 		sessions:      	make(map[int]*session.Session),
+		musicPlayers: 	make(map[int]musicplayer.MusicPlayer),
 		sessionsMutex:  &sync.Mutex{},
 		database: 		database,
 		sessionCache: sessionCache,	
 	}
 }
 
-func (r *Resolver) WatchSessions() {
-	for {
-		r.sessionsMutex.Lock()
+// func (r *Resolver) WatchSessions() {
+// 	for {
+// 		r.sessionsMutex.Lock()
 
-		for _, session := range r.sessions{
-			if r.sessionCache.IsSessionExpired(session.SessionInfo.ID) {
-				r.endSession(session)
-			}
-		}
-		r.sessionsMutex.Unlock()
-		time.Sleep(sessionWatchFrequency * time.Second)
-	}
-}
+// 		for _, session := range r.sessions{
+// 			if r.sessionCache.IsSessionExpired(session.SessionInfo.ID) {
+// 				r.endSession(session)
+// 			}
+// 		}
+// 		r.sessionsMutex.Unlock()
+// 		time.Sleep(sessionWatchFrequency * time.Second)
+// 	}
+// }
 
-func (r *Resolver) endSession(session *session.Session) error {
-	slog.Info("Ending session!", "sessionID", session.SessionInfo.ID)
-	err := r.database.SetAccountSession(session.SessionInfo.Admin, 0)
-	if err != nil {
-		return err
-	}
+// func (r *Resolver) endSession(session *session.Session) error {
+// 	slog.Info("Ending session!", "sessionID", session.SessionInfo.ID)
+// 	err := r.database.SetAccountSession(session.SessionInfo.Admin, 0)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	delete(r.sessions, session.SessionInfo.ID)
+// 	delete(r.sessions, session.SessionInfo.ID)
 
-	r.sessionCache.ExpireSession(session.SessionInfo.ID)
+// 	r.sessionCache.ExpireSession(session.SessionInfo.ID)
 	
-	return nil
-}
+// 	return nil
+// }
 
 func (r *Resolver) getSession(sessionID int) (*session.Session, bool) {
 	r.sessionsMutex.Lock()

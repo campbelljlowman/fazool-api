@@ -41,7 +41,7 @@ func InitializeRoutes() *gin.Engine {
 	redSync := redsync.New(redisPool)
 	sessionCache := session.NewSessionCache(redSync, redisClient)
 	r := graph.NewResolver(pgClient, sessionCache)
-	go r.WatchSessions()
+	// go r.WatchSessions()
 	srv := graph.NewGraphQLServer(r)
 
 	router.Any("/query", func(c *gin.Context) {
