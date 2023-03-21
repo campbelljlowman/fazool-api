@@ -81,10 +81,7 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 		return "", utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
-	// err := r.endSession(session)
-	// if err != nil {
-	// 	return "", utils.LogAndReturnError("Error ending session for the accountID", err)
-	// }
+	r.session.EndSession(sessionID)
 
 	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
 }

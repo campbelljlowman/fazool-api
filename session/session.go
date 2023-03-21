@@ -45,6 +45,8 @@ func NewSessionClient(redsync *redsync.Redsync, redisClient *redis.Client) *Sess
 		redsync: redsync,
 		redisClient: redisClient,
 	}
+	// Clean up any data from previous run, this should be removed when running in production
+	redisClient.FlushAllAsync(context.Background()).Result()
 	return sessionCache
 }
 
@@ -69,7 +71,7 @@ func (sc *Session) CreateSession(adminAccountID, accountLevel string) (int, erro
 }
 
 // TODO: This code hasn't been tested
-func (sc *Session) endSession(sessionID int) {
+func (sc *Session) EndSession(sessionID int) {
 // Delete all keys from Redis
 // Remove schedulers
 }
@@ -77,7 +79,7 @@ func (sc *Session) endSession(sessionID int) {
 func (sc *Session) CheckSessionExpiry(sessionID int) {
 	isSessionExpired := sc.isSessionExpired(sessionID)
 	if isSessionExpired == true {
-		sc.endSession(sessionID)
+		sc.EndSession(sessionID)
 	}
 }
 
@@ -125,7 +127,7 @@ func (sc *Session) CheckVotersExpirations(sessionID int) {
 	for {
 		if sc.isSessionExpired(sessionID) {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", sessionID)
-			// TODO: Deregister this check from the scheduler
+			// TODO: Remove this when the scheduler calls this function
 			return
 		}
 
