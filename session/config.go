@@ -9,12 +9,12 @@ import (
 
 )
 
-func (sc *Session) setSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
-	sc.redisClient.HSet(context.Background(),  getSessionConfigKey(sessionID), "sessionID", sessionID, "maximumVoters", maximumVoters, "adminAccountID", adminAccountID)
+func (s *Session) setSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
+	s.redisClient.HSet(context.Background(),  getSessionConfigKey(sessionID), "sessionID", sessionID, "maximumVoters", maximumVoters, "adminAccountID", adminAccountID)
 }
 
-func (sc *Session) GetSessionAdmin(sessionID int) string {
-	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "adminAccountID").Result()
+func (s *Session) GetSessionAdmin(sessionID int) string {
+	sessionMaximumVoters, err := s.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "adminAccountID").Result()
 	if err != nil {
 		slog.Warn("Error getting session admin", "error", err)
 	}
@@ -22,8 +22,8 @@ func (sc *Session) GetSessionAdmin(sessionID int) string {
 	return sessionMaximumVoters
 }
 
-func (sc *Session) getSessionMaximumVoters(sessionID int) int {
-	sessionMaximumVoters, err := sc.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "maximumVoters").Result()
+func (s *Session) getSessionMaximumVoters(sessionID int) int {
+	sessionMaximumVoters, err := s.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "maximumVoters").Result()
 	if err != nil {
 		slog.Warn("Error getting session maximum voters", "error", err)
 	}
@@ -35,8 +35,8 @@ func (sc *Session) getSessionMaximumVoters(sessionID int) int {
 	return sessionMaximumVotersInt
 }
 
-func (sc *Session) DoesSessionExist(sessionID int) bool {
-	_, err := sc.redisClient.HGetAll(context.Background(), getSessionConfigKey(sessionID)).Result()
+func (s *Session) DoesSessionExist(sessionID int) bool {
+	_, err := s.redisClient.HGetAll(context.Background(), getSessionConfigKey(sessionID)).Result()
 	if err != nil {
 		slog.Warn("Error getting session config", "error", err)
 		return false

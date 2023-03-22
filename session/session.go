@@ -50,7 +50,7 @@ func NewSessionClient(redsync *redsync.Redsync, redisClient *redis.Client) *Sess
 	return sessionCache
 }
 
-func (sc *Session) CreateSession(adminAccountID, accountLevel string) (int, error) {
+func (s *Session) CreateSession(adminAccountID, accountLevel string) (int, error) {
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
 		return 0, utils.LogAndReturnError("Error generating session ID", err)
@@ -61,42 +61,37 @@ func (sc *Session) CreateSession(adminAccountID, accountLevel string) (int, erro
 		maximumVoters = 50
 	}
 
-	sc.refreshSession(sessionID)
-	sc.initVoterMap(sessionID)
-	sc.setSessionConfig(sessionID, maximumVoters, adminAccountID)
-	sc.initQueue(sessionID)
-	sc.initCurrentlyPlaying(sessionID)
+	s.refreshSession(sessionID)
+	s.initVoterMap(sessionID)
+	s.setSessionConfig(sessionID, maximumVoters, adminAccountID)
+	s.initQueue(sessionID)
+	s.initCurrentlyPlaying(sessionID)
 
 	return sessionID, nil
 }
 
 // TODO: This code hasn't been tested
-func (sc *Session) EndSession(sessionID int) {
+func (s *Session) EndSession(sessionID int) {
 // Delete all keys from Redis
-// Remove schedulers
+// Remove shedulers
+// Remove session from database
 }
 
-func (sc *Session) CheckSessionExpiry(sessionID int) {
-	isSessionExpired := sc.isSessionExpired(sessionID)
+func (s *Session) CheckSessionExpiry(sessionID int) {
+	isSessionExpired := s.isSessionExpired(sessionID)
 	if isSessionExpired == true {
-		sc.EndSession(sessionID)
+		s.EndSession(sessionID)
 	}
 }
 
 // TODO: This code hasn't been tested
-func (sc *Session) processBonusVotes(sessionID int, songID string) error {
-	sessionBonusVotes, bonusVoteMutex := sc.lockAndGetBonusVotes(sessionID)
+func (s *Session) processBonusVotes(sessionID int, songID string) error {
+	sessionBonusVotes, bonusVoteMutex := s.lockAndGetBonusVotes(sessionID)
 
 	songBonusVotes, exists := sessionBonusVotes[songID]
 	delete(sessionBonusVotes, songID)
 
-	err :=	sc.setStructToRedis(getBonusVoteKey(sessionID), sessionBonusVotes)
-
-	bonusVoteMutex.Unlock()
-
-	if err != nil {
-		slog.Warn("Error setting session Expiration", "error", err)
-	}
+	s.setAndUnlockBonusVotes(sessionID, sessionBonusVotes, bonusVoteMutex)
 
 	if !exists {
 		return nil
@@ -122,16 +117,16 @@ func (sc *Session) processBonusVotes(sessionID int, songID string) error {
 	return nil
 }
 
-func (sc *Session) CheckVotersExpirations(sessionID int) {
+func (s *Session) CheckVotersExpirations(sessionID int) {
 
 	for {
-		if sc.isSessionExpired(sessionID) {
+		if s.isSessionExpired(sessionID) {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", sessionID)
-			// TODO: Remove this when the scheduler calls this function
+			// TODO: Remove this when the sheduler calls this function
 			return
 		}
 
-		voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
+		voters, votersMutex := s.lockAndGetAllVotersInSession(sessionID)
 
 		for _, voter := range voters {
 			if voter.VoterType == constants.AdminVoterType {
@@ -144,24 +139,18 @@ func (sc *Session) CheckVotersExpirations(sessionID int) {
 			}
 
 		}
-		err := sc.setStructToRedis(getVotersKey(sessionID), voters)
-
-		votersMutex.Unlock()
-
-		if err != nil {
-			slog.Warn("Error setting session voters", "error", err)
-		}
+		s.setAndUnlockAllVotersInSession(sessionID, voters, votersMutex)
 
 		time.Sleep(voterWatchFrequency * time.Second)
 	}
 }
 
-func (sc *Session) IsSessionFull(sessionID int) bool {
+func (s *Session) IsSessionFull(sessionID int) bool {
 	isFull := false
 
-	voterCount := sc.getNumberOfVoters(sessionID)
+	voterCount := s.getNumberOfVoters(sessionID)
 
-	sessionMaximumVoters := sc.getSessionMaximumVoters(sessionID)
+	sessionMaximumVoters := s.getSessionMaximumVoters(sessionID)
 
 	if voterCount >= sessionMaximumVoters {
 		isFull = true
@@ -169,25 +158,24 @@ func (sc *Session) IsSessionFull(sessionID int) bool {
 	return isFull
 }
 
-func (sc *Session) AdvanceQueue(sessionID int, force bool, musicPlayer musicplayer.MusicPlayer) error { 
+func (s *Session) AdvanceQueue(sessionID int, force bool, musicPlayer musicplayer.MusicPlayer) error { 
 	var song *model.SimpleSong
 
-	queue, queueMutex := sc.lockAndGetQueue(sessionID)
+	queue, queueMutex := s.lockAndGetQueue(sessionID)
 	if len(queue) == 0 {
 		queueMutex.Unlock()
 		return nil
 	}
 
 	song, queue = queue[0].SimpleSong, queue[1:]
-	sc.setAndUnlockQueue(sessionID, queue, queueMutex)
-	queueMutex.Unlock()
+	s.setAndUnlockQueue(sessionID, queue, queueMutex)
 
 	err := musicPlayer.QueueSong(song.ID)
 	if err != nil {
 		return err
 	}
 
-	err = sc.processBonusVotes(sessionID, song.ID)
+	err = s.processBonusVotes(sessionID, song.ID)
 	if err != nil {
 		return err
 	}
@@ -201,12 +189,12 @@ func (sc *Session) AdvanceQueue(sessionID int, force bool, musicPlayer musicplay
 		return err
 	}
 
-	sc.refreshSession(sessionID)
+	s.refreshSession(sessionID)
 	return nil
 }
 
-func (sc *Session) UpsertQueue(sessionID int, vote int, song model.SongUpdate) {
-	queue, queueMutex := sc.lockAndGetQueue(sessionID)
+func (s *Session) UpsertQueue(sessionID int, vote int, song model.SongUpdate) {
+	queue, queueMutex := s.lockAndGetQueue(sessionID)
 	idx := slices.IndexFunc(queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
 	if idx == -1 {
 		// add new song to queue
@@ -227,18 +215,18 @@ func (sc *Session) UpsertQueue(sessionID int, vote int, song model.SongUpdate) {
 
 	// Sort queue
 	sort.Slice(queue, func(i, j int) bool { return queue[i].Votes > queue[j].Votes })
-	sc.setAndUnlockQueue(sessionID, queue, queueMutex)
-	sc.refreshSession(sessionID)
+	s.setAndUnlockQueue(sessionID, queue, queueMutex)
+	s.refreshSession(sessionID)
 }
 
 
-func (sc *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer) {
+func (s *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer) {
 	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	updateSessionFlag := false
 	addNextSongFlag := false
 
 	for {
-		if sc.isSessionExpired(sessionID) {
+		if s.isSessionExpired(sessionID) {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", sessionID)
 			return
 		}
@@ -250,7 +238,7 @@ func (sc *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer music
 			continue
 		}
 
-		currentlyPlaying, currentlyPlayingMutex := sc.lockAndGetCurrentlyPlaying(sessionID)
+		currentlyPlaying, currentlyPlayingMutex := s.lockAndGetCurrentlyPlaying(sessionID)
 		if isSpotifyCurrentlyPlaying == true {
 			if currentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
@@ -273,7 +261,7 @@ func (sc *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer music
 			}
 
 			if timeLeft < 5000 && addNextSongFlag {
-				sc.AdvanceQueue(sessionID, false, musicPlayer)
+				s.AdvanceQueue(sessionID, false, musicPlayer)
 
 				updateSessionFlag = true
 				addNextSongFlag = false
@@ -287,8 +275,8 @@ func (sc *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer music
 		}
 
 		if updateSessionFlag {
-			sc.setAndUnlockCurrentlyPlaying(sessionID, currentlyPlaying, currentlyPlayingMutex)
-			sc.refreshSession(sessionID)
+			s.setAndUnlockCurrentlyPlaying(sessionID, currentlyPlaying, currentlyPlayingMutex)
+			s.refreshSession(sessionID)
 		} else {
 			currentlyPlayingMutex.Unlock()
 		}
@@ -299,21 +287,21 @@ func (sc *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer music
 }
 
 
-func (sc *Session) GetSessionInfo(sessionID int) *model.SessionInfo {
+func (s *Session) GetSessionInfo(sessionID int) *model.SessionInfo {
 	sessionInfo := &model.SessionInfo{
 		ID: sessionID,
-		CurrentlyPlaying: sc.getCurrentlyPlaying(sessionID),
-		Queue: sc.getQueue(sessionID),
-		Admin: sc.GetSessionAdmin(sessionID),
-		NumberOfVoters: sc.getNumberOfVoters(sessionID),
-		MaximumVoters: sc.getSessionMaximumVoters(sessionID),
+		CurrentlyPlaying: s.getCurrentlyPlaying(sessionID),
+		Queue: s.getQueue(sessionID),
+		Admin: s.GetSessionAdmin(sessionID),
+		NumberOfVoters: s.getNumberOfVoters(sessionID),
+		MaximumVoters: s.getSessionMaximumVoters(sessionID),
 	}
 
 	return sessionInfo
 }
 
-func (sc *Session) getStructFromRedis(key string, dest interface{}) error {
-    result, err := sc.redisClient.Get(context.Background(), key).Result()
+func (s *Session) getStructFromRedis(key string, dest interface{}) error {
+    result, err := s.redisClient.Get(context.Background(), key).Result()
     if err != nil {
     	return err
     }
@@ -324,10 +312,10 @@ func (sc *Session) getStructFromRedis(key string, dest interface{}) error {
     return nil
 }
 
-func (sc *Session) setStructToRedis(key string, value interface{}) error {
+func (s *Session) setStructToRedis(key string, value interface{}) error {
 	valueString, err := json.Marshal(value)
     if err != nil {
        return err
     }
-    return sc.redisClient.Set(context.Background(), key, string(valueString), 0).Err()
+    return s.redisClient.Set(context.Background(), key, string(valueString), 0).Err()
 }

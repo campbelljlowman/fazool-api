@@ -10,11 +10,11 @@ import (
 
 )
 
-func (sc *Session) initVoterMap(sessionID int) {
+func (s *Session) initVoterMap(sessionID int) {
 	voters := make(map[string]*voter.Voter)
-	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
+	votersMutex := s.redsync.NewMutex(getVotersMutexKey(sessionID))
 	votersMutex.Lock()
-	err := sc.setStructToRedis(getVotersKey(sessionID), voters)
+	err := s.setStructToRedis(getVotersKey(sessionID), voters)
 	votersMutex.Unlock()
 
 	if err != nil {
@@ -22,10 +22,10 @@ func (sc *Session) initVoterMap(sessionID int) {
 	}
 }
 
-func (sc *Session) UpsertVoterInSession(sessionID int, newVoter *voter.Voter){
-	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
+func (s *Session) UpsertVoterInSession(sessionID int, newVoter *voter.Voter){
+	voters, votersMutex := s.lockAndGetAllVotersInSession(sessionID)
 	voters[newVoter.VoterID] = newVoter
-	err := sc.setStructToRedis(getVotersKey(sessionID), voters)
+	err := s.setStructToRedis(getVotersKey(sessionID), voters)
 
 	votersMutex.Unlock()
 
@@ -33,11 +33,11 @@ func (sc *Session) UpsertVoterInSession(sessionID int, newVoter *voter.Voter){
 		slog.Warn("Error setting session voters", "error", err)
 	}
 
-	sc.setNumberOfVoters(sessionID, len(voters))
+	s.setNumberOfVoters(sessionID, len(voters))
 }
 
-func (sc *Session) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
-	voters, votersMutex := sc.lockAndGetAllVotersInSession(sessionID)
+func (s *Session) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
+	voters, votersMutex := s.lockAndGetAllVotersInSession(sessionID)
 	voter, exists := voters[voterID]
 
 	votersMutex.Unlock()
@@ -45,12 +45,12 @@ func (sc *Session) GetVoterInSession(sessionID int, voterID string) (*voter.Vote
 	return voter, exists
 }
 
-func (sc *Session) lockAndGetAllVotersInSession(sessionID int) (map[string]*voter.Voter, *redsync.Mutex) {
-	votersMutex := sc.redsync.NewMutex(getVotersMutexKey(sessionID))
+func (s *Session) lockAndGetAllVotersInSession(sessionID int) (map[string]*voter.Voter, *redsync.Mutex) {
+	votersMutex := s.redsync.NewMutex(getVotersMutexKey(sessionID))
 	votersMutex.Lock()
 
 	var voters map[string] *voter.Voter
-	err := sc.getStructFromRedis(getVotersKey(sessionID), &voters)
+	err := s.getStructFromRedis(getVotersKey(sessionID), &voters)
 
 	if err != nil {
 		slog.Warn("Error getting session voters", "error", err)
@@ -59,12 +59,20 @@ func (sc *Session) lockAndGetAllVotersInSession(sessionID int) (map[string]*vote
 	return voters, votersMutex
 }
 
-func (sc *Session) getNumberOfVoters(sessionID int) int {
-	voterCountMutex := sc.redsync.NewMutex(getVoterCountMutexKey(sessionID))
+func (s *Session) setAndUnlockAllVotersInSession(sessionID int, voters map[string]*voter.Voter, votersMutex *redsync.Mutex) {
+	err := s.setStructToRedis(getVotersMutexKey(sessionID), voters)
+	if err != nil {
+		slog.Warn("Error setting voters", "error", err)
+	}
+	votersMutex.Unlock()
+}
+
+func (s *Session) getNumberOfVoters(sessionID int) int {
+	voterCountMutex := s.redsync.NewMutex(getVoterCountMutexKey(sessionID))
 	voterCountMutex.Lock()
 
 	var voterCount int
-	err := sc.getStructFromRedis(getVoterCountKey(sessionID), &voterCount)
+	err := s.getStructFromRedis(getVoterCountKey(sessionID), &voterCount)
 
 	if err != nil {
 		slog.Warn("Error getting session voterCount", "error", err)
@@ -75,11 +83,11 @@ func (sc *Session) getNumberOfVoters(sessionID int) int {
 	return voterCount	
 }
 
-func (sc *Session) setNumberOfVoters(sessionID, voterCount int) {
-	voterCountMutex := sc.redsync.NewMutex(getVoterCountMutexKey(sessionID))
+func (s *Session) setNumberOfVoters(sessionID, voterCount int) {
+	voterCountMutex := s.redsync.NewMutex(getVoterCountMutexKey(sessionID))
 	voterCountMutex.Lock()
 
-	err := sc.setStructToRedis(getVoterCountKey(sessionID), voterCount)
+	err := s.setStructToRedis(getVoterCountKey(sessionID), voterCount)
 
 	if err != nil {
 		slog.Warn("Error getting session voterCount", "error", err)

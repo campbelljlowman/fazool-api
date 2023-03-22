@@ -9,12 +9,12 @@ import (
 
 )
 
-func (sc *Session) expireSession(sessionID int) {
-	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
+func (s *Session) expireSession(sessionID int) {
+	expiryMutex := s.redsync.NewMutex(getExpiryMutexKey(sessionID))
 
 	expiryMutex.Lock()
 	expiresAt := time.Now()
-	err := sc.setStructToRedis(getExpiryKey(sessionID), expiresAt)
+	err := s.setStructToRedis(getExpiryKey(sessionID), expiresAt)
 	expiryMutex.Unlock()
 
 	if err != nil {
@@ -22,8 +22,8 @@ func (sc *Session) expireSession(sessionID int) {
 	}
 }
 
-func (sc *Session) isSessionExpired(sessionID int) bool {
-	expiresAt, expiryMutex := sc.lockAndGetSessionExpiry(sessionID)
+func (s *Session) isSessionExpired(sessionID int) bool {
+	expiresAt, expiryMutex := s.lockAndGetSessionExpiry(sessionID)
 
 	expiryMutex.Unlock()
 
@@ -32,12 +32,12 @@ func (sc *Session) isSessionExpired(sessionID int) bool {
 	return isExpired
 }
 
-func (sc *Session) refreshSession(sessionID int) {
-	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
+func (s *Session) refreshSession(sessionID int) {
+	expiryMutex := s.redsync.NewMutex(getExpiryMutexKey(sessionID))
 	expiryMutex.Lock()
 
 	expiresAt := time.Now().Add(sessionTimeout * time.Minute)
-	err := sc.setStructToRedis(getExpiryKey(sessionID), expiresAt)
+	err := s.setStructToRedis(getExpiryKey(sessionID), expiresAt)
 
 	expiryMutex.Unlock()
 
@@ -46,12 +46,12 @@ func (sc *Session) refreshSession(sessionID int) {
 	}
 }
 
-func (sc *Session) lockAndGetSessionExpiry(sessionID int) (time.Time, *redsync.Mutex) {
-	expiryMutex := sc.redsync.NewMutex(getExpiryMutexKey(sessionID))
+func (s *Session) lockAndGetSessionExpiry(sessionID int) (time.Time, *redsync.Mutex) {
+	expiryMutex := s.redsync.NewMutex(getExpiryMutexKey(sessionID))
 	
 	expiryMutex.Lock()
 	var expiresAt time.Time
-	err := sc.getStructFromRedis(getExpiryKey(sessionID), &expiresAt)
+	err := s.getStructFromRedis(getExpiryKey(sessionID), &expiresAt)
 
 	if err != nil {
 		slog.Warn("Error getting session expiration", "error", err)

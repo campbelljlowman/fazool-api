@@ -10,31 +10,31 @@ import (
 
 )
 
-func (sc *Session) initQueue(sessionID int) {
+func (s *Session) initQueue(sessionID int) {
 	var queue []*model.QueuedSong
-	sc.SetQueue(sessionID, queue)
+	s.SetQueue(sessionID, queue)
 }
 
-func (sc *Session) getQueue(sessionID int) []*model.QueuedSong {
-	queue, queueMutex := sc.lockAndGetQueue(sessionID)
+func (s *Session) getQueue(sessionID int) []*model.QueuedSong {
+	queue, queueMutex := s.lockAndGetQueue(sessionID)
 	queueMutex.Unlock()
 
 	return queue
 }
 
-func (sc *Session) SetQueue(sessionID int, newQueue [] *model.QueuedSong) {
-	queueMutex := sc.redsync.NewMutex(getQueueMutexKey(sessionID))
+func (s *Session) SetQueue(sessionID int, newQueue [] *model.QueuedSong) {
+	queueMutex := s.redsync.NewMutex(getQueueMutexKey(sessionID))
 	queueMutex.Lock()
 
-	sc.setAndUnlockQueue(sessionID, newQueue, queueMutex)
+	s.setAndUnlockQueue(sessionID, newQueue, queueMutex)
 }
 
-func (sc *Session) lockAndGetQueue(sessionID int) ([]*model.QueuedSong, *redsync.Mutex) {
-	queueMutex := sc.redsync.NewMutex(getQueueMutexKey(sessionID))
+func (s *Session) lockAndGetQueue(sessionID int) ([]*model.QueuedSong, *redsync.Mutex) {
+	queueMutex := s.redsync.NewMutex(getQueueMutexKey(sessionID))
 	queueMutex.Lock()
 
 	var queue [] *model.QueuedSong
-	err := sc.getStructFromRedis(getQueueKey(sessionID), &queue)
+	err := s.getStructFromRedis(getQueueKey(sessionID), &queue)
 
 	if err != nil {
 		slog.Warn("Error getting session queue", "error", err)
@@ -43,8 +43,11 @@ func (sc *Session) lockAndGetQueue(sessionID int) ([]*model.QueuedSong, *redsync
 	return queue, queueMutex
 }
 
-func (sc *Session) setAndUnlockQueue(sessionID int, newQueue [] *model.QueuedSong, queueMutex *redsync.Mutex) {
-	sc.setStructToRedis(getQueueKey(sessionID), newQueue)
+func (s *Session) setAndUnlockQueue(sessionID int, newQueue [] *model.QueuedSong, queueMutex *redsync.Mutex) {
+	err := s.setStructToRedis(getQueueKey(sessionID), newQueue)
+	if err != nil {
+		slog.Warn("Error setting queue", "error", err)
+	}
 	queueMutex.Unlock()
 }
 

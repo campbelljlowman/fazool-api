@@ -10,30 +10,30 @@ import (
 
 )
 
-func (sc *Session) initCurrentlyPlaying(sessionID int) {
-	currentlyPlayingMutex := sc.redsync.NewMutex(getCurrentlyPlayingMutexKey(sessionID))
+func (s *Session) initCurrentlyPlaying(sessionID int) {
+	currentlyPlayingMutex := s.redsync.NewMutex(getCurrentlyPlayingMutexKey(sessionID))
 	currentlyPlayingMutex.Lock()
 
 	currentlyPlaying := &model.CurrentlyPlayingSong{
 		SimpleSong: &model.SimpleSong{},
 		Playing:    false,
 	}
-	sc.setStructToRedis(getCurrentlyPlayingKey(sessionID), currentlyPlaying)
+	s.setStructToRedis(getCurrentlyPlayingKey(sessionID), currentlyPlaying)
 	currentlyPlayingMutex.Unlock()
 }
 
-func (sc *Session) getCurrentlyPlaying(sessionID int) *model.CurrentlyPlayingSong {
-	currentlyPlaying, currentlyPlayingMutex := sc.lockAndGetCurrentlyPlaying(sessionID)
+func (s *Session) getCurrentlyPlaying(sessionID int) *model.CurrentlyPlayingSong {
+	currentlyPlaying, currentlyPlayingMutex := s.lockAndGetCurrentlyPlaying(sessionID)
 	currentlyPlayingMutex.Unlock()
 	return currentlyPlaying
 }
 
-func (sc *Session) lockAndGetCurrentlyPlaying(sessionID int) (*model.CurrentlyPlayingSong, *redsync.Mutex) {
-	currentlyPlayingMutex := sc.redsync.NewMutex(getCurrentlyPlayingMutexKey(sessionID))
+func (s *Session) lockAndGetCurrentlyPlaying(sessionID int) (*model.CurrentlyPlayingSong, *redsync.Mutex) {
+	currentlyPlayingMutex := s.redsync.NewMutex(getCurrentlyPlayingMutexKey(sessionID))
 	currentlyPlayingMutex.Lock()
 
 	var currentlyPlaying *model.CurrentlyPlayingSong
-	err := sc.getStructFromRedis(getCurrentlyPlayingKey(sessionID), &currentlyPlaying)
+	err := s.getStructFromRedis(getCurrentlyPlayingKey(sessionID), &currentlyPlaying)
 
 	if err != nil {
 		slog.Warn("Error getting session currentlyPlaying", "error", err)
@@ -42,8 +42,11 @@ func (sc *Session) lockAndGetCurrentlyPlaying(sessionID int) (*model.CurrentlyPl
 	return currentlyPlaying, currentlyPlayingMutex
 }
 
-func (sc *Session) setAndUnlockCurrentlyPlaying(sessionID int, newCurrentlyPlaying *model.CurrentlyPlayingSong, currentlyPlayingMutex *redsync.Mutex) {
-	sc.setStructToRedis(getCurrentlyPlayingKey(sessionID), newCurrentlyPlaying)
+func (s *Session) setAndUnlockCurrentlyPlaying(sessionID int, newCurrentlyPlaying *model.CurrentlyPlayingSong, currentlyPlayingMutex *redsync.Mutex) {
+	err := s.setStructToRedis(getCurrentlyPlayingKey(sessionID), newCurrentlyPlaying)
+	if err != nil {
+		slog.Warn("Error setting currently playing", "error", err)
+	}
 	currentlyPlayingMutex.Unlock()
 }
 
