@@ -18,9 +18,9 @@ var GetVoterInfoTests = []struct {
 		AccountID: "asdf",
 		VoterType: constants.RegularVoterType,
 		ExpiresAt: time.Now(),
-		songsUpVoted: map[string]struct{}{"song1": emptyStructValue},
-		songsDownVoted:  make(map[string]struct{}),
-		bonusVotes: 2,
+		SongsUpVoted: map[string]struct{}{"song1": emptyStructValue},
+		SongsDownVoted:  make(map[string]struct{}),
+		BonusVotes: 2,
 	}, model.VoterInfo{
 		Type: constants.RegularVoterType,
 		SongsUpVoted: []string{"song1"},
@@ -80,8 +80,8 @@ func TestGetVoterInfo(t *testing.T){
 
 var calculateAndAddUpVoteTests = []struct {
 	voterType string
-	songsUpVoted map[string]struct{}
-	songsDownVoted map[string]struct{}
+	SongsUpVoted map[string]struct{}
+	SongsDownVoted map[string]struct{}
 	bonusVotes int
 	songVotingFor string
 	expectedVoteAmount int
@@ -104,8 +104,8 @@ var calculateAndAddUpVoteTests = []struct {
 func TestCalculateAndAddUpVote(t *testing.T){
 	for _, testCase := range(calculateAndAddUpVoteTests) {
 		voter, _ := NewVoter("voterID", "accoundID", testCase.voterType, testCase.bonusVotes)
-		voter.songsUpVoted = testCase.songsUpVoted
-		voter.songsDownVoted = testCase.songsDownVoted
+		voter.SongsUpVoted = testCase.SongsUpVoted
+		voter.SongsDownVoted = testCase.SongsDownVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndAddUpVote(testCase.songVotingFor)
 
@@ -123,12 +123,12 @@ func TestCalculateAndAddUpVote(t *testing.T){
 
 		}
 
-		_, upVoteExists := voter.songsUpVoted[testCase.songVotingFor]
+		_, upVoteExists := voter.SongsUpVoted[testCase.songVotingFor]
 		if !upVoteExists {
 			t.Errorf("calculateAndAddUpVote() failed! Song not in map of upvoted songs")
 		}
 
-		_, downVoteExists := voter.songsDownVoted[testCase.songVotingFor]
+		_, downVoteExists := voter.SongsDownVoted[testCase.songVotingFor]
 		if downVoteExists {
 			t.Errorf("calculateAndAddUpVote() failed! Song in map of downvoted songs")
 		}
@@ -137,8 +137,8 @@ func TestCalculateAndAddUpVote(t *testing.T){
 
 var calculateAndAddDownVoteTests = []struct {
 	voterType string
-	songsUpVoted map[string]struct{}
-	songsDownVoted map[string]struct{}
+	SongsUpVoted map[string]struct{}
+	SongsDownVoted map[string]struct{}
 	songVotingFor string
 	expectedVoteAmount int
 	expectedError bool
@@ -160,8 +160,8 @@ var calculateAndAddDownVoteTests = []struct {
 func TestCalculateAndAddDownVote(t *testing.T){
 	for _, testCase := range(calculateAndAddDownVoteTests) {
 		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
-		voter.songsUpVoted = testCase.songsUpVoted
-		voter.songsDownVoted = testCase.songsDownVoted
+		voter.SongsUpVoted = testCase.SongsUpVoted
+		voter.SongsDownVoted = testCase.SongsDownVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndAddDownVote(testCase.songVotingFor)
 
@@ -179,12 +179,12 @@ func TestCalculateAndAddDownVote(t *testing.T){
 
 		}
 
-		_, downVoteExists := voter.songsDownVoted[testCase.songVotingFor]
+		_, downVoteExists := voter.SongsDownVoted[testCase.songVotingFor]
 		if !downVoteExists {
 			t.Errorf("calculateAndAddUpVote() failed! Song not in map of downvoted songs")
 		}
 
-		_, upVoteExists := voter.songsUpVoted[testCase.songVotingFor]
+		_, upVoteExists := voter.SongsUpVoted[testCase.songVotingFor]
 		if upVoteExists {
 			t.Errorf("calculateAndAddUpVote() failed! Song in map of upvoted songs")
 		}
@@ -194,7 +194,7 @@ func TestCalculateAndAddDownVote(t *testing.T){
 
 var calculateAndRemoveUpVoteTests = []struct {
 	voterType string
-	songsUpVoted map[string]struct{}
+	SongsUpVoted map[string]struct{}
 	songVotingFor string
 	expectedVoteAmount int
 }{
@@ -206,7 +206,7 @@ var calculateAndRemoveUpVoteTests = []struct {
 func TestCalculateAndRemoveUpVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveUpVoteTests) {
 		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
-		voter.songsUpVoted = testCase.songsUpVoted
+		voter.SongsUpVoted = testCase.SongsUpVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndRemoveUpVote(testCase.songVotingFor)
 
@@ -224,7 +224,7 @@ func TestCalculateAndRemoveUpVote(t *testing.T){
 
 		}
 
-		_, upVoteExists := voter.songsUpVoted[testCase.songVotingFor]
+		_, upVoteExists := voter.SongsUpVoted[testCase.songVotingFor]
 		if upVoteExists {
 			t.Errorf("calculateAndRemoveUpVote() failed! Song in map of upvoted songs")
 		}
@@ -233,7 +233,7 @@ func TestCalculateAndRemoveUpVote(t *testing.T){
 
 var calculateAndRemoveDownVoteTests = []struct {
 	voterType string
-	songsDownVoted map[string]struct{}
+	SongsDownVoted map[string]struct{}
 	songVotingFor string
 	expectedVoteAmount int
 }{
@@ -245,7 +245,7 @@ var calculateAndRemoveDownVoteTests = []struct {
 func TestCalculateAndRemoveDownVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveDownVoteTests) {
 		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
-		voter.songsDownVoted = testCase.songsDownVoted
+		voter.SongsDownVoted = testCase.SongsDownVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndRemoveDownVote(testCase.songVotingFor)
 
@@ -263,7 +263,7 @@ func TestCalculateAndRemoveDownVote(t *testing.T){
 
 		}
 
-		_, upVoteExists := voter.songsDownVoted[testCase.songVotingFor]
+		_, upVoteExists := voter.SongsDownVoted[testCase.songVotingFor]
 		if upVoteExists {
 			t.Errorf("calculateAndRemoveDownVote() failed! Song in map of downvoted songs")
 		}

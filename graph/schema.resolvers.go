@@ -12,7 +12,6 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
-	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
@@ -31,34 +30,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 		return nil, utils.LogAndReturnError("Error getting account level from database", nil)
 	}
 
-	sessionSize := 0
-	if accountLevel == constants.RegularAccountLevel {
-		sessionSize = 50
-	}
-
-	sessionID, err := utils.GenerateSessionID()
-	if err != nil {
-		return nil, utils.LogAndReturnError("Error generating session ID", err)
-	}
-
-	session := session.NewSession()
-
-	r.sessionsMutex.Lock()
-	r.sessions[sessionID] = &session
-	r.sessionsMutex.Unlock()
-
-	// Create session info
-	sessionInfo := &model.SessionInfo{
-		ID: sessionID,
-		CurrentlyPlaying: &model.CurrentlyPlayingSong{
-			SimpleSong: &model.SimpleSong{},
-			Playing:    false,
-		},
-		Queue: nil,
-		Admin: accountID,
-		Size:  sessionSize,
-	}
-	session.SessionInfo = sessionInfo
+	sessionID, err := r.session.CreateSession(accountID, accountLevel)
 
 	// TODO: Maybe combine these two sets to a single db function and query
 	err = r.database.SetAccountSession(accountID, sessionID)
@@ -79,10 +51,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	}
 
 	client := musicplayer.NewSpotifyClient(spotifyToken)
-	session.MusicPlayer = client
+	r.musicPlayers[sessionID] = client
 
-	go session.WatchSpotifyCurrentlyPlaying()
-	go session.WatchVoters()
+	go r.session.CheckSpotifyCurrentlyPlaying(sessionID, client)
+	// TODO: Add this to scheduler, and make this only run once
+	go r.session.CheckVotersExpirations(sessionID)
 
 	account := &model.Account{
 		ID:        accountID,
@@ -99,19 +72,16 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 		return "", utils.LogAndReturnError("Account ID is required to end session", nil)
 	}
 
-	session, exists := r.getSession(sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 	if !exists {
 		return "", utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != session.SessionInfo.Admin {
+	if accountID != r.session.GetSessionAdmin(sessionID) {
 		return "", utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
-	err := r.endSession(session)
-	if err != nil {
-		return "", utils.LogAndReturnError("Error ending session for the accountID", err)
-	}
+	r.session.EndSession(sessionID)
 
 	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
 }
@@ -124,12 +94,12 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogAndReturnError("Voter ID is required to update queue", nil)
 	}
 
-	session, exists := r.getSession(sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	existingVoter, voterExists := session.GetVoter(voterID)
+	existingVoter, voterExists := r.session.GetVoterInSession(sessionID, voterID)
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Voter not in active voters! Voter: %v", voterID), nil)
 	}
@@ -141,18 +111,15 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	// TODO: Remove bonus votes if applicable?
 	if isBonusVote {
-		session.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes)
+		r.session.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes, sessionID)
 	}
 
 	existingVoter.RefreshVoterExpiration()
+	r.session.UpsertVoterInSession(sessionID, existingVoter)
 
-	slog.Info("Currently playing", "artist", session.SessionInfo.CurrentlyPlaying.SimpleSong.Artist)
+	r.session.UpsertQueue(sessionID, numberOfVotes, song)
 
-	session.UpsertQueue(song, numberOfVotes)
-
-	session.UpdateCache()
-
-	return session.SessionInfo, nil
+	return r.session.GetSessionInfo(sessionID), nil
 }
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
@@ -162,35 +129,36 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		return nil, utils.LogAndReturnError("Account ID is required to update currently playing song", nil)
 	}
 
-	session, exists := r.getSession(sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != session.SessionInfo.Admin {
+	if accountID != r.session.GetSessionAdmin(sessionID) {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
+	musicPlayer := r.musicPlayers[sessionID]
+
 	switch action {
 	case "PLAY":
-		err := session.MusicPlayer.Play()
+		err := musicPlayer.Play()
 		if err != nil {
 			return nil, utils.LogAndReturnError("Error playing song", err)
 		}
 	case "PAUSE":
-		err := session.MusicPlayer.Pause()
+		err := musicPlayer.Pause()
 		if err != nil {
 			return nil, utils.LogAndReturnError("Error pausing song", err)
 		}
 	case "ADVANCE":
-		err := session.AdvanceQueue(true)
+		err := r.session.AdvanceQueue(sessionID, true, musicPlayer)
 		if err != nil {
 			return nil, utils.LogAndReturnError("Error advancing queue", err)
 		}
-		session.UpdateCache()
 	}
 
-	return session.SessionInfo, nil
+	return r.session.GetSessionInfo(sessionID), nil
 }
 
 // CreateAccount is the resolver for the createAccount field.
@@ -284,16 +252,17 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("Account ID required for setting playlist", nil)
 	}
 
-	session, exists := r.getSession(sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != session.SessionInfo.Admin {
+	if accountID != r.session.GetSessionAdmin(sessionID) {
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to set playlists", nil)
 	}
 
-	songs, err := session.MusicPlayer.GetSongsInPlaylist(playlist)
+	musicPlayer := r.musicPlayers[sessionID]
+	songs, err := musicPlayer.GetSongsInPlaylist(playlist)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error getting songs in playlist", err)
 	}
@@ -307,9 +276,9 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		songsToQueue = append(songsToQueue, songToQueue)
 	}
 
-	session.SetQueue(songsToQueue)
+	r.session.SetQueue(sessionID, songsToQueue)
 
-	return session.SessionInfo, nil
+	return r.session.GetSessionInfo(sessionID), nil
 }
 
 // Session is the resolver for the session field.
@@ -319,13 +288,15 @@ func (r *queryResolver) Session(ctx context.Context, sessionID int) (*model.Sess
 		return nil, utils.LogAndReturnError("Voter ID is required to get session", nil)
 	}
 
-	session, exists := r.getSession(sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	return session.SessionInfo, nil
+	returnSession := r.session.GetSessionInfo(sessionID)
+
+	return returnSession, nil
 }
 
 // Voter is the resolver for the voter field.
@@ -336,19 +307,19 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogAndReturnError("Voter ID required for getting voter", nil)
 	}
 
-	session, exists := r.getSession(sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	existingVoter, exists := session.GetVoter(voterID)
+	existingVoter, exists := r.session.GetVoterInSession(sessionID, voterID)
 
 	if exists {
 		slog.Info("Return existing voter", "voter", existingVoter.VoterID)
 		return existingVoter.GetVoterInfo(), nil
 	}
 
-	if session.IsFull() {
+	if r.session.IsSessionFull(sessionID) {
 		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}
 
@@ -365,18 +336,19 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		if voterLevel == constants.PrivilegedVoterType {
 			voterType = constants.PrivilegedVoterType
 		}
-		if session.SessionInfo.Admin == accountID {
+		if r.session.GetSessionAdmin(sessionID) == accountID {
 			voterType = constants.AdminVoterType
 		}
 	}
 
-	slog.Info("Generating new voter", "voter", voterID)
+	slog.Info("Generating new voter", "voter", voterID, "bonus-votes", bonusVotes)
 	newVoter, err := voter.NewVoter(voterID, accountID, voterType, bonusVotes)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}
 
-	session.AddVoter(voterID, newVoter)
+	slog.Info("New voter created:", "voter", newVoter)
+	r.session.UpsertVoterInSession(sessionID, newVoter)
 
 	return newVoter.GetVoterInfo(), nil
 }
@@ -403,16 +375,17 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 		return nil, utils.LogAndReturnError("accountID required for getting playlists", nil)
 	}
 
-	session, exists := r.getSession(sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != session.SessionInfo.Admin {
+	if accountID != r.session.GetSessionAdmin(sessionID) {
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to get playlists", nil)
 	}
 
-	playlists, err := session.MusicPlayer.GetPlaylists()
+	musicPlayer := r.musicPlayers[sessionID]
+	playlists, err := musicPlayer.GetPlaylists()
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error getting playlists for the session!", err)
 	}
@@ -427,18 +400,20 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 		return nil, utils.LogAndReturnError("Voter ID required for searching for music", nil)
 	}
 
-	session, sessionExists := r.getSession(sessionID)
+	slog.Info("Session ID", "sessionID", sessionID)
+	exists := r.session.DoesSessionExist(sessionID)
 
-	if !sessionExists {
+	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	_, voterExists := session.GetVoter(voterID)
+	_, voterExists := r.session.GetVoterInSession(sessionID, voterID)
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("You're not in session %v!", sessionID), nil)
 	}
 
-	searchResult, err := session.MusicPlayer.Search(query)
+	musicPlayer := r.musicPlayers[sessionID]
+	searchResult, err := musicPlayer.Search(query)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error executing music search!", err)
 	}
