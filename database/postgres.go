@@ -26,9 +26,9 @@ func NewPostgresClient() *PostgresWrapper {
 	}
 
 	queryString := fmt.Sprintf(
-	`CREATE TABLE IF NOT EXISTS public.accounts
+	`CREATE TABLE IF NOT EXISTS public.old_accounts
 	(
-		account_id       			int GENERATED ALWAYS AS IDENTITY primary key,
+		account_id       		int GENERATED ALWAYS AS IDENTITY primary key,
 		first_name    			varchar(100) not null,
 		last_name     			varchar(100) not null,
 		email 		 			varchar(100) not null,
@@ -41,7 +41,7 @@ func NewPostgresClient() *PostgresWrapper {
 		spotify_refresh_token 	varchar(150)
 	);
 
-	UPDATE public.accounts
+	UPDATE public.old_accounts
 	SET session_id = 0;
 	`)
 
@@ -57,7 +57,7 @@ func NewPostgresClient() *PostgresWrapper {
 
 func (p *PostgresWrapper) GetAccountByEmail(accountEmail string) (*model.Account, error) {
 	queryString := fmt.Sprintf(
-	`SELECT account_id::VARCHAR, first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.accounts WHERE email = '%v'`,
+	`SELECT account_id::VARCHAR, first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.old_accounts WHERE email = '%v'`,
 	accountEmail)
 	var sessionID int
 	var accountID, firstName, lastName, email string
@@ -79,7 +79,7 @@ func (p *PostgresWrapper) GetAccountByEmail(accountEmail string) (*model.Account
 
 func (p *PostgresWrapper) GetAccountByID(accountID string) (*model.Account, error) {
 	queryString := fmt.Sprintf(
-	`SELECT first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.accounts WHERE account_id = '%v'`,
+	`SELECT first_name, last_name, email, coalesce(session_id,0) as session_id FROM public.old_accounts WHERE account_id = '%v'`,
 	accountID)
 	slog.Debug("Query string:", "query-string", queryString)
 
@@ -103,7 +103,7 @@ func (p *PostgresWrapper) GetAccountByID(accountID string) (*model.Account, erro
 
 func (p *PostgresWrapper) GetAccountLoginValues(accountEmail string) (string, string, error) {
 	queryString := fmt.Sprintf(
-	`SELECT account_id::VARCHAR, pass_hash FROM public.accounts WHERE email = '%v'`,
+	`SELECT account_id::VARCHAR, pass_hash FROM public.old_accounts WHERE email = '%v'`,
 	accountEmail)
 	slog.Debug("Query string:", "query-string", queryString)
 
@@ -118,7 +118,7 @@ func (p *PostgresWrapper) GetAccountLoginValues(accountEmail string) (string, st
 
 func (p *PostgresWrapper) GetSpotifyRefreshToken(accountID string) (string, error) {
 	queryString := fmt.Sprintf(
-	`SELECT spotify_refresh_token FROM public.accounts WHERE account_id = '%v'`,
+	`SELECT spotify_refresh_token FROM public.old_accounts WHERE account_id = '%v'`,
 	accountID)
 	var spotifyRefreshToken string
 	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&spotifyRefreshToken)
@@ -131,7 +131,7 @@ func (p *PostgresWrapper) GetSpotifyRefreshToken(accountID string) (string, erro
 
 func (p *PostgresWrapper) GetAccountLevel(accountID string) (string, error){
 	queryString := fmt.Sprintf(
-		`SELECT account_level FROM public.accounts WHERE account_id = '%v'`,
+		`SELECT account_level FROM public.old_accounts WHERE account_id = '%v'`,
 	accountID)
 	var accountLevel string
 	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&accountLevel)
@@ -144,7 +144,7 @@ func (p *PostgresWrapper) GetAccountLevel(accountID string) (string, error){
 
 func (p *PostgresWrapper) GetVoterValues(accountID string) (string, int, error){
 	queryString := fmt.Sprintf(
-		`SELECT voter_level, bonus_votes FROM public.accounts WHERE account_id = '%v'`,
+		`SELECT voter_level, bonus_votes FROM public.old_accounts WHERE account_id = '%v'`,
 	accountID)
 	var voterLevel string
 	var bonusVotes int
@@ -158,7 +158,7 @@ func (p *PostgresWrapper) GetVoterValues(accountID string) (string, int, error){
 
 func (p *PostgresWrapper) SetAccountSession(accountID string, sessionID int) error {
 	queryString := fmt.Sprintf(
-	`UPDATE public.accounts
+	`UPDATE public.old_accounts
 	SET session_id = %v
 	WHERE account_id = %v;`, sessionID, accountID)
 
@@ -175,7 +175,7 @@ func (p *PostgresWrapper) SetAccountSession(accountID string, sessionID int) err
 
 func (p *PostgresWrapper) SetSpotifyAccessToken(accountID, AccessToken string) error {
 	queryString := fmt.Sprintf(
-	`UPDATE public.accounts
+	`UPDATE public.old_accounts
 	SET spotify_access_token = '%v'
 	WHERE account_id = %v;`, AccessToken, accountID)
 
@@ -192,7 +192,7 @@ func (p *PostgresWrapper) SetSpotifyAccessToken(accountID, AccessToken string) e
 
 func (p *PostgresWrapper) SetSpotifyRefreshToken(accountID, RefreshToken string) error {
 	queryString := fmt.Sprintf(
-	`UPDATE public.accounts
+	`UPDATE public.old_accounts
 	SET spotify_refresh_token = '%v'
 	WHERE account_id = %v;`, RefreshToken, accountID)
 
@@ -209,7 +209,7 @@ func (p *PostgresWrapper) SetSpotifyRefreshToken(accountID, RefreshToken string)
 
 func (p *PostgresWrapper) SubtractBonusVotes(accountID string, bonusVotes int) error {
 	queryString := fmt.Sprintf(
-		`UPDATE public.accounts
+		`UPDATE public.old_accounts
 		SET bonus_votes = bonus_votes - '%v'
 		WHERE account_id = %v;`, bonusVotes, accountID)
 	
@@ -226,7 +226,7 @@ func (p *PostgresWrapper) SubtractBonusVotes(accountID string, bonusVotes int) e
 
 
 func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
-	queryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.accounts WHERE email = '%v' LIMIT 1);", email)
+	queryString := fmt.Sprintf("SELECT exists (SELECT 1 FROM public.old_accounts WHERE email = '%v' LIMIT 1);", email)
 	var emailExists bool
 	err := p.PostgresClient.QueryRow(context.Background(), queryString).Scan(&emailExists)
 	if err != nil {
@@ -238,7 +238,7 @@ func (p *PostgresWrapper) CheckIfEmailExists(email string) (bool, error) {
 
 func (p *PostgresWrapper) AddAccountToDatabase(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) (string, error) {
 	queryString := fmt.Sprintf(
-	`INSERT INTO public.accounts(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
+	`INSERT INTO public.old_accounts(first_name, last_name, email, pass_hash, account_level, voter_level, bonus_votes)
 	VALUES ('%v', '%v', '%v', '%v', '%v', '%v', '%v')
 	RETURNING account_id::VARCHAR;`,
 	newAccount.FirstName, newAccount.LastName, newAccount.Email, passwordHash, account_level, voter_level, bonusVotes)

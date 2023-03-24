@@ -184,10 +184,12 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 
 	passwordHash := utils.HashHelper(newAccount.Password)
 
-	accountID, err := r.database.AddAccountToDatabase(newAccount, passwordHash, accountLevel, voterLevel, 0)
-	if err != nil {
-		return "", utils.LogAndReturnError("Error ing account to database", err)
-	}
+	// accountID, err := r.database.AddAccountToDatabase(newAccount, passwordHash, accountLevel, voterLevel, 0)
+	// if err != nil {
+	// 	return "", utils.LogAndReturnError("Error ing account to database", err)
+	// }
+
+	accountID := r.accountService.AddAccountToDatabase(newAccount, passwordHash, accountLevel, voterLevel, 0)
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
 	if err != nil {

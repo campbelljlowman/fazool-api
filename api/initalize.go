@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/exp/slog"
 
+	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/cache"
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph"
@@ -40,8 +41,8 @@ func InitializeRoutes() *gin.Engine {
 	redisPool := goredis.NewPool(redisClient) 
 	redSync := redsync.New(redisPool)
 	sessionCache := session.NewSessionClient(redSync, redisClient)
-	r := graph.NewResolver(pgClient, sessionCache)
-	// go r.WatchSessions()
+	accountService := account.NewAccountGorm()
+	r := graph.NewResolver(pgClient, sessionCache, accountService)
 	srv := graph.NewGraphQLServer(r)
 
 	router.Any("/query", func(c *gin.Context) {
