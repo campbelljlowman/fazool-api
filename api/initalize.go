@@ -33,7 +33,7 @@ func InitializeRoutes() *gin.Engine {
 	})
 
 	sessionService := session.NewSessionService()
-	accountService := account.NewAccountGorm()
+	accountService := account.NewAccountServiceGormImpl()
 	r := graph.NewResolver(sessionService, accountService)
 	srv := graph.NewGraphQLServer(r)
 

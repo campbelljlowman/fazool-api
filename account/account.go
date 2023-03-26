@@ -42,12 +42,11 @@ type account struct {
 	SpotifyRefreshToken		string
 }
 
-// TODO: Use type alias?
-type AccountGorm struct {
+type AccountServiceGorm struct {
 	gorm 	*gorm.DB
 }
 
-func NewAccountGorm() *AccountGorm {
+func NewAccountServiceGormImpl() *AccountServiceGorm {
 	postgresURL := os.Getenv("POSTRGRES_URL")
 
     gormDB, err := gorm.Open(postgres.Open(postgresURL), &gorm.Config{})
@@ -60,18 +59,18 @@ func NewAccountGorm() *AccountGorm {
 
 	gormDB.Exec("UPDATE public.accounts SET active_session = 0;")
 
-	accountGorm := AccountGorm{gorm: gormDB}
+	accountGorm := AccountServiceGorm{gorm: gormDB}
 	return &accountGorm
 }
 
-func (a *AccountGorm) GetAccountFromEmail(accountEmail string) *model.Account {
+func (a *AccountServiceGorm) GetAccountFromEmail(accountEmail string) *model.Account {
 	var fullAccount account
 	a.gorm.Where("email = ?", accountEmail).First(&fullAccount)
 
 	return transformAccountType(fullAccount)
 }
 
-func (a *AccountGorm) GetAccountFromID(accountID string) *model.Account {
+func (a *AccountServiceGorm) GetAccountFromID(accountID string) *model.Account {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -89,35 +88,35 @@ func transformAccountType(fullAccount account) *model.Account {
 	return accountToReturn
 }
 
-func (a *AccountGorm) GetAccountIDAndPassHash(accountEmail string) (string, string) {
+func (a *AccountServiceGorm) GetAccountIDAndPassHash(accountEmail string) (string, string) {
 	var fullAccount account
 	a.gorm.Where("email = ?", accountEmail).First(&fullAccount)
 
 	return fmt.Sprintf("%d", fullAccount.ID), fullAccount.PasswordHash
 }
 
-func (a *AccountGorm) GetSpotifyRefreshToken(accountID string) string {
+func (a *AccountServiceGorm) GetSpotifyRefreshToken(accountID string) string {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.SpotifyRefreshToken
 }
 
-func (a *AccountGorm) GetAccountLevel(accountID string) string {
+func (a *AccountServiceGorm) GetAccountLevel(accountID string) string {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.AccountLevel
 }
 
-func (a *AccountGorm) GetVoterLevelAndBonusVotes(accountID string) (string, int) {
+func (a *AccountServiceGorm) GetVoterLevelAndBonusVotes(accountID string) (string, int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.VoterLevel, fullAccount.BonusVotes
 }
 
-func (a *AccountGorm) SetAccountActiveSession(accountID string, sessionID int) {
+func (a *AccountServiceGorm) SetAccountActiveSession(accountID string, sessionID int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -125,7 +124,7 @@ func (a *AccountGorm) SetAccountActiveSession(accountID string, sessionID int) {
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountGorm) SetSpotifyRefreshToken(accountID, refreshToken string) {
+func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID, refreshToken string) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -133,7 +132,7 @@ func (a *AccountGorm) SetSpotifyRefreshToken(accountID, refreshToken string) {
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountGorm) SubtractBonusVotes(accountID string, bonusVotes int) {
+func (a *AccountServiceGorm) SubtractBonusVotes(accountID string, bonusVotes int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -141,7 +140,7 @@ func (a *AccountGorm) SubtractBonusVotes(accountID string, bonusVotes int) {
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountGorm) CheckIfEmailHasAccount(email string) bool {
+func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 	var fullAccount account
 	err := a.gorm.Where("email = ?", email).First(&fullAccount).Error
 
@@ -155,7 +154,7 @@ func (a *AccountGorm) CheckIfEmailHasAccount(email string) bool {
 }
 
 // TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountGorm) AddAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) string {
+func (a *AccountServiceGorm) AddAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) string {
 	accountToAdd := &account{
 		FirstName: 		newAccount.FirstName,
 		LastName: 		newAccount.LastName,
