@@ -6,7 +6,6 @@ import (
 	"golang.org/x/exp/slog"
 
 	"github.com/campbelljlowman/fazool-api/account"
-	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph"
 	"github.com/campbelljlowman/fazool-api/session"
 
@@ -33,10 +32,9 @@ func InitializeRoutes() *gin.Engine {
 		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
 	})
 
-	pgClient := database.NewPostgresClient()
 	sessionService := session.NewSessionService()
 	accountService := account.NewAccountGorm()
-	r := graph.NewResolver(pgClient, sessionService, accountService)
+	r := graph.NewResolver(sessionService, accountService)
 	srv := graph.NewGraphQLServer(r)
 
 	router.Any("/query", func(c *gin.Context) {

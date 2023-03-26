@@ -10,7 +10,6 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/jackc/pgx/v4 v4.17.2
 	github.com/redis/go-redis/v9 v9.0.2
 	github.com/vektah/gqlparser/v2 v2.4.8
 	github.com/zmb3/spotify/v2 v2.3.0
@@ -34,15 +33,9 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.13.0 // indirect
-	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgproto3/v2 v2.3.1 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/pgtype v1.12.0 // indirect
 	github.com/jackc/pgx/v5 v5.3.0 // indirect
-	github.com/jackc/puddle v1.3.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

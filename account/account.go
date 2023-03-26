@@ -20,13 +20,12 @@ type AccountService interface {
 	GetVoterLevelAndBonusVotes(accountID string) (string, int)
 
 	SetAccountActiveSession(accountID string, sessionID int)
-	SetSpotifyAccessToken(accountID, accessToken string)
 	SetSpotifyRefreshToken(accountID, refreshToken string)
 	SubtractBonusVotes(accountID string, bonusVotes int)
 
 	CheckIfEmailHasAccount(email string) bool
 
-	AddAccountToDatabase(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) string 
+	AddAccount(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) string 
 }
 
 type account struct {
@@ -58,6 +57,8 @@ func NewAccountGorm() *AccountGorm {
 	}
 
 	gormDB.AutoMigrate(&account{})
+
+	gormDB.Exec("UPDATE public.accounts SET active_session = 0;")
 
 	accountGorm := AccountGorm{gorm: gormDB}
 	return &accountGorm
@@ -124,14 +125,6 @@ func (a *AccountGorm) SetAccountActiveSession(accountID string, sessionID int) {
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountGorm) SetSpotifyAccessToken(accountID, accessToken string) {
-	var fullAccount account
-	a.gorm.First(&fullAccount, accountID)
-
-	fullAccount.SpotifyAccessToken = accessToken
-	a.gorm.Save(&fullAccount)
-}
-
 func (a *AccountGorm) SetSpotifyRefreshToken(accountID, refreshToken string) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
@@ -162,7 +155,7 @@ func (a *AccountGorm) CheckIfEmailHasAccount(email string) bool {
 }
 
 // TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountGorm) AddAccountToDatabase(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) string {
+func (a *AccountGorm) AddAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) string {
 	accountToAdd := &account{
 		FirstName: 		newAccount.FirstName,
 		LastName: 		newAccount.LastName,

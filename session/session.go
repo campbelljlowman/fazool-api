@@ -4,25 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"time"
 	"sort"
-
+	"time"
 
 	"github.com/go-redsync/redsync/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"github.com/go-redsync/redsync/v4/redis/goredis/v9"
-	"golang.org/x/exp/slog"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slices"
+	"golang.org/x/exp/slog"
 
-
+	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/constants"
-	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/utils"
 )
-
 
 // Sessions get watched at this frequency in seconds
 const sessionWatchFrequency time.Duration = 10
@@ -90,7 +86,7 @@ func (s *Session) CheckSessionExpiry(sessionID int) {
 }
 
 // TODO: This code hasn't been tested
-func (s *Session) processBonusVotes(sessionID int, songID string) error {
+func (s *Session) processBonusVotes(sessionID int, songID string, accountService account.AccountService) error {
 	sessionBonusVotes, bonusVoteMutex := s.lockAndGetBonusVotes(sessionID)
 
 	songBonusVotes, exists := sessionBonusVotes[songID]
@@ -102,23 +98,11 @@ func (s *Session) processBonusVotes(sessionID int, songID string) error {
 		return nil
 	}
 
-	databaseURL := os.Getenv("POSTRGRES_URL")
-
-	dbPool, err := pgxpool.Connect(context.Background(), databaseURL)
-	if err != nil {
-		return err
-	}
-
-	pg := database.PostgresWrapper{PostgresClient: dbPool}
 
 	for accountID, votes := range songBonusVotes {
-		err = pg.SubtractBonusVotes(accountID, votes)
-		if err != nil {
-			slog.Warn("Error updating account's bonus votes", "account", accountID)
-		}
+		accountService.SubtractBonusVotes(accountID, votes)
 	}
 
-	pg.CloseConnection()
 	return nil
 }
 
@@ -163,7 +147,7 @@ func (s *Session) IsSessionFull(sessionID int) bool {
 	return isFull
 }
 
-func (s *Session) AdvanceQueue(sessionID int, force bool, musicPlayer musicplayer.MusicPlayer) error { 
+func (s *Session) AdvanceQueue(sessionID int, force bool, musicPlayer musicplayer.MusicPlayer, accountService account.AccountService) error { 
 	var song *model.SimpleSong
 
 	queue, queueMutex := s.lockAndGetQueue(sessionID)
@@ -180,7 +164,7 @@ func (s *Session) AdvanceQueue(sessionID int, force bool, musicPlayer musicplaye
 		return err
 	}
 
-	err = s.processBonusVotes(sessionID, song.ID)
+	err = s.processBonusVotes(sessionID, song.ID, accountService)
 	if err != nil {
 		return err
 	}
@@ -225,7 +209,7 @@ func (s *Session) UpsertQueue(sessionID int, vote int, song model.SongUpdate) {
 }
 
 
-func (s *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer) {
+func (s *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicplayer.MusicPlayer, accountService account.AccountService) {
 	// s.SessionInfo.CurrentlyPlaying = &model.CurrentlyPlayingSong{}
 	updateSessionFlag := false
 	addNextSongFlag := false
@@ -266,7 +250,7 @@ func (s *Session) CheckSpotifyCurrentlyPlaying(sessionID int, musicPlayer musicp
 			}
 
 			if timeLeft < 5000 && addNextSongFlag {
-				s.AdvanceQueue(sessionID, false, musicPlayer)
+				s.AdvanceQueue(sessionID, false, musicPlayer, accountService)
 
 				updateSessionFlag = true
 				addNextSongFlag = false
