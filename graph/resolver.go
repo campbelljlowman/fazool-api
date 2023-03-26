@@ -1,12 +1,9 @@
 package graph
 
 import (
-	"sync"
-
-	"github.com/campbelljlowman/fazool-api/database"
+	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/musicplayer"
 	"github.com/campbelljlowman/fazool-api/session"
-	// "golang.org/x/exp/slog"
 )
 
 // This file will not be regenerated automatically.
@@ -15,17 +12,15 @@ import (
 
 type Resolver struct {
 	musicPlayers	map[int]musicplayer.MusicPlayer
-	sessionsMutex 	*sync.Mutex
-	database 		database.Database
 	// TODO: Change this to cache and wrap Redis in an interface
-	session		    *session.Session
+	sessionService		    *session.Session
+	accountService  account.AccountService
 }
 
-func NewResolver(database database.Database, session *session.Session) *Resolver {
+func NewResolver(sessionService *session.Session, accountService account.AccountService) *Resolver {
 	return &Resolver{
 		musicPlayers: 	make(map[int]musicplayer.MusicPlayer),
-		sessionsMutex:  &sync.Mutex{},
-		database: 		database,
-		session: session,	
+		sessionService: sessionService,
+		accountService: accountService,
 	}
 }

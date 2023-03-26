@@ -15,7 +15,7 @@ var GetVoterInfoTests = []struct {
 }{
 	{Voter{
 		VoterID: "asdf",
-		AccountID: "asdf",
+		AccountID: 1234,
 		VoterType: constants.RegularVoterType,
 		ExpiresAt: time.Now(),
 		SongsUpVoted: map[string]struct{}{"song1": emptyStructValue},
@@ -103,7 +103,7 @@ var calculateAndAddUpVoteTests = []struct {
 }
 func TestCalculateAndAddUpVote(t *testing.T){
 	for _, testCase := range(calculateAndAddUpVoteTests) {
-		voter, _ := NewVoter("voterID", "accoundID", testCase.voterType, testCase.bonusVotes)
+		voter, _ := NewVoter("voterID", testCase.voterType, 1234, testCase.bonusVotes)
 		voter.SongsUpVoted = testCase.SongsUpVoted
 		voter.SongsDownVoted = testCase.SongsDownVoted
 
@@ -159,7 +159,7 @@ var calculateAndAddDownVoteTests = []struct {
 
 func TestCalculateAndAddDownVote(t *testing.T){
 	for _, testCase := range(calculateAndAddDownVoteTests) {
-		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
+		voter, _ := NewVoter("voterID", testCase.voterType, 1234, 0)
 		voter.SongsUpVoted = testCase.SongsUpVoted
 		voter.SongsDownVoted = testCase.SongsDownVoted
 
@@ -205,7 +205,7 @@ var calculateAndRemoveUpVoteTests = []struct {
 }
 func TestCalculateAndRemoveUpVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveUpVoteTests) {
-		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
+		voter, _ := NewVoter("voterID", testCase.voterType, 1234, 0)
 		voter.SongsUpVoted = testCase.SongsUpVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndRemoveUpVote(testCase.songVotingFor)
@@ -244,7 +244,7 @@ var calculateAndRemoveDownVoteTests = []struct {
 }
 func TestCalculateAndRemoveDownVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveDownVoteTests) {
-		voter, _ := NewVoter("voterID", "accountID", testCase.voterType, 0)
+		voter, _ := NewVoter("voterID", testCase.voterType, 1234, 0)
 		voter.SongsDownVoted = testCase.SongsDownVoted
 
 		resulteVoteAmount, isResultBonusVote, err := voter.calculateAndRemoveDownVote(testCase.songVotingFor)

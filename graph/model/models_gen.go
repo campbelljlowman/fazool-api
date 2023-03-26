@@ -9,11 +9,11 @@ import (
 )
 
 type Account struct {
-	ID        string  `json:"id"`
-	FirstName *string `json:"firstName"`
-	LastName  *string `json:"lastName"`
-	Email     *string `json:"email"`
-	SessionID *int    `json:"sessionID"`
+	ID            int     `json:"id"`
+	FirstName     *string `json:"firstName"`
+	LastName      *string `json:"lastName"`
+	Email         *string `json:"email"`
+	ActiveSession *int    `json:"activeSession"`
 }
 
 type AccountLogin struct {
@@ -48,7 +48,7 @@ type SessionInfo struct {
 	ID               int                   `json:"id"`
 	CurrentlyPlaying *CurrentlyPlayingSong `json:"currentlyPlaying"`
 	Queue            []*QueuedSong         `json:"queue"`
-	Admin            string                `json:"admin"`
+	AdminAccountID   int                   `json:"adminAccountID"`
 	NumberOfVoters   int                   `json:"numberOfVoters"`
 	MaximumVoters    int                   `json:"maximumVoters"`
 }

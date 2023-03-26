@@ -12,7 +12,7 @@ import (
 
 type Voter struct {
 	VoterID string
-	AccountID string
+	AccountID int
 	VoterType string
 	ExpiresAt time.Time
 	SongsUpVoted map[string]struct{}
@@ -26,7 +26,7 @@ const priviledgedVoterDurationInMinutes time.Duration = 15
 var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
 
 
-func NewVoter(voterID, accountID, voterType string, BonusVotes int) (*Voter, error) {
+func NewVoter(voterID, voterType string, accountID, BonusVotes int) (*Voter, error) {
 	if !contains(validVoterTypes, voterType) {
 		return nil, fmt.Errorf("Invalid voter type passed!")
 	}

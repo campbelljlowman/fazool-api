@@ -23,17 +23,17 @@ type SessionInfo {
   id: Int!
   currentlyPlaying: CurrentlyPlayingSong
   queue: [QueuedSong!]
-  admin: String!
+  adminAccountID: Int!
   numberOfVoters: Int!
   maximumVoters: Int!
 }
 
 type Account {
-  id: String!
+  id: Int!
   firstName: String
   lastName: String
   email: String
-  sessionID: Int
+  activeSession: Int
 }
 
 type VoterInfo {

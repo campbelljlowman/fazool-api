@@ -9,17 +9,22 @@ import (
 
 )
 
-func (s *Session) setSessionConfig(sessionID, maximumVoters int, adminAccountID string) {
+func (s *Session) setSessionConfig(sessionID, maximumVoters, adminAccountID int) {
 	s.redisClient.HSet(context.Background(),  getSessionConfigKey(sessionID), "sessionID", sessionID, "maximumVoters", maximumVoters, "adminAccountID", adminAccountID)
 }
 
-func (s *Session) GetSessionAdmin(sessionID int) string {
-	sessionMaximumVoters, err := s.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "adminAccountID").Result()
+func (s *Session) GetSessionAdminAccountID(sessionID int) int {
+	adminAccountIDStr, err := s.redisClient.HGet(context.Background(), getSessionConfigKey(sessionID), "adminAccountID").Result()
 	if err != nil {
 		slog.Warn("Error getting session admin", "error", err)
 	}
 
-	return sessionMaximumVoters
+	adminAccountIDInt, err := strconv.Atoi(adminAccountIDStr)
+	if err != nil {
+		slog.Warn("Error converting account admin ID to int")
+	}
+
+	return adminAccountIDInt
 }
 
 func (s *Session) getSessionMaximumVoters(sessionID int) int {

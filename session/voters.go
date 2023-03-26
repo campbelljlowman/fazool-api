@@ -55,12 +55,12 @@ func (s *Session) lockAndGetAllVotersInSession(sessionID int) (map[string]*voter
 	if err != nil {
 		slog.Warn("Error getting session voters", "error", err)
 	}
-
+	
 	return voters, votersMutex
 }
 
 func (s *Session) setAndUnlockAllVotersInSession(sessionID int, voters map[string]*voter.Voter, votersMutex *redsync.Mutex) {
-	err := s.setStructToRedis(getVotersMutexKey(sessionID), voters)
+	err := s.setStructToRedis(getVotersKey(sessionID), voters)
 	if err != nil {
 		slog.Warn("Error setting voters", "error", err)
 	}
