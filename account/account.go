@@ -12,19 +12,19 @@ import (
 )
 
 type AccountService interface {
-	// GetAccountByEmail(accountEmail string) (*model.Account, error)
-	// GetAccountByID(accountID string) (*model.Account, error)
-	// GetAccountLoginValues(accountEmail string) (string, string, error)
-	// GetSpotifyRefreshToken(accountID string) (string, error)
-	// GetAccountLevel(accountID string) (string, error)
-	// GetVoterValues(accountID string) (string, int, error)
+	GetAccountFromEmail(accountEmail string) *model.Account
+	GetAccountFromID(accountID string) *model.Account
+	GetAccountIDAndPassHash(accountEmail string) (string, string)
+	GetSpotifyRefreshToken(accountID string) string
+	GetAccountLevel(accountID string) string
+	GetVoterLevelAndBonusVotes(accountID string) (string, int)
 
-	// SetAccountSession(accountID string, sessionID int) error
-	// SetSpotifyAccessToken(accountID, AccessToken string) error
-	// SetSpotifyRefreshToken(accountID, RefreshToken string) error
-	// SubtractBonusVotes(accountID string, bonusVotes int) error
+	SetAccountActiveSession(accountID string, sessionID int)
+	SetSpotifyAccessToken(accountID, accessToken string)
+	SetSpotifyRefreshToken(accountID, refreshToken string)
+	SubtractBonusVotes(accountID string, bonusVotes int)
 
-	// CheckIfEmailExists(email string) (bool, error)
+	CheckIfEmailHasAccount(email string) bool
 
 	AddAccountToDatabase(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) string 
 }
@@ -63,20 +63,103 @@ func NewAccountGorm() *AccountGorm {
 	return &accountGorm
 }
 
-// func (a *AccountGorm) GetAccountByEmail(accountEmail string) (*model.Account, error)
+func (a *AccountGorm) GetAccountFromEmail(accountEmail string) *model.Account {
+	var fullAccount account
+	a.gorm.Where("email = ?", accountEmail).First(&fullAccount)
 
-// func (a *AccountGorm) GetAccountByID(accountID string) (*model.Account, error)
-// func (a *AccountGorm) GetAccountLoginValues(accountEmail string) (string, string, error)
-// func (a *AccountGorm) GetSpotifyRefreshToken(accountID string) (string, error)
-// func (a *AccountGorm) GetAccountLevel(accountID string) (string, error)
-// func (a *AccountGorm) GetVoterValues(accountID string) (string, int, error)
+	return transformAccountType(fullAccount)
+}
 
-// func (a *AccountGorm) SetAccountSession(accountID string, sessionID int) error
-// func (a *AccountGorm) SetSpotifyAccessToken(accountID, AccessToken string) error
-// func (a *AccountGorm) SetSpotifyRefreshToken(accountID, RefreshToken string) error
-// func (a *AccountGorm) SubtractBonusVotes(accountID string, bonusVotes int) error
+func (a *AccountGorm) GetAccountFromID(accountID string) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
 
-// func (a *AccountGorm) CheckIfEmailExists(email string) (bool, error)
+	return transformAccountType(fullAccount)
+}
+
+func transformAccountType(fullAccount account) *model.Account {
+	accountToReturn := &model.Account{
+		ID: fmt.Sprintf("%d", fullAccount.ID),
+		FirstName: &fullAccount.FirstName,
+		LastName: &fullAccount.LastName,
+		Email: &fullAccount.Email,
+		SessionID: &fullAccount.ActiveSession,
+	}
+	return accountToReturn
+}
+
+func (a *AccountGorm) GetAccountIDAndPassHash(accountEmail string) (string, string) {
+	var fullAccount account
+	a.gorm.Where("email = ?", accountEmail).First(&fullAccount)
+
+	return fmt.Sprintf("%d", fullAccount.ID), fullAccount.PasswordHash
+}
+
+func (a *AccountGorm) GetSpotifyRefreshToken(accountID string) string {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	return fullAccount.SpotifyRefreshToken
+}
+
+func (a *AccountGorm) GetAccountLevel(accountID string) string {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	return fullAccount.AccountLevel
+}
+
+func (a *AccountGorm) GetVoterLevelAndBonusVotes(accountID string) (string, int) {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	return fullAccount.VoterLevel, fullAccount.BonusVotes
+}
+
+func (a *AccountGorm) SetAccountActiveSession(accountID string, sessionID int) {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.ActiveSession = sessionID
+	a.gorm.Save(&fullAccount)
+}
+
+func (a *AccountGorm) SetSpotifyAccessToken(accountID, accessToken string) {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.SpotifyAccessToken = accessToken
+	a.gorm.Save(&fullAccount)
+}
+
+func (a *AccountGorm) SetSpotifyRefreshToken(accountID, refreshToken string) {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.SpotifyRefreshToken = refreshToken
+	a.gorm.Save(&fullAccount)
+}
+
+func (a *AccountGorm) SubtractBonusVotes(accountID string, bonusVotes int) {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.BonusVotes -= bonusVotes
+	a.gorm.Save(&fullAccount)
+}
+
+func (a *AccountGorm) CheckIfEmailHasAccount(email string) bool {
+	var fullAccount account
+	err := a.gorm.Where("email = ?", email).First(&fullAccount).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return false
+		}
+		slog.Warn("Error checking if email has an account", "error", err)
+	}
+	return true
+}
 
 // TODO, password is passed to this function on newAccount struct, this is bad
 func (a *AccountGorm) AddAccountToDatabase(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) string {
