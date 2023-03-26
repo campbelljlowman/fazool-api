@@ -20,8 +20,8 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, error) {
-	accountID, _ := ctx.Value("accountID").(string)
-	if accountID == "" {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID is required to create session", nil)
 	}
 
@@ -38,11 +38,10 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 	client := musicplayer.NewSpotifyClient(spotifyToken)
 
-
 	accountLevel := r.accountService.GetAccountLevel(accountID)
 
 	sessionID, err := r.sessionService.CreateSession(accountID, accountLevel)
-	
+
 	r.musicPlayers[sessionID] = client
 
 	r.accountService.SetAccountActiveSession(accountID, sessionID)
@@ -52,8 +51,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	go r.sessionService.CheckVotersExpirations(sessionID)
 
 	account := &model.Account{
-		ID:        accountID,
-		SessionID: &sessionID,
+		ID:        		accountID,
+		ActiveSession: &sessionID,
 	}
 
 	return account, nil
@@ -61,8 +60,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 // EndSession is the resolver for the endSession field.
 func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
-	accountID, _ := ctx.Value("accountID").(string)
-	if accountID == "" {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
 		return "", utils.LogAndReturnError("Account ID is required to end session", nil)
 	}
 
@@ -71,7 +70,7 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 		return "", utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != r.sessionService.GetSessionAdmin(sessionID) {
+	if accountID != r.sessionService.GetSessionAdminAccountID(sessionID) {
 		return "", utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
@@ -118,8 +117,8 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
-	accountID, _ := ctx.Value("accountID").(string)
-	if accountID == "" {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID is required to update currently playing song", nil)
 	}
 
@@ -128,7 +127,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != r.sessionService.GetSessionAdmin(sessionID) {
+	if accountID != r.sessionService.GetSessionAdminAccountID(sessionID) {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
@@ -208,8 +207,8 @@ func (r *mutationResolver) JoinVoters(ctx context.Context) (string, error) {
 
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error) {
-	accountID, _ := ctx.Value("accountID").(string)
-	if accountID == "" {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID required for adding Spotify token", nil)
 	}
 
@@ -220,8 +219,8 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 
 // SetPlaylist is the resolver for the setPlaylist field.
 func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error) {
-	accountID, _ := ctx.Value("accountID").(string)
-	if accountID == "" {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID required for setting playlist", nil)
 	}
 
@@ -230,7 +229,7 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != r.sessionService.GetSessionAdmin(sessionID) {
+	if accountID != r.sessionService.GetSessionAdminAccountID(sessionID) {
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to set playlists", nil)
 	}
 
@@ -275,7 +274,7 @@ func (r *queryResolver) Session(ctx context.Context, sessionID int) (*model.Sess
 // Voter is the resolver for the voter field.
 func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
 	voterID, _ := ctx.Value("voterID").(string)
-	accountID, _ := ctx.Value("accountID").(string)
+	accountID, _ := ctx.Value("accountID").(int)
 	if voterID == "" {
 		return nil, utils.LogAndReturnError("Voter ID required for getting voter", nil)
 	}
@@ -299,20 +298,20 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	voterType := constants.RegularVoterType
 	bonusVotes := 0
 
-	if accountID != "" {
-		voterLevel, bonusVotesValue:= r.accountService.GetVoterLevelAndBonusVotes(accountID)
+	if accountID != 0 {
+		voterLevel, bonusVotesValue := r.accountService.GetVoterLevelAndBonusVotes(accountID)
 		bonusVotes = bonusVotesValue
 
 		if voterLevel == constants.PrivilegedVoterType {
 			voterType = constants.PrivilegedVoterType
 		}
-		if r.sessionService.GetSessionAdmin(sessionID) == accountID {
+		if r.sessionService.GetSessionAdminAccountID(sessionID) == accountID {
 			voterType = constants.AdminVoterType
 		}
 	}
 
 	slog.Info("Generating new voter", "voter", voterID, "bonus-votes", bonusVotes)
-	newVoter, err := voter.NewVoter(voterID, accountID, voterType, bonusVotes)
+	newVoter, err := voter.NewVoter(voterID, voterType, accountID, bonusVotes)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}
@@ -325,8 +324,9 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 
 // Account is the resolver for the account field.
 func (r *queryResolver) Account(ctx context.Context) (*model.Account, error) {
-	accountID, _ := ctx.Value("accountID").(string)
-	if accountID == "" {
+	slog.Info("account ID")
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
 		return nil, utils.LogAndReturnError("No account found on token for getting account", nil)
 	}
 
@@ -337,8 +337,8 @@ func (r *queryResolver) Account(ctx context.Context) (*model.Account, error) {
 
 // Playlists is the resolver for the playlists field.
 func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error) {
-	accountID, _ := ctx.Value("accountID").(string)
-	if accountID == "" {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
 		return nil, utils.LogAndReturnError("accountID required for getting playlists", nil)
 	}
 
@@ -347,7 +347,7 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	if accountID != r.sessionService.GetSessionAdmin(sessionID) {
+	if accountID != r.sessionService.GetSessionAdminAccountID(sessionID) {
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to get playlists", nil)
 	}
 

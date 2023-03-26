@@ -1,7 +1,6 @@
 package account
 
 import (
-	"fmt"
 	"os"
 
 	"golang.org/x/exp/slog"
@@ -13,19 +12,19 @@ import (
 
 type AccountService interface {
 	GetAccountFromEmail(accountEmail string) *model.Account
-	GetAccountFromID(accountID string) *model.Account
-	GetAccountIDAndPassHash(accountEmail string) (string, string)
-	GetSpotifyRefreshToken(accountID string) string
-	GetAccountLevel(accountID string) string
-	GetVoterLevelAndBonusVotes(accountID string) (string, int)
+	GetAccountFromID(accountID int) *model.Account
+	GetAccountIDAndPassHash(accountEmail string) (int, string)
+	GetSpotifyRefreshToken(accountID int) string
+	GetAccountLevel(accountID int) string
+	GetVoterLevelAndBonusVotes(accountID int) (string, int)
 
-	SetAccountActiveSession(accountID string, sessionID int)
-	SetSpotifyRefreshToken(accountID, refreshToken string)
-	SubtractBonusVotes(accountID string, bonusVotes int)
+	SetAccountActiveSession(accountID int, sessionID int)
+	SetSpotifyRefreshToken(accountID int, refreshToken string)
+	SubtractBonusVotes(accountID, bonusVotes int)
 
 	CheckIfEmailHasAccount(email string) bool
 
-	AddAccount(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) string 
+	AddAccount(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) int 
 }
 
 type account struct {
@@ -70,7 +69,7 @@ func (a *AccountServiceGorm) GetAccountFromEmail(accountEmail string) *model.Acc
 	return transformAccountType(fullAccount)
 }
 
-func (a *AccountServiceGorm) GetAccountFromID(accountID string) *model.Account {
+func (a *AccountServiceGorm) GetAccountFromID(accountID int) *model.Account {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -79,44 +78,44 @@ func (a *AccountServiceGorm) GetAccountFromID(accountID string) *model.Account {
 
 func transformAccountType(fullAccount account) *model.Account {
 	accountToReturn := &model.Account{
-		ID: fmt.Sprintf("%d", fullAccount.ID),
+		ID: int(fullAccount.ID),
 		FirstName: &fullAccount.FirstName,
 		LastName: &fullAccount.LastName,
 		Email: &fullAccount.Email,
-		SessionID: &fullAccount.ActiveSession,
+		ActiveSession: &fullAccount.ActiveSession,
 	}
 	return accountToReturn
 }
 
-func (a *AccountServiceGorm) GetAccountIDAndPassHash(accountEmail string) (string, string) {
+func (a *AccountServiceGorm) GetAccountIDAndPassHash(accountEmail string) (int, string) {
 	var fullAccount account
 	a.gorm.Where("email = ?", accountEmail).First(&fullAccount)
 
-	return fmt.Sprintf("%d", fullAccount.ID), fullAccount.PasswordHash
+	return int(fullAccount.ID), fullAccount.PasswordHash
 }
 
-func (a *AccountServiceGorm) GetSpotifyRefreshToken(accountID string) string {
+func (a *AccountServiceGorm) GetSpotifyRefreshToken(accountID int) string {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.SpotifyRefreshToken
 }
 
-func (a *AccountServiceGorm) GetAccountLevel(accountID string) string {
+func (a *AccountServiceGorm) GetAccountLevel(accountID int) string {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.AccountLevel
 }
 
-func (a *AccountServiceGorm) GetVoterLevelAndBonusVotes(accountID string) (string, int) {
+func (a *AccountServiceGorm) GetVoterLevelAndBonusVotes(accountID int) (string, int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.VoterLevel, fullAccount.BonusVotes
 }
 
-func (a *AccountServiceGorm) SetAccountActiveSession(accountID string, sessionID int) {
+func (a *AccountServiceGorm) SetAccountActiveSession(accountID int, sessionID int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -124,7 +123,7 @@ func (a *AccountServiceGorm) SetAccountActiveSession(accountID string, sessionID
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID, refreshToken string) {
+func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID int, refreshToken string) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -132,7 +131,7 @@ func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID, refreshToken stri
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountServiceGorm) SubtractBonusVotes(accountID string, bonusVotes int) {
+func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -154,7 +153,7 @@ func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 }
 
 // TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountServiceGorm) AddAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) string {
+func (a *AccountServiceGorm) AddAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
 	accountToAdd := &account{
 		FirstName: 		newAccount.FirstName,
 		LastName: 		newAccount.LastName,
@@ -167,5 +166,5 @@ func (a *AccountServiceGorm) AddAccount(newAccount model.NewAccount, passwordHas
 	
 	a.gorm.Create(accountToAdd)
 
-	return fmt.Sprintf("%d", accountToAdd.ID)
+	return int(accountToAdd.ID)
 }

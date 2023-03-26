@@ -9,11 +9,11 @@ import (
 )
 
 
-func (s *Session) AddBonusVote(songID, accountID string, numberOfVotes, sessionID int) {
+func (s *Session) AddBonusVote(songID string, accountID, numberOfVotes, sessionID int) {
 	bonusVotes, bonusVoteMutex := s.lockAndGetBonusVotes(sessionID)
 
 	if _, exists := bonusVotes[songID][accountID]; !exists {
-		bonusVotes[songID] = make(map[string]int)
+		bonusVotes[songID] = make(map[int]int)
 	}
 	bonusVotes[songID][accountID] += numberOfVotes
 
@@ -26,10 +26,10 @@ func (s *Session) AddBonusVote(songID, accountID string, numberOfVotes, sessionI
 }
 
 
-func (s *Session) lockAndGetBonusVotes(sessionID int) (map[string]map[string]int, *redsync.Mutex) {
+func (s *Session) lockAndGetBonusVotes(sessionID int) (map[string]map[int]int, *redsync.Mutex) {
 	bonusVoteMutex := s.redsync.NewMutex(fmt.Sprintf("bonus-vote-mutex-%d", sessionID))
 	// Map of [song][account][votes]
-	var bonusVotes map[string]map[string]int
+	var bonusVotes map[string]map[int]int
 
 	bonusVoteMutex.Lock()
 	err := s.getStructFromRedis(getBonusVoteKey(sessionID), &bonusVotes)
@@ -41,7 +41,7 @@ func (s *Session) lockAndGetBonusVotes(sessionID int) (map[string]map[string]int
 	return bonusVotes, bonusVoteMutex
 }
 
-func (s *Session) setAndUnlockBonusVotes(sessionID int, bonusVotes map[string]map[string]int, bonusVoteMutex *redsync.Mutex) {
+func (s *Session) setAndUnlockBonusVotes(sessionID int, bonusVotes map[string]map[int]int, bonusVoteMutex *redsync.Mutex) {
 	err := s.setStructToRedis(getBonusVoteKey(sessionID), bonusVotes)
 	if err != nil {
 		slog.Warn("Error setting bonus votes:", "error", err)

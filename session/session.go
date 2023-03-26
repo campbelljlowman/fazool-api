@@ -51,7 +51,7 @@ func NewSessionService() *Session {
 	return sessionCache
 }
 
-func (s *Session) CreateSession(adminAccountID, accountLevel string) (int, error) {
+func (s *Session) CreateSession(adminAccountID int, accountLevel string) (int, error) {
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
 		return 0, utils.LogAndReturnError("Error generating session ID", err)
@@ -281,7 +281,7 @@ func (s *Session) GetSessionInfo(sessionID int) *model.SessionInfo {
 		ID: sessionID,
 		CurrentlyPlaying: s.getCurrentlyPlaying(sessionID),
 		Queue: s.getQueue(sessionID),
-		Admin: s.GetSessionAdmin(sessionID),
+		AdminAccountID: s.GetSessionAdminAccountID(sessionID),
 		NumberOfVoters: s.getNumberOfVoters(sessionID),
 		MaximumVoters: s.getSessionMaximumVoters(sessionID),
 	}

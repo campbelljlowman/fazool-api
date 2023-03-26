@@ -45,11 +45,11 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Account struct {
-		Email     func(childComplexity int) int
-		FirstName func(childComplexity int) int
-		ID        func(childComplexity int) int
-		LastName  func(childComplexity int) int
-		SessionID func(childComplexity int) int
+		ActiveSession func(childComplexity int) int
+		Email         func(childComplexity int) int
+		FirstName     func(childComplexity int) int
+		ID            func(childComplexity int) int
+		LastName      func(childComplexity int) int
 	}
 
 	CurrentlyPlayingSong struct {
@@ -89,7 +89,7 @@ type ComplexityRoot struct {
 	}
 
 	SessionInfo struct {
-		Admin            func(childComplexity int) int
+		AdminAccountID   func(childComplexity int) int
 		CurrentlyPlaying func(childComplexity int) int
 		ID               func(childComplexity int) int
 		MaximumVoters    func(childComplexity int) int
@@ -146,6 +146,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
+	case "Account.activeSession":
+		if e.complexity.Account.ActiveSession == nil {
+			break
+		}
+
+		return e.complexity.Account.ActiveSession(childComplexity), true
+
 	case "Account.email":
 		if e.complexity.Account.Email == nil {
 			break
@@ -173,13 +180,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Account.LastName(childComplexity), true
-
-	case "Account.sessionID":
-		if e.complexity.Account.SessionID == nil {
-			break
-		}
-
-		return e.complexity.Account.SessionID(childComplexity), true
 
 	case "CurrentlyPlayingSong.playing":
 		if e.complexity.CurrentlyPlayingSong.Playing == nil {
@@ -383,12 +383,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.QueuedSong.Votes(childComplexity), true
 
-	case "SessionInfo.admin":
-		if e.complexity.SessionInfo.Admin == nil {
+	case "SessionInfo.adminAccountID":
+		if e.complexity.SessionInfo.AdminAccountID == nil {
 			break
 		}
 
-		return e.complexity.SessionInfo.Admin(childComplexity), true
+		return e.complexity.SessionInfo.AdminAccountID(childComplexity), true
 
 	case "SessionInfo.currentlyPlaying":
 		if e.complexity.SessionInfo.CurrentlyPlaying == nil {
@@ -578,17 +578,17 @@ type SessionInfo {
   id: Int!
   currentlyPlaying: CurrentlyPlayingSong
   queue: [QueuedSong!]
-  admin: String!
+  adminAccountID: Int!
   numberOfVoters: Int!
   maximumVoters: Int!
 }
 
 type Account {
-  id: String!
+  id: Int!
   firstName: String
   lastName: String
   email: String
-  sessionID: Int
+  activeSession: Int
 }
 
 type VoterInfo {
@@ -957,9 +957,9 @@ func (ec *executionContext) _Account_id(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Account_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -969,7 +969,7 @@ func (ec *executionContext) fieldContext_Account_id(ctx context.Context, field g
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1098,8 +1098,8 @@ func (ec *executionContext) fieldContext_Account_email(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Account_sessionID(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Account_sessionID(ctx, field)
+func (ec *executionContext) _Account_activeSession(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Account_activeSession(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1112,7 +1112,7 @@ func (ec *executionContext) _Account_sessionID(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SessionID, nil
+		return obj.ActiveSession, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1126,7 +1126,7 @@ func (ec *executionContext) _Account_sessionID(ctx context.Context, field graphq
 	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Account_sessionID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Account_activeSession(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Account",
 		Field:      field,
@@ -1284,8 +1284,8 @@ func (ec *executionContext) fieldContext_Mutation_createSession(ctx context.Cont
 				return ec.fieldContext_Account_lastName(ctx, field)
 			case "email":
 				return ec.fieldContext_Account_email(ctx, field)
-			case "sessionID":
-				return ec.fieldContext_Account_sessionID(ctx, field)
+			case "activeSession":
+				return ec.fieldContext_Account_activeSession(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -1393,8 +1393,8 @@ func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Contex
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "admin":
-				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "adminAccountID":
+				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
 			case "numberOfVoters":
 				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
 			case "maximumVoters":
@@ -1462,8 +1462,8 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "admin":
-				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "adminAccountID":
+				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
 			case "numberOfVoters":
 				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
 			case "maximumVoters":
@@ -1687,8 +1687,8 @@ func (ec *executionContext) fieldContext_Mutation_upsertSpotifyToken(ctx context
 				return ec.fieldContext_Account_lastName(ctx, field)
 			case "email":
 				return ec.fieldContext_Account_email(ctx, field)
-			case "sessionID":
-				return ec.fieldContext_Account_sessionID(ctx, field)
+			case "activeSession":
+				return ec.fieldContext_Account_activeSession(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -1752,8 +1752,8 @@ func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Contex
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "admin":
-				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "adminAccountID":
+				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
 			case "numberOfVoters":
 				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
 			case "maximumVoters":
@@ -1950,8 +1950,8 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
 			case "queue":
 				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "admin":
-				return ec.fieldContext_SessionInfo_admin(ctx, field)
+			case "adminAccountID":
+				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
 			case "numberOfVoters":
 				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
 			case "maximumVoters":
@@ -2086,8 +2086,8 @@ func (ec *executionContext) fieldContext_Query_account(ctx context.Context, fiel
 				return ec.fieldContext_Account_lastName(ctx, field)
 			case "email":
 				return ec.fieldContext_Account_email(ctx, field)
-			case "sessionID":
-				return ec.fieldContext_Account_sessionID(ctx, field)
+			case "activeSession":
+				return ec.fieldContext_Account_activeSession(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2582,8 +2582,8 @@ func (ec *executionContext) fieldContext_SessionInfo_queue(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionInfo_admin(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_admin(ctx, field)
+func (ec *executionContext) _SessionInfo_adminAccountID(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2596,7 +2596,7 @@ func (ec *executionContext) _SessionInfo_admin(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Admin, nil
+		return obj.AdminAccountID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2608,19 +2608,19 @@ func (ec *executionContext) _SessionInfo_admin(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SessionInfo_admin(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionInfo_adminAccountID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SessionInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5059,9 +5059,9 @@ func (ec *executionContext) _Account(ctx context.Context, sel ast.SelectionSet, 
 
 			out.Values[i] = ec._Account_email(ctx, field, obj)
 
-		case "sessionID":
+		case "activeSession":
 
-			out.Values[i] = ec._Account_sessionID(ctx, field, obj)
+			out.Values[i] = ec._Account_activeSession(ctx, field, obj)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -5470,9 +5470,9 @@ func (ec *executionContext) _SessionInfo(ctx context.Context, sel ast.SelectionS
 
 			out.Values[i] = ec._SessionInfo_queue(ctx, field, obj)
 
-		case "admin":
+		case "adminAccountID":
 
-			out.Values[i] = ec._SessionInfo_admin(ctx, field, obj)
+			out.Values[i] = ec._SessionInfo_adminAccountID(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
