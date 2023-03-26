@@ -6,7 +6,6 @@ import (
 	"golang.org/x/exp/slog"
 
 	"github.com/campbelljlowman/fazool-api/account"
-	"github.com/campbelljlowman/fazool-api/cache"
 	"github.com/campbelljlowman/fazool-api/database"
 	"github.com/campbelljlowman/fazool-api/graph"
 	"github.com/campbelljlowman/fazool-api/session"
@@ -14,8 +13,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redsync/redsync/v4"
-	"github.com/go-redsync/redsync/v4/redis/goredis/v9"
 )
 
 func InitializeRoutes() *gin.Engine {
@@ -37,12 +34,9 @@ func InitializeRoutes() *gin.Engine {
 	})
 
 	pgClient := database.NewPostgresClient()
-	redisClient := cache.GetRedisClient()
-	redisPool := goredis.NewPool(redisClient) 
-	redSync := redsync.New(redisPool)
-	sessionCache := session.NewSessionClient(redSync, redisClient)
+	sessionService := session.NewSessionService()
 	accountService := account.NewAccountGorm()
-	r := graph.NewResolver(pgClient, sessionCache, accountService)
+	r := graph.NewResolver(pgClient, sessionService, accountService)
 	srv := graph.NewGraphQLServer(r)
 
 	router.Any("/query", func(c *gin.Context) {

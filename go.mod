@@ -16,6 +16,8 @@ require (
 	github.com/zmb3/spotify/v2 v2.3.0
 	golang.org/x/exp v0.0.0-20221114191408-850992195362
 	golang.org/x/oauth2 v0.0.0-20210810183815-faf39c7919d5
+	gorm.io/driver/postgres v1.5.0
+	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11
 )
 
 require (
@@ -58,6 +60,4 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gorm.io/driver/postgres v1.5.0 // indirect
-	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11 // indirect
 )

@@ -11,6 +11,7 @@ import (
 	"github.com/go-redsync/redsync/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/go-redsync/redsync/v4/redis/goredis/v9"
 	"golang.org/x/exp/slog"
 	"golang.org/x/exp/slices"
 
@@ -40,9 +41,13 @@ type Session struct {
 	redisClient 		*redis.Client
 }
 
-func NewSessionClient(redsync *redsync.Redsync, redisClient *redis.Client) *Session {
+func NewSessionService() *Session {
+	redisClient := getRedisClient()
+	redisPool := goredis.NewPool(redisClient) 
+	redSync := redsync.New(redisPool)
+
 	sessionCache := &Session{
-		redsync: redsync,
+		redsync: redSync,
 		redisClient: redisClient,
 	}
 	// Clean up any data from previous run, this should be removed when running in production
@@ -318,4 +323,22 @@ func (s *Session) setStructToRedis(key string, value interface{}) error {
        return err
     }
     return s.redisClient.Set(context.Background(), key, string(valueString), 0).Err()
+}
+
+func getRedisClient() *redis.Client {
+	redisURL := os.Getenv("REDIS_URL")
+
+	rdb := redis.NewClient(&redis.Options{
+        Addr:     redisURL,
+        Password: "", // no password set
+        DB:       0,  // use default DB
+    })
+
+	_, err := rdb.Ping(context.Background()).Result()
+	if err != nil {
+		slog.Error("Error connecting to Redis", err)
+		os.Exit(1)
+	}
+
+	return rdb
 }
