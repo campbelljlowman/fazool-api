@@ -40,17 +40,12 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 	accountLevel := r.accountService.GetAccountLevel(accountID)
 
-	sessionID, err := r.sessionService.CreateSession(accountID, accountLevel, client)
+	sessionID, err := r.sessionService.CreateSession(accountID, accountLevel, client, r.accountService)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error creating new session", err)
 	}
 
 	r.accountService.SetAccountActiveSession(accountID, sessionID)
-
-	// TODO: Add these as part of the constructor
-	go r.sessionService.WatchSpotifyCurrentlyPlaying(sessionID, r.accountService)
-	// TODO: Add this to scheduler, and make this only run once
-	go r.sessionService.WatchVotersExpirations(sessionID)
 
 	account := &model.Account{
 		ID:        		accountID,
@@ -104,7 +99,6 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		return nil, utils.LogAndReturnError("Error processing vote", err)
 	}
 
-	// TODO: Remove bonus votes if applicable?
 	if isBonusVote {
 		r.sessionService.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes, sessionID)
 	}

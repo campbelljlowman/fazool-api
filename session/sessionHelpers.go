@@ -53,18 +53,6 @@ func (s *SessionServiceInMemory) expireSession(sessionID int) {
 	session.expiryMutex.Unlock()
 }
 
-func (s *SessionServiceInMemory) isExpired(sessionID int) bool {
-	s.allSessionsMutex.Lock()
-	session := s.sessions[sessionID]
-	s.allSessionsMutex.Unlock()
-
-	session.expiryMutex.Lock()
-	isExpired := session.expiresAt.Before(time.Now())
-	session.expiryMutex.Unlock()
-	return isExpired
-}
-
-
 func (s *SessionServiceInMemory) setQueue(sessionID int, newQueue [] *model.QueuedSong) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]

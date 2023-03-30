@@ -16,7 +16,7 @@ import (
 )
 
 type SessionService interface {
-	CreateSession(adminAccountID int, accountLevel string, streamingService streamingService.StreamingService) (int, error)
+	CreateSession(adminAccountID int, accountLevel string, streamingService streamingService.StreamingService, accountService account.AccountService) (int, error)
 
 	GetSessionInfo(sessionID int) *model.SessionInfo
 	GetSessionAdminAccountID(sessionID int) int
@@ -63,15 +63,17 @@ const sessionTimeout time.Duration = 30 // Minutes
 const spotifyWatchFrequency time.Duration = 250 // Milliseconds
 const voterWatchFrequency time.Duration = 1 // Seconds
 
-func NewSessionServiceInMemoryImpl() *SessionServiceInMemory{
+func NewSessionServiceInMemoryImpl(accountService account.AccountService) *SessionServiceInMemory{
 	sessionInMemory := &SessionServiceInMemory{
 		sessions: 			make(map[int]*Session),
 		allSessionsMutex: 	&sync.Mutex{},
 	}
+
+	go sessionInMemory.WatchSessions(accountService)
 	return sessionInMemory
 }
 
-func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel string, streamingService streamingService.StreamingService) (int, error) {
+func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel string, streamingService streamingService.StreamingService, accountService account.AccountService) (int, error) {
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
 		return 0, err
@@ -108,6 +110,10 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel 
 	s.allSessionsMutex.Lock()
 	s.sessions[sessionID] = &session
 	s.allSessionsMutex.Unlock()
+
+	go s.WatchSpotifyCurrentlyPlaying(sessionID, accountService)
+	go s.WatchVotersExpirations(sessionID)
+	
 	
 	return sessionID, nil
 }
@@ -329,7 +335,11 @@ func (s *SessionServiceInMemory) WatchSpotifyCurrentlyPlaying(sessionID int, acc
 	addNextSongFlag := false
 
 	for {
-		if time.Now().After(session.expiresAt) {
+		session.expiryMutex.Lock()
+		sessionExpired := time.Now().After(session.expiresAt)
+		session.expiryMutex.Unlock()
+
+		if sessionExpired {
 			slog.Info("Session has expired, ending session spotify watcher", "session_id", session.sessionInfo.ID)
 			return
 		}
@@ -390,15 +400,20 @@ func (s *SessionServiceInMemory) WatchSessions(accountService account.AccountSer
 	var sessionsToEnd []int
 
 	for {
-
 		s.allSessionsMutex.Lock()
-		for sessionID := range s.sessions {
-			if s.isExpired(sessionID) {
+
+		for sessionID, session := range s.sessions {
+			session.expiryMutex.Lock()
+			sessionExpired := time.Now().After(session.expiresAt)
+			session.expiryMutex.Unlock()
+
+			if sessionExpired {
 				sessionsToEnd = append(sessionsToEnd, sessionID)
-				s.EndSession(sessionID, accountService)
 			}
 		}
+
 		s.allSessionsMutex.Unlock()
+
 
 		for sessionID := range sessionsToEnd {
 			s.EndSession(sessionID, accountService)
@@ -409,7 +424,6 @@ func (s *SessionServiceInMemory) WatchSessions(accountService account.AccountSer
 	}
 }
 
-// TODO: Write function that watches voters and removes any inactive ones
 func (s *SessionServiceInMemory) WatchVotersExpirations(sessionID int) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
@@ -417,7 +431,11 @@ func (s *SessionServiceInMemory) WatchVotersExpirations(sessionID int) {
 
 
 	for {
-		if time.Now().After(session.expiresAt) {
+		session.expiryMutex.Lock()
+		sessionExpired := time.Now().After(session.expiresAt)
+		session.expiryMutex.Unlock()
+
+		if sessionExpired {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", session.sessionInfo.ID)
 			return
 		}
@@ -427,7 +445,7 @@ func (s *SessionServiceInMemory) WatchVotersExpirations(sessionID int) {
 			if voter.VoterType == constants.AdminVoterType {
 				continue
 			}
-
+			
 			if time.Now().After(voter.ExpiresAt) {
 				slog.Info("Voter exipred! Removing", "voter", voter.VoterID)
 				delete(session.voters, voter.VoterID)
