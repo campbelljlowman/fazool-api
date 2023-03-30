@@ -1,4 +1,4 @@
-package musicplayer
+package streamingService
 
 import (
 	"context"
