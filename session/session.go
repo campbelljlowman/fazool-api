@@ -18,7 +18,8 @@ import (
 type SessionService interface {
 	CreateSession(adminAccountID int, accountLevel string, streamingService streamingService.StreamingService, accountService account.AccountService) (int, error)
 
-	GetSessionInfo(sessionID int) *model.SessionInfo
+	GetSessionConfig(sessionID int) *model.SessionConfig
+	GetSessionState(sessionID int) *model.SessionState
 	GetSessionAdminAccountID(sessionID int) int
 	GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool)
 	GetPlaylists(sessionID int) ([]*model.Playlist, error)
@@ -37,13 +38,14 @@ type SessionService interface {
 }
 
 type Session struct {
-	sessionInfo    		*model.SessionInfo
+	sessionConfig    	*model.SessionConfig
+	sessionState    	*model.SessionState
 	voters         		map[string]*voter.Voter
 	streamingService    streamingService.StreamingService
 	expiresAt      		time.Time
 	// Map of [song][account][votes]
 	bonusVotes     		map[string]map[int]int
-	queueMutex     		*sync.Mutex
+	sessionStateMutex	*sync.Mutex
 	votersMutex    		*sync.Mutex
 	expiryMutex    		*sync.Mutex
 	bonusVoteMutex 		*sync.Mutex
@@ -80,24 +82,29 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel 
 		maximumVoters = 50
 	}
 
-	sessionInfo := &model.SessionInfo{
+	sessionConfig := &model.SessionConfig{
 		ID: sessionID,
+		AdminAccountID: adminAccountID,
+		MaximumVoters: maximumVoters,
+	}
+
+	sessionState := &model.SessionState{
 		CurrentlyPlaying: &model.CurrentlyPlayingSong{
 			SimpleSong: &model.SimpleSong{},
 			Playing:    false,
 		},
 		Queue: nil,
-		AdminAccountID: adminAccountID,
-		MaximumVoters: maximumVoters,
+		NumberOfVoters: 0,
 	}
 
 	session := Session{
-		sessionInfo:    	sessionInfo,
+		sessionConfig:    	sessionConfig,
+		sessionState: 		sessionState,	
 		voters:         	make(map[string]*voter.Voter),
 		streamingService:   streamingService,
 		expiresAt:      	time.Now().Add(sessionTimeout * time.Minute),
 		bonusVotes:     	make(map[string]map[int]int),
-		queueMutex:     	&sync.Mutex{},
+		sessionStateMutex:	&sync.Mutex{},
 		votersMutex:    	&sync.Mutex{},
 		expiryMutex:    	&sync.Mutex{},
 		bonusVoteMutex: 	&sync.Mutex{},
@@ -114,12 +121,24 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel 
 	return sessionID, nil
 }
 
-func (s *SessionServiceInMemory) GetSessionInfo(sessionID int) *model.SessionInfo {
+func (s *SessionServiceInMemory) GetSessionConfig(sessionID int) *model.SessionConfig {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
-	return session.sessionInfo
+	return session.sessionConfig
+}
+
+func (s *SessionServiceInMemory) GetSessionState(sessionID int) *model.SessionState {
+	s.allSessionsMutex.Lock()
+	session := s.sessions[sessionID]
+	s.allSessionsMutex.Unlock()
+
+	session.sessionStateMutex.Lock()
+	sessionState := session.sessionState
+	session.sessionStateMutex.Unlock()
+
+	return sessionState
 }
 
 func (s *SessionServiceInMemory) GetSessionAdminAccountID(sessionID int) int {
@@ -127,7 +146,7 @@ func (s *SessionServiceInMemory) GetSessionAdminAccountID(sessionID int) int {
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
-	return session.sessionInfo.AdminAccountID
+	return session.sessionConfig.AdminAccountID
 }
 
 func (s *SessionServiceInMemory) GetVoterInSession(sessionID int, voterID string) (*voter.Voter, bool){
@@ -155,12 +174,15 @@ func (s *SessionServiceInMemory) IsSessionFull(sessionID int) bool {
 	s.allSessionsMutex.Unlock()
 
 	isFull := false
+
 	session.votersMutex.Lock()
-	// TODO: Check the number of active voters
-	if len(session.voters) >= session.sessionInfo.MaximumVoters  {
+	session.sessionStateMutex.Lock()
+	if session.sessionState.NumberOfVoters >= session.sessionConfig.MaximumVoters  {
 		isFull = true
 	}
 	session.votersMutex.Unlock()
+	session.sessionStateMutex.Unlock()
+
 	return isFull
 }
 
@@ -185,8 +207,8 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.Son
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
-	session.queueMutex.Lock()
-	idx := slices.IndexFunc(session.sessionInfo.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
+	session.sessionStateMutex.Lock()
+	idx := slices.IndexFunc(session.sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
 	if idx == -1 {
 		// add new song to queue
 		newSong := &model.QueuedSong{
@@ -198,15 +220,15 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.Son
 			},
 			Votes: vote,
 		}
-		session.sessionInfo.Queue = append(session.sessionInfo.Queue, newSong)
+		session.sessionState.Queue = append(session.sessionState.Queue, newSong)
 	} else {
-		queuedSong := session.sessionInfo.Queue[idx]
+		queuedSong := session.sessionState.Queue[idx]
 		queuedSong.Votes += vote
 	}
 
 	// Sort queue
-	sort.Slice(session.sessionInfo.Queue, func(i, j int) bool { return session.sessionInfo.Queue[i].Votes > session.sessionInfo.Queue[j].Votes })
-	session.queueMutex.Unlock()
+	sort.Slice(session.sessionState.Queue, func(i, j int) bool { return session.sessionState.Queue[i].Votes > session.sessionState.Queue[j].Votes })
+	session.sessionStateMutex.Unlock()
 	s.refreshSession(sessionID)
 }
 
@@ -219,6 +241,10 @@ func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, newVoter *v
 	session.voters[newVoter.VoterID] = newVoter
 	session.votersMutex.Unlock()
 	// TODO: update number of active voters in session
+
+	session.sessionStateMutex.Lock()
+	session.sessionState.NumberOfVoters++
+	session.sessionStateMutex.Unlock()
 }
 
 func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error {
@@ -254,14 +280,14 @@ func (s *SessionServiceInMemory) AdvanceQueue(sessionID int, force bool, account
 
 	var song *model.SimpleSong
 
-	session.queueMutex.Lock()
-	if len(session.sessionInfo.Queue) == 0 {
-		session.queueMutex.Unlock()
+	session.sessionStateMutex.Lock()
+	if len(session.sessionState.Queue) == 0 {
+		session.sessionStateMutex.Unlock()
 		return nil
 	}
 
-	song, session.sessionInfo.Queue = session.sessionInfo.Queue[0].SimpleSong, session.sessionInfo.Queue[1:]
-	session.queueMutex.Unlock()
+	song, session.sessionState.Queue = session.sessionState.Queue[0].SimpleSong, session.sessionState.Queue[1:]
+	session.sessionStateMutex.Unlock()
 
 	err := session.streamingService.QueueSong(song.ID)
 	if err != nil {
@@ -329,7 +355,7 @@ func (s *SessionServiceInMemory) EndSession(sessionID int, accountService accoun
 	delete(s.sessions, sessionID)
 	s.allSessionsMutex.Unlock()
 
-	accountService.SetAccountActiveSession(session.sessionInfo.AdminAccountID, 0)
+	accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
 
 	s.expireSession(sessionID)	
 }

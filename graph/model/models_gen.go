@@ -44,13 +44,16 @@ type QueuedSong struct {
 	Votes      int         `json:"votes"`
 }
 
-type SessionInfo struct {
-	ID               int                   `json:"id"`
+type SessionConfig struct {
+	ID             int `json:"id"`
+	AdminAccountID int `json:"adminAccountID"`
+	MaximumVoters  int `json:"maximumVoters"`
+}
+
+type SessionState struct {
 	CurrentlyPlaying *CurrentlyPlayingSong `json:"currentlyPlaying"`
 	Queue            []*QueuedSong         `json:"queue"`
-	AdminAccountID   int                   `json:"adminAccountID"`
 	NumberOfVoters   int                   `json:"numberOfVoters"`
-	MaximumVoters    int                   `json:"maximumVoters"`
 }
 
 type SimpleSong struct {

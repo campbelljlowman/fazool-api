@@ -48,7 +48,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	r.accountService.SetAccountActiveSession(accountID, sessionID)
 
 	account := &model.Account{
-		ID:        		accountID,
+		ID:            accountID,
 		ActiveSession: &sessionID,
 	}
 
@@ -77,7 +77,7 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
-func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error) {
+func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionState, error) {
 	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
 	voterID, _ := ctx.Value("voterID").(string)
 	if voterID == "" {
@@ -108,11 +108,11 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	r.sessionService.UpsertQueue(sessionID, numberOfVotes, song)
 
-	return r.sessionService.GetSessionInfo(sessionID), nil
+	return r.sessionService.GetSessionState(sessionID), nil
 }
 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
-func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error) {
+func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionState, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID is required to update currently playing song", nil)
@@ -132,7 +132,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		return nil, utils.LogAndReturnError("Error updating currently playing", err)
 	}
 
-	return r.sessionService.GetSessionInfo(sessionID), nil
+	return r.sessionService.GetSessionState(sessionID), nil
 }
 
 // CreateAccount is the resolver for the createAccount field.
@@ -199,7 +199,7 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 }
 
 // SetPlaylist is the resolver for the setPlaylist field.
-func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error) {
+func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionState, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID required for setting playlist", nil)
@@ -219,14 +219,14 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("Error setting sesison playlist", err)
 	}
 
-	return r.sessionService.GetSessionInfo(sessionID), nil
+	return r.sessionService.GetSessionState(sessionID), nil
 }
 
-// Session is the resolver for the session field.
-func (r *queryResolver) Session(ctx context.Context, sessionID int) (*model.SessionInfo, error) {
+// SessionConfig is the resolver for the sessionConfig field.
+func (r *queryResolver) SessionConfig(ctx context.Context, sessionID int) (*model.SessionConfig, error) {
 	voterID, _ := ctx.Value("voterID").(string)
 	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID is required to get session", nil)
+		return nil, utils.LogAndReturnError("Voter ID is required to get session config", nil)
 	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
@@ -235,9 +235,23 @@ func (r *queryResolver) Session(ctx context.Context, sessionID int) (*model.Sess
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
 	}
 
-	returnSession := r.sessionService.GetSessionInfo(sessionID)
+	return r.sessionService.GetSessionConfig(sessionID), nil
+}
 
-	return returnSession, nil
+// SessionState is the resolver for the sessionState field.
+func (r *queryResolver) SessionState(ctx context.Context, sessionID int) (*model.SessionState, error) {
+	voterID, _ := ctx.Value("voterID").(string)
+	if voterID == "" {
+		return nil, utils.LogAndReturnError("Voter ID is required to get session state", nil)
+	}
+
+	exists := r.sessionService.DoesSessionExist(sessionID)
+
+	if !exists {
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
+	}
+
+	return r.sessionService.GetSessionState(sessionID), nil
 }
 
 // Voter is the resolver for the voter field.
