@@ -62,9 +62,9 @@ func (s *SessionServiceInMemory) setQueue(sessionID int, newQueue [] *model.Queu
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
-	session.queueMutex.Lock()
-	session.sessionInfo.Queue = newQueue
-	session.queueMutex.Unlock()
+	session.sessionStateMutex.Lock()
+	session.sessionState.Queue = newQueue
+	session.sessionStateMutex.Unlock()
 }
 
 func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, accountService account.AccountService) {
@@ -74,6 +74,7 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 
 	sendUpdateFlag := false
 	addNextSongFlag := false
+	advanceQueueFlag := false
 
 	for {
 		session.expiryMutex.Lock()
@@ -81,7 +82,7 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 		session.expiryMutex.Unlock()
 
 		if sessionExpired {
-			slog.Info("Session has expired, ending session spotify watcher", "session_id", session.sessionInfo.ID)
+			slog.Info("Session has expired, ending session spotify watcher", "session_id", sessionID)
 			return
 		}
 
@@ -92,15 +93,16 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 			continue
 		}
 
+		session.sessionStateMutex.Lock()
 		if spotifyCurrentlyPlaying == true {
-			if session.sessionInfo.CurrentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
+			if session.sessionState.CurrentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
-				session.sessionInfo.CurrentlyPlaying = spotifyCurrentlyPlayingSong
+				session.sessionState.CurrentlyPlaying = spotifyCurrentlyPlayingSong
 				sendUpdateFlag = true
 				addNextSongFlag = true
-			} else if session.sessionInfo.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
+			} else if session.sessionState.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
 				// If same song is paused and then played, set the new state
-				session.sessionInfo.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
+				session.sessionState.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
 				sendUpdateFlag = true
 			}
 
@@ -114,19 +116,23 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 			}
 
 			if timeLeft < 5000 && addNextSongFlag {
-				s.AdvanceQueue(sessionID, false, accountService)
-
+				advanceQueueFlag = true
 				sendUpdateFlag = true
 				addNextSongFlag = false
 			}
 		} else {
 			// Change currently playing to false if music gets paused
-			if session.sessionInfo.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
-				session.sessionInfo.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
+			if session.sessionState.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
+				session.sessionState.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
 				sendUpdateFlag = true
 			}
 		}
+		session.sessionStateMutex.Unlock()
 
+		if advanceQueueFlag {
+			s.AdvanceQueue(sessionID, false, accountService)
+			advanceQueueFlag = false
+		}
 		if sendUpdateFlag {
 			s.refreshSession(sessionID)
 			s.sendUpdate(sessionID)
@@ -134,6 +140,44 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 
 		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
 		time.Sleep(spotifyWatchFrequency * time.Millisecond)
+	}
+}
+
+func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
+	s.allSessionsMutex.Lock()
+	session := s.sessions[sessionID]
+	s.allSessionsMutex.Unlock()
+
+
+	for {
+		session.expiryMutex.Lock()
+		sessionExpired := time.Now().After(session.expiresAt)
+		session.expiryMutex.Unlock()
+
+		if sessionExpired {
+			slog.Info("Session has expired, ending session voter watcher", "session_id", sessionID)
+			return
+		}
+
+		session.votersMutex.Lock()
+		for _, voter := range session.voters {
+			if voter.VoterType == constants.AdminVoterType {
+				continue
+			}
+			
+			if time.Now().After(voter.ExpiresAt) {
+				slog.Info("Voter exipred! Removing", "voter", voter.VoterID)
+				delete(session.voters, voter.VoterID)
+
+				session.sessionStateMutex.Lock()
+				session.sessionState.NumberOfVoters--
+				session.sessionStateMutex.Unlock()
+			}
+
+		}
+		session.votersMutex.Unlock()
+
+		time.Sleep(voterWatchFrequency * time.Second)
 	}
 }
 
@@ -162,39 +206,5 @@ func (s *SessionServiceInMemory) watchSessions(accountService account.AccountSer
 		sessionsToEnd = nil
 
 		time.Sleep(sessionWatchFrequency * time.Second)
-	}
-}
-
-func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
-	s.allSessionsMutex.Lock()
-	session := s.sessions[sessionID]
-	s.allSessionsMutex.Unlock()
-
-
-	for {
-		session.expiryMutex.Lock()
-		sessionExpired := time.Now().After(session.expiresAt)
-		session.expiryMutex.Unlock()
-
-		if sessionExpired {
-			slog.Info("Session has expired, ending session voter watcher", "session_id", session.sessionInfo.ID)
-			return
-		}
-
-		session.votersMutex.Lock()
-		for _, voter := range session.voters {
-			if voter.VoterType == constants.AdminVoterType {
-				continue
-			}
-			
-			if time.Now().After(voter.ExpiresAt) {
-				slog.Info("Voter exipred! Removing", "voter", voter.VoterID)
-				delete(session.voters, voter.VoterID)
-			}
-
-		}
-		session.votersMutex.Unlock()
-
-		time.Sleep(voterWatchFrequency * time.Second)
 	}
 }

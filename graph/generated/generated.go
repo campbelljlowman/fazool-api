@@ -76,11 +76,12 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Account     func(childComplexity int) int
-		MusicSearch func(childComplexity int, sessionID int, query string) int
-		Playlists   func(childComplexity int, sessionID int) int
-		Session     func(childComplexity int, sessionID int) int
-		Voter       func(childComplexity int, sessionID int) int
+		Account       func(childComplexity int) int
+		MusicSearch   func(childComplexity int, sessionID int, query string) int
+		Playlists     func(childComplexity int, sessionID int) int
+		SessionConfig func(childComplexity int, sessionID int) int
+		SessionState  func(childComplexity int, sessionID int) int
+		Voter         func(childComplexity int, sessionID int) int
 	}
 
 	QueuedSong struct {
@@ -88,11 +89,14 @@ type ComplexityRoot struct {
 		Votes      func(childComplexity int) int
 	}
 
-	SessionInfo struct {
-		AdminAccountID   func(childComplexity int) int
+	SessionConfig struct {
+		AdminAccountID func(childComplexity int) int
+		ID             func(childComplexity int) int
+		MaximumVoters  func(childComplexity int) int
+	}
+
+	SessionState struct {
 		CurrentlyPlaying func(childComplexity int) int
-		ID               func(childComplexity int) int
-		MaximumVoters    func(childComplexity int) int
 		NumberOfVoters   func(childComplexity int) int
 		Queue            func(childComplexity int) int
 	}
@@ -115,16 +119,17 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreateSession(ctx context.Context) (*model.Account, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
-	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionInfo, error)
-	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionInfo, error)
+	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionState, error)
+	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionState, error)
 	CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	JoinVoters(ctx context.Context) (string, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error)
-	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionInfo, error)
+	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionState, error)
 }
 type QueryResolver interface {
-	Session(ctx context.Context, sessionID int) (*model.SessionInfo, error)
+	SessionConfig(ctx context.Context, sessionID int) (*model.SessionConfig, error)
+	SessionState(ctx context.Context, sessionID int) (*model.SessionState, error)
 	Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error)
 	Account(ctx context.Context) (*model.Account, error)
 	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
@@ -345,17 +350,29 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Playlists(childComplexity, args["sessionID"].(int)), true
 
-	case "Query.session":
-		if e.complexity.Query.Session == nil {
+	case "Query.sessionConfig":
+		if e.complexity.Query.SessionConfig == nil {
 			break
 		}
 
-		args, err := ec.field_Query_session_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_sessionConfig_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.Session(childComplexity, args["sessionID"].(int)), true
+		return e.complexity.Query.SessionConfig(childComplexity, args["sessionID"].(int)), true
+
+	case "Query.sessionState":
+		if e.complexity.Query.SessionState == nil {
+			break
+		}
+
+		args, err := ec.field_Query_sessionState_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.SessionState(childComplexity, args["sessionID"].(int)), true
 
 	case "Query.voter":
 		if e.complexity.Query.Voter == nil {
@@ -383,47 +400,47 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.QueuedSong.Votes(childComplexity), true
 
-	case "SessionInfo.adminAccountID":
-		if e.complexity.SessionInfo.AdminAccountID == nil {
+	case "SessionConfig.adminAccountID":
+		if e.complexity.SessionConfig.AdminAccountID == nil {
 			break
 		}
 
-		return e.complexity.SessionInfo.AdminAccountID(childComplexity), true
+		return e.complexity.SessionConfig.AdminAccountID(childComplexity), true
 
-	case "SessionInfo.currentlyPlaying":
-		if e.complexity.SessionInfo.CurrentlyPlaying == nil {
+	case "SessionConfig.id":
+		if e.complexity.SessionConfig.ID == nil {
 			break
 		}
 
-		return e.complexity.SessionInfo.CurrentlyPlaying(childComplexity), true
+		return e.complexity.SessionConfig.ID(childComplexity), true
 
-	case "SessionInfo.id":
-		if e.complexity.SessionInfo.ID == nil {
+	case "SessionConfig.maximumVoters":
+		if e.complexity.SessionConfig.MaximumVoters == nil {
 			break
 		}
 
-		return e.complexity.SessionInfo.ID(childComplexity), true
+		return e.complexity.SessionConfig.MaximumVoters(childComplexity), true
 
-	case "SessionInfo.maximumVoters":
-		if e.complexity.SessionInfo.MaximumVoters == nil {
+	case "SessionState.currentlyPlaying":
+		if e.complexity.SessionState.CurrentlyPlaying == nil {
 			break
 		}
 
-		return e.complexity.SessionInfo.MaximumVoters(childComplexity), true
+		return e.complexity.SessionState.CurrentlyPlaying(childComplexity), true
 
-	case "SessionInfo.numberOfVoters":
-		if e.complexity.SessionInfo.NumberOfVoters == nil {
+	case "SessionState.numberOfVoters":
+		if e.complexity.SessionState.NumberOfVoters == nil {
 			break
 		}
 
-		return e.complexity.SessionInfo.NumberOfVoters(childComplexity), true
+		return e.complexity.SessionState.NumberOfVoters(childComplexity), true
 
-	case "SessionInfo.queue":
-		if e.complexity.SessionInfo.Queue == nil {
+	case "SessionState.queue":
+		if e.complexity.SessionState.Queue == nil {
 			break
 		}
 
-		return e.complexity.SessionInfo.Queue(childComplexity), true
+		return e.complexity.SessionState.Queue(childComplexity), true
 
 	case "SimpleSong.artist":
 		if e.complexity.SimpleSong.Artist == nil {
@@ -558,50 +575,53 @@ var sources = []*ast.Source{
 # https://gqlgen.com/getting-started/
 
 type SimpleSong {
-  id: String!
-  title: String!
+  id:     String!
+  title:  String!
   artist: String!
-  image: String!
+  image:  String!
 }
 
 type QueuedSong {
   simpleSong: SimpleSong!
-  votes: Int!
+  votes:      Int!
 }
 
 type CurrentlyPlayingSong {
   simpleSong: SimpleSong!
-  playing: Boolean!
+  playing:    Boolean!
 }
 
-type SessionInfo {
-  id: Int!
+type SessionState {
   currentlyPlaying: CurrentlyPlayingSong
-  queue: [QueuedSong!]
+  queue:            [QueuedSong!]
+  numberOfVoters:   Int!
+}
+
+type SessionConfig {
+  id:             Int!
   adminAccountID: Int!
-  numberOfVoters: Int!
-  maximumVoters: Int!
+  maximumVoters:  Int!
 }
 
 type Account {
-  id: Int!
-  firstName: String
-  lastName: String
-  email: String
-  activeSession: Int
+  id:             Int!
+  firstName:      String
+  lastName:       String
+  email:          String
+  activeSession:  Int
 }
 
 type VoterInfo {
-  type: String!
-  songsUpVoted: [String!]
+  type:           String!
+  songsUpVoted:   [String!]
   songsDownVoted: [String!]
-  bonusVotes: Int
+  bonusVotes:     Int
 }
 
 type Playlist {
-  id: String!
-  name: String!
-  image: String!
+  id:     String!
+  name:   String!
+  image:  String!
 }
 
 enum QueueAction {
@@ -621,33 +641,34 @@ enum SongVoteAction {
 }
 
 input SongUpdate {
-  id: String!
-  title: String
+  id:     String!
+  title:  String
   artist: String
-  image: String
-  vote: SongVoteDirection!
+  image:  String
+  vote:   SongVoteDirection!
   action: SongVoteAction!
 }
 
 input NewAccount {
-  firstName: String!
-  lastName: String!
-  email: String!
-  password: String!
+  firstName:  String!
+  lastName:   String!
+  email:      String!
+  password:   String!
 }
 
 input AccountLogin {
-  email: String!
+  email:    String!
   password: String!
 }
 
 input SpotifyCreds {
-  accessToken: String!
+  accessToken:  String!
   refreshToken: String!
 }
 
 type Query {
-  session(sessionID: Int!): SessionInfo
+  sessionConfig(sessionID: Int!): SessionConfig
+  sessionState(sessionID: Int!): SessionState
   voter(sessionID: Int!): VoterInfo!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
@@ -658,8 +679,8 @@ type Mutation {
   # Sessions
   createSession: Account!
   endSession(sessionID: Int!): String!
-  updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
-  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
+  updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
+  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
 
   # Account
   createAccount(newAccount: NewAccount!): String!
@@ -668,7 +689,7 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
-  setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
+  setPlaylist(sessionID: Int!, playlist: String!): SessionState!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -863,7 +884,22 @@ func (ec *executionContext) field_Query_playlists_args(ctx context.Context, rawA
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_sessionConfig_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_sessionState_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -1374,9 +1410,9 @@ func (ec *executionContext) _Mutation_updateQueue(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.SessionInfo)
+	res := resTmp.(*model.SessionState)
 	fc.Result = res
-	return ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
+	return ec.marshalNSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1387,20 +1423,14 @@ func (ec *executionContext) fieldContext_Mutation_updateQueue(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_SessionInfo_id(ctx, field)
 			case "currentlyPlaying":
-				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
+				return ec.fieldContext_SessionState_currentlyPlaying(ctx, field)
 			case "queue":
-				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "adminAccountID":
-				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
+				return ec.fieldContext_SessionState_queue(ctx, field)
 			case "numberOfVoters":
-				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
-			case "maximumVoters":
-				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
+				return ec.fieldContext_SessionState_numberOfVoters(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionState", field.Name)
 		},
 	}
 	defer func() {
@@ -1443,9 +1473,9 @@ func (ec *executionContext) _Mutation_updateCurrentlyPlaying(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.SessionInfo)
+	res := resTmp.(*model.SessionState)
 	fc.Result = res
-	return ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
+	return ec.marshalNSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1456,20 +1486,14 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_SessionInfo_id(ctx, field)
 			case "currentlyPlaying":
-				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
+				return ec.fieldContext_SessionState_currentlyPlaying(ctx, field)
 			case "queue":
-				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "adminAccountID":
-				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
+				return ec.fieldContext_SessionState_queue(ctx, field)
 			case "numberOfVoters":
-				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
-			case "maximumVoters":
-				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
+				return ec.fieldContext_SessionState_numberOfVoters(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionState", field.Name)
 		},
 	}
 	defer func() {
@@ -1733,9 +1757,9 @@ func (ec *executionContext) _Mutation_setPlaylist(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.SessionInfo)
+	res := resTmp.(*model.SessionState)
 	fc.Result = res
-	return ec.marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
+	return ec.marshalNSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1746,20 +1770,14 @@ func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_SessionInfo_id(ctx, field)
 			case "currentlyPlaying":
-				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
+				return ec.fieldContext_SessionState_currentlyPlaying(ctx, field)
 			case "queue":
-				return ec.fieldContext_SessionInfo_queue(ctx, field)
-			case "adminAccountID":
-				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
+				return ec.fieldContext_SessionState_queue(ctx, field)
 			case "numberOfVoters":
-				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
-			case "maximumVoters":
-				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
+				return ec.fieldContext_SessionState_numberOfVoters(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionState", field.Name)
 		},
 	}
 	defer func() {
@@ -1908,8 +1926,8 @@ func (ec *executionContext) fieldContext_Playlist_image(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_session(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_session(ctx, field)
+func (ec *executionContext) _Query_sessionConfig(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_sessionConfig(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1922,7 +1940,7 @@ func (ec *executionContext) _Query_session(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Session(rctx, fc.Args["sessionID"].(int))
+		return ec.resolvers.Query().SessionConfig(rctx, fc.Args["sessionID"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1931,12 +1949,12 @@ func (ec *executionContext) _Query_session(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.SessionInfo)
+	res := resTmp.(*model.SessionConfig)
 	fc.Result = res
-	return ec.marshalOSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx, field.Selections, res)
+	return ec.marshalOSessionConfig2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionConfig(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_session(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_sessionConfig(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -1945,19 +1963,13 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_SessionInfo_id(ctx, field)
-			case "currentlyPlaying":
-				return ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
-			case "queue":
-				return ec.fieldContext_SessionInfo_queue(ctx, field)
+				return ec.fieldContext_SessionConfig_id(ctx, field)
 			case "adminAccountID":
-				return ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
-			case "numberOfVoters":
-				return ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
+				return ec.fieldContext_SessionConfig_adminAccountID(ctx, field)
 			case "maximumVoters":
-				return ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
+				return ec.fieldContext_SessionConfig_maximumVoters(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionConfig", field.Name)
 		},
 	}
 	defer func() {
@@ -1967,7 +1979,67 @@ func (ec *executionContext) fieldContext_Query_session(ctx context.Context, fiel
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_session_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_sessionConfig_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_sessionState(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_sessionState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().SessionState(rctx, fc.Args["sessionID"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.SessionState)
+	fc.Result = res
+	return ec.marshalOSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_sessionState(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "currentlyPlaying":
+				return ec.fieldContext_SessionState_currentlyPlaying(ctx, field)
+			case "queue":
+				return ec.fieldContext_SessionState_queue(ctx, field)
+			case "numberOfVoters":
+				return ec.fieldContext_SessionState_numberOfVoters(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SessionState", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_sessionState_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -2444,8 +2516,8 @@ func (ec *executionContext) fieldContext_QueuedSong_votes(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionInfo_id(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_id(ctx, field)
+func (ec *executionContext) _SessionConfig_id(ctx context.Context, field graphql.CollectedField, obj *model.SessionConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionConfig_id(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2475,9 +2547,9 @@ func (ec *executionContext) _SessionInfo_id(ctx context.Context, field graphql.C
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SessionInfo_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionConfig_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SessionInfo",
+		Object:     "SessionConfig",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -2488,102 +2560,8 @@ func (ec *executionContext) fieldContext_SessionInfo_id(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionInfo_currentlyPlaying(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_currentlyPlaying(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CurrentlyPlaying, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.CurrentlyPlayingSong)
-	fc.Result = res
-	return ec.marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SessionInfo_currentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SessionInfo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "simpleSong":
-				return ec.fieldContext_CurrentlyPlayingSong_simpleSong(ctx, field)
-			case "playing":
-				return ec.fieldContext_CurrentlyPlayingSong_playing(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CurrentlyPlayingSong", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SessionInfo_queue(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_queue(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Queue, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*model.QueuedSong)
-	fc.Result = res
-	return ec.marshalOQueuedSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐQueuedSongᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SessionInfo_queue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SessionInfo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "simpleSong":
-				return ec.fieldContext_QueuedSong_simpleSong(ctx, field)
-			case "votes":
-				return ec.fieldContext_QueuedSong_votes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type QueuedSong", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SessionInfo_adminAccountID(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_adminAccountID(ctx, field)
+func (ec *executionContext) _SessionConfig_adminAccountID(ctx context.Context, field graphql.CollectedField, obj *model.SessionConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionConfig_adminAccountID(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2613,9 +2591,9 @@ func (ec *executionContext) _SessionInfo_adminAccountID(ctx context.Context, fie
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SessionInfo_adminAccountID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionConfig_adminAccountID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SessionInfo",
+		Object:     "SessionConfig",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -2626,52 +2604,8 @@ func (ec *executionContext) fieldContext_SessionInfo_adminAccountID(ctx context.
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionInfo_numberOfVoters(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_numberOfVoters(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.NumberOfVoters, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SessionInfo_numberOfVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SessionInfo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SessionInfo_maximumVoters(ctx context.Context, field graphql.CollectedField, obj *model.SessionInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionInfo_maximumVoters(ctx, field)
+func (ec *executionContext) _SessionConfig_maximumVoters(ctx context.Context, field graphql.CollectedField, obj *model.SessionConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionConfig_maximumVoters(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2701,9 +2635,147 @@ func (ec *executionContext) _SessionInfo_maximumVoters(ctx context.Context, fiel
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SessionInfo_maximumVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionConfig_maximumVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SessionInfo",
+		Object:     "SessionConfig",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SessionState_currentlyPlaying(ctx context.Context, field graphql.CollectedField, obj *model.SessionState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionState_currentlyPlaying(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrentlyPlaying, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.CurrentlyPlayingSong)
+	fc.Result = res
+	return ec.marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SessionState_currentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "simpleSong":
+				return ec.fieldContext_CurrentlyPlayingSong_simpleSong(ctx, field)
+			case "playing":
+				return ec.fieldContext_CurrentlyPlayingSong_playing(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CurrentlyPlayingSong", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SessionState_queue(ctx context.Context, field graphql.CollectedField, obj *model.SessionState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionState_queue(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Queue, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.QueuedSong)
+	fc.Result = res
+	return ec.marshalOQueuedSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐQueuedSongᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SessionState_queue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "simpleSong":
+				return ec.fieldContext_QueuedSong_simpleSong(ctx, field)
+			case "votes":
+				return ec.fieldContext_QueuedSong_votes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type QueuedSong", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SessionState_numberOfVoters(ctx context.Context, field graphql.CollectedField, obj *model.SessionState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionState_numberOfVoters(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.NumberOfVoters, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SessionState_numberOfVoters(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionState",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -5281,7 +5353,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "session":
+		case "sessionConfig":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -5290,7 +5362,27 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_session(ctx, field)
+				res = ec._Query_sessionConfig(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "sessionState":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_sessionState(ctx, field)
 				return res
 			}
 
@@ -5445,48 +5537,69 @@ func (ec *executionContext) _QueuedSong(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
-var sessionInfoImplementors = []string{"SessionInfo"}
+var sessionConfigImplementors = []string{"SessionConfig"}
 
-func (ec *executionContext) _SessionInfo(ctx context.Context, sel ast.SelectionSet, obj *model.SessionInfo) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, sessionInfoImplementors)
+func (ec *executionContext) _SessionConfig(ctx context.Context, sel ast.SelectionSet, obj *model.SessionConfig) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, sessionConfigImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("SessionInfo")
+			out.Values[i] = graphql.MarshalString("SessionConfig")
 		case "id":
 
-			out.Values[i] = ec._SessionInfo_id(ctx, field, obj)
+			out.Values[i] = ec._SessionConfig_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "currentlyPlaying":
-
-			out.Values[i] = ec._SessionInfo_currentlyPlaying(ctx, field, obj)
-
-		case "queue":
-
-			out.Values[i] = ec._SessionInfo_queue(ctx, field, obj)
-
 		case "adminAccountID":
 
-			out.Values[i] = ec._SessionInfo_adminAccountID(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "numberOfVoters":
-
-			out.Values[i] = ec._SessionInfo_numberOfVoters(ctx, field, obj)
+			out.Values[i] = ec._SessionConfig_adminAccountID(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "maximumVoters":
 
-			out.Values[i] = ec._SessionInfo_maximumVoters(ctx, field, obj)
+			out.Values[i] = ec._SessionConfig_maximumVoters(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var sessionStateImplementors = []string{"SessionState"}
+
+func (ec *executionContext) _SessionState(ctx context.Context, sel ast.SelectionSet, obj *model.SessionState) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, sessionStateImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SessionState")
+		case "currentlyPlaying":
+
+			out.Values[i] = ec._SessionState_currentlyPlaying(ctx, field, obj)
+
+		case "queue":
+
+			out.Values[i] = ec._SessionState_queue(ctx, field, obj)
+
+		case "numberOfVoters":
+
+			out.Values[i] = ec._SessionState_numberOfVoters(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -5993,18 +6106,18 @@ func (ec *executionContext) marshalNQueuedSong2ᚖgithubᚗcomᚋcampbelljlowman
 	return ec._QueuedSong(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNSessionInfo2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v model.SessionInfo) graphql.Marshaler {
-	return ec._SessionInfo(ctx, sel, &v)
+func (ec *executionContext) marshalNSessionState2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx context.Context, sel ast.SelectionSet, v model.SessionState) graphql.Marshaler {
+	return ec._SessionState(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v *model.SessionInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx context.Context, sel ast.SelectionSet, v *model.SessionState) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._SessionInfo(ctx, sel, v)
+	return ec._SessionState(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNSimpleSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSimpleSong(ctx context.Context, sel ast.SelectionSet, v *model.SimpleSong) graphql.Marshaler {
@@ -6472,11 +6585,18 @@ func (ec *executionContext) marshalOQueuedSong2ᚕᚖgithubᚗcomᚋcampbelljlow
 	return ret
 }
 
-func (ec *executionContext) marshalOSessionInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionInfo(ctx context.Context, sel ast.SelectionSet, v *model.SessionInfo) graphql.Marshaler {
+func (ec *executionContext) marshalOSessionConfig2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionConfig(ctx context.Context, sel ast.SelectionSet, v *model.SessionConfig) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._SessionInfo(ctx, sel, v)
+	return ec._SessionConfig(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx context.Context, sel ast.SelectionSet, v *model.SessionState) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._SessionState(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSimpleSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSimpleSongᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SimpleSong) graphql.Marshaler {

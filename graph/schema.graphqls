@@ -3,50 +3,53 @@
 # https://gqlgen.com/getting-started/
 
 type SimpleSong {
-  id: String!
-  title: String!
+  id:     String!
+  title:  String!
   artist: String!
-  image: String!
+  image:  String!
 }
 
 type QueuedSong {
   simpleSong: SimpleSong!
-  votes: Int!
+  votes:      Int!
 }
 
 type CurrentlyPlayingSong {
   simpleSong: SimpleSong!
-  playing: Boolean!
+  playing:    Boolean!
 }
 
-type SessionInfo {
-  id: Int!
+type SessionState {
   currentlyPlaying: CurrentlyPlayingSong
-  queue: [QueuedSong!]
+  queue:            [QueuedSong!]
+  numberOfVoters:   Int!
+}
+
+type SessionConfig {
+  id:             Int!
   adminAccountID: Int!
-  numberOfVoters: Int!
-  maximumVoters: Int!
+  maximumVoters:  Int!
 }
 
 type Account {
-  id: Int!
-  firstName: String
-  lastName: String
-  email: String
-  activeSession: Int
+  id:             Int!
+  firstName:      String
+  lastName:       String
+  email:          String
+  activeSession:  Int
 }
 
 type VoterInfo {
-  type: String!
-  songsUpVoted: [String!]
+  type:           String!
+  songsUpVoted:   [String!]
   songsDownVoted: [String!]
-  bonusVotes: Int
+  bonusVotes:     Int
 }
 
 type Playlist {
-  id: String!
-  name: String!
-  image: String!
+  id:     String!
+  name:   String!
+  image:  String!
 }
 
 enum QueueAction {
@@ -66,33 +69,34 @@ enum SongVoteAction {
 }
 
 input SongUpdate {
-  id: String!
-  title: String
+  id:     String!
+  title:  String
   artist: String
-  image: String
-  vote: SongVoteDirection!
+  image:  String
+  vote:   SongVoteDirection!
   action: SongVoteAction!
 }
 
 input NewAccount {
-  firstName: String!
-  lastName: String!
-  email: String!
-  password: String!
+  firstName:  String!
+  lastName:   String!
+  email:      String!
+  password:   String!
 }
 
 input AccountLogin {
-  email: String!
+  email:    String!
   password: String!
 }
 
 input SpotifyCreds {
-  accessToken: String!
+  accessToken:  String!
   refreshToken: String!
 }
 
 type Query {
-  session(sessionID: Int!): SessionInfo
+  sessionConfig(sessionID: Int!): SessionConfig
+  sessionState(sessionID: Int!): SessionState
   voter(sessionID: Int!): VoterInfo!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
@@ -103,8 +107,8 @@ type Mutation {
   # Sessions
   createSession: Account!
   endSession(sessionID: Int!): String!
-  updateQueue(sessionID: Int!, song: SongUpdate!): SessionInfo!
-  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionInfo!
+  updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
+  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
 
   # Account
   createAccount(newAccount: NewAccount!): String!
@@ -113,5 +117,5 @@ type Mutation {
 
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
-  setPlaylist(sessionID: Int!, playlist: String!): SessionInfo!
+  setPlaylist(sessionID: Int!, playlist: String!): SessionState!
 }
