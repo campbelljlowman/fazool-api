@@ -52,7 +52,6 @@ func GetAccountIDFromJWT(tokenString string) (int, error) {
 		return 0, fmt.Errorf("JWT Token not valid! Token: %v", jwtToken.Raw)
 	}
 
-	slog.Info("jwt claims", "k", jwtClaims)
 	accountID, err := strconv.Atoi(fmt.Sprintf("%v", jwtClaims["accountID"]))
 
 	// accountID, err := strconv.Atoi(jwtClaims["accountID"].(string))

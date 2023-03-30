@@ -37,7 +37,7 @@ type Session struct {
 	redisClient 		*redis.Client
 }
 
-func NewSessionService() *Session {
+func NewSessionServiceRedisImpl() *Session {
 	redisClient := getRedisClient()
 	redisPool := goredis.NewPool(redisClient) 
 	redSync := redsync.New(redisPool)
@@ -78,7 +78,7 @@ func (s *Session) EndSession(sessionID int) {
 // Remove session from database
 }
 
-func (s *Session) CheckSessionExpiry(sessionID int) {
+func (s *Session) checkSessionExpiry(sessionID int) {
 	isSessionExpired := s.isSessionExpired(sessionID)
 	if isSessionExpired == true {
 		s.EndSession(sessionID)
