@@ -11,20 +11,21 @@ import (
 )
 
 type AccountService interface {
+	CreateAccount(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) int 
+
 	GetAccountFromEmail(accountEmail string) *model.Account
 	GetAccountFromID(accountID int) *model.Account
 	GetAccountIDAndPassHash(accountEmail string) (int, string)
 	GetSpotifyRefreshToken(accountID int) string
 	GetAccountLevel(accountID int) string
 	GetVoterLevelAndBonusVotes(accountID int) (string, int)
+	CheckIfEmailHasAccount(email string) bool
 
 	SetAccountActiveSession(accountID int, sessionID int)
 	SetSpotifyRefreshToken(accountID int, refreshToken string)
 	SubtractBonusVotes(accountID, bonusVotes int)
 
-	CheckIfEmailHasAccount(email string) bool
-
-	AddAccount(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) int 
+	// TODO: Delete account
 }
 
 type account struct {
@@ -153,7 +154,7 @@ func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 }
 
 // TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountServiceGorm) AddAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
+func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
 	accountToAdd := &account{
 		FirstName: 		newAccount.FirstName,
 		LastName: 		newAccount.LastName,

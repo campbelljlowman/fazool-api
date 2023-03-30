@@ -40,15 +40,14 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 	accountLevel := r.accountService.GetAccountLevel(accountID)
 
-	sessionID, err := r.sessionService.CreateSession(accountID, accountLevel)
-
-	r.musicPlayers[sessionID] = client
+	sessionID, err := r.sessionService.CreateSession(accountID, accountLevel, client)
 
 	r.accountService.SetAccountActiveSession(accountID, sessionID)
 
-	go r.sessionService.CheckSpotifyCurrentlyPlaying(sessionID, client, r.accountService)
+	// TODO: Add these as part of the constructor
+	go r.sessionService.WatchSpotifyCurrentlyPlaying(sessionID, r.accountService)
 	// TODO: Add this to scheduler, and make this only run once
-	go r.sessionService.CheckVotersExpirations(sessionID)
+	go r.sessionService.WatchVotersExpirations(sessionID)
 
 	account := &model.Account{
 		ID:        		accountID,
@@ -74,7 +73,7 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 		return "", utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
-	r.sessionService.EndSession(sessionID)
+	r.sessionService.EndSession(sessionID, r.accountService)
 
 	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
 }
@@ -131,7 +130,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
-	musicPlayer := r.musicPlayers[sessionID]
+	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
 
 	switch action {
 	case "PLAY":
@@ -145,7 +144,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 			return nil, utils.LogAndReturnError("Error pausing song", err)
 		}
 	case "ADVANCE":
-		err := r.sessionService.AdvanceQueue(sessionID, true, musicPlayer, r.accountService)
+		err := r.sessionService.AdvanceQueue(sessionID, true, r.accountService)
 		if err != nil {
 			return nil, utils.LogAndReturnError("Error advancing queue", err)
 		}
@@ -173,7 +172,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 
 	passwordHash := utils.HashHelper(newAccount.Password)
 
-	accountID := r.accountService.AddAccount(newAccount, passwordHash, accountLevel, voterLevel, 0)
+	accountID := r.accountService.CreateAccount(newAccount, passwordHash, accountLevel, voterLevel, 0)
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
 	if err != nil {
@@ -233,7 +232,7 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to set playlists", nil)
 	}
 
-	musicPlayer := r.musicPlayers[sessionID]
+	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
 	songs, err := musicPlayer.GetSongsInPlaylist(playlist)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error getting songs in playlist", err)
@@ -351,7 +350,7 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to get playlists", nil)
 	}
 
-	musicPlayer := r.musicPlayers[sessionID]
+	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
 	playlists, err := musicPlayer.GetPlaylists()
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error getting playlists for the session!", err)
@@ -377,7 +376,7 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("You're not in session %v!", sessionID), nil)
 	}
-	musicPlayer := r.musicPlayers[sessionID]
+	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
 	searchResult, err := musicPlayer.Search(query)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error executing music search!", err)

@@ -32,7 +32,7 @@ func InitializeRoutes() *gin.Engine {
 		playground.Handler("GraphQL", "/query").ServeHTTP(c.Writer, c.Request)
 	})
 
-	sessionService := session.NewSessionServiceRedisImpl()
+	sessionService := session.NewSessionServiceInMemoryImpl()
 	accountService := account.NewAccountServiceGormImpl()
 	r := graph.NewResolver(sessionService, accountService)
 	srv := graph.NewGraphQLServer(r)
