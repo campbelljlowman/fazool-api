@@ -11,7 +11,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/musicplayer"
+	"github.com/campbelljlowman/fazool-api/streamingService"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
@@ -31,16 +31,19 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 		return nil, utils.LogAndReturnError("No spotify refresh token found", nil)
 	}
 
-	spotifyToken, err := musicplayer.RefreshSpotifyToken(refreshToken)
+	spotifyToken, err := streamingService.RefreshSpotifyToken(refreshToken)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error refreshing Spotify Token", err)
 	}
 
-	client := musicplayer.NewSpotifyClient(spotifyToken)
+	client := streamingService.NewSpotifyClient(spotifyToken)
 
 	accountLevel := r.accountService.GetAccountLevel(accountID)
 
 	sessionID, err := r.sessionService.CreateSession(accountID, accountLevel, client)
+	if err != nil {
+		return nil, utils.LogAndReturnError("Error creating new session", err)
+	}
 
 	r.accountService.SetAccountActiveSession(accountID, sessionID)
 
@@ -130,24 +133,9 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
-	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
-
-	switch action {
-	case "PLAY":
-		err := musicPlayer.Play()
-		if err != nil {
-			return nil, utils.LogAndReturnError("Error playing song", err)
-		}
-	case "PAUSE":
-		err := musicPlayer.Pause()
-		if err != nil {
-			return nil, utils.LogAndReturnError("Error pausing song", err)
-		}
-	case "ADVANCE":
-		err := r.sessionService.AdvanceQueue(sessionID, true, r.accountService)
-		if err != nil {
-			return nil, utils.LogAndReturnError("Error advancing queue", err)
-		}
+	err := r.sessionService.UpdateCurrentlyPlaying(sessionID, action, r.accountService)
+	if err != nil {
+		return nil, utils.LogAndReturnError("Error updating currently playing", err)
 	}
 
 	return r.sessionService.GetSessionInfo(sessionID), nil
@@ -232,22 +220,10 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to set playlists", nil)
 	}
 
-	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
-	songs, err := musicPlayer.GetSongsInPlaylist(playlist)
+	err := r.sessionService.SetPlaylist(sessionID, playlist)
 	if err != nil {
-		return nil, utils.LogAndReturnError("Error getting songs in playlist", err)
+		return nil, utils.LogAndReturnError("Error setting sesison playlist", err)
 	}
-
-	var songsToQueue []*model.QueuedSong
-	for _, song := range songs {
-		songToQueue := &model.QueuedSong{
-			SimpleSong: song,
-			Votes:      0,
-		}
-		songsToQueue = append(songsToQueue, songToQueue)
-	}
-
-	r.sessionService.SetQueue(sessionID, songsToQueue)
 
 	return r.sessionService.GetSessionInfo(sessionID), nil
 }
@@ -350,8 +326,7 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to get playlists", nil)
 	}
 
-	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
-	playlists, err := musicPlayer.GetPlaylists()
+	playlists, err := r.sessionService.GetPlaylists(sessionID)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error getting playlists for the session!", err)
 	}
@@ -376,8 +351,8 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 	if !voterExists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("You're not in session %v!", sessionID), nil)
 	}
-	musicPlayer := r.sessionService.GetMusicPlayer(sessionID)
-	searchResult, err := musicPlayer.Search(query)
+
+	searchResult, err := r.sessionService.SearchForSongs(sessionID, query)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error executing music search!", err)
 	}
