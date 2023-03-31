@@ -47,7 +47,7 @@ type AccountServiceGorm struct {
 }
 
 func NewAccountServiceGormImpl() *AccountServiceGorm {
-	postgresURL := os.Getenv("POSTRGRES_URL")
+	postgresURL := os.Getenv("POSTGRES_URL")
 
     gormDB, err := gorm.Open(postgres.Open(postgresURL), &gorm.Config{})
 	if err != nil {
