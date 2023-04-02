@@ -240,7 +240,6 @@ func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, newVoter *v
 	session.votersMutex.Lock()
 	session.voters[newVoter.VoterID] = newVoter
 	session.votersMutex.Unlock()
-	// TODO: update number of active voters in session
 
 	session.sessionStateMutex.Lock()
 	session.sessionState.NumberOfVoters++
