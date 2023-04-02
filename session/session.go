@@ -8,7 +8,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/streamingService"
+	"github.com/campbelljlowman/fazool-api/streaming_service"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"golang.org/x/exp/slices"

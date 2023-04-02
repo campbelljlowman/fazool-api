@@ -1,6 +1,6 @@
 GO_VERSION=1.19.3
 # To make it easy to connect from your dev machine, make your postgres username the same as your linux username
-# POSTGRES_USERNAME=clowman
+POSTGRES_USERNAME=clowman
 POSTGRES_PASSWORD=asdf
 POSTGRES_DEV_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
 
@@ -51,9 +51,13 @@ integration-test-setup:
 	docker-compose up -d --remove-orphans postgres;
 
 INTEGRATION_TEST_POSTGRES_URL=postgres://postgres:asdf@localhost:5432/fazool-integration-test
-integration-test:
+integration-test-server-up:
 	POSTGRES_URL=${INTEGRATION_TEST_POSTGRES_URL} \
-	go test -v -tags=integration
+	go run .
 
 integration-test-teardown:
 	docker-compose down;
+
+integration-test:
+	npm --prefix ./integration_tests run build
+	npm --prefix ./integration_tests test
