@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "test": "mocha --file tests.js"
+    "test": "mocha"
   },
   "author": "Campbell Lowman",
   "license": "ISC",
