@@ -11,7 +11,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/streaming_service"
+	streamingService "github.com/campbelljlowman/fazool-api/streaming_service"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
@@ -222,6 +222,16 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 	return r.sessionService.GetSessionState(sessionID), nil
 }
 
+// DeleteAccount is the resolver for the deleteAccount field.
+func (r *mutationResolver) DeleteAccount(ctx context.Context, accountID int) (string, error) {
+	tokenAccountID, _ := ctx.Value("accountID").(int)
+	if tokenAccountID != accountID {
+		return "Failed to delete account", utils.LogAndReturnError("You can only delete your own account!", nil)
+	}
+	r.accountService.DeleteAccount(accountID)
+	return fmt.Sprintf("Account %v successfully deleted", accountID), nil
+}
+
 // SessionConfig is the resolver for the sessionConfig field.
 func (r *queryResolver) SessionConfig(ctx context.Context, sessionID int) (*model.SessionConfig, error) {
 	voterID, _ := ctx.Value("voterID").(string)
@@ -307,7 +317,6 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 
 // Account is the resolver for the account field.
 func (r *queryResolver) Account(ctx context.Context) (*model.Account, error) {
-	slog.Info("account ID")
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("No account found on token for getting account", nil)

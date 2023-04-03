@@ -25,7 +25,7 @@ type AccountService interface {
 	SetSpotifyRefreshToken(accountID int, refreshToken string)
 	SubtractBonusVotes(accountID, bonusVotes int)
 
-	// TODO: Delete account
+	DeleteAccount(accountID int)
 }
 
 type account struct {
@@ -61,6 +61,23 @@ func NewAccountServiceGormImpl() *AccountServiceGorm {
 
 	accountGorm := AccountServiceGorm{gorm: gormDB}
 	return &accountGorm
+}
+
+// TODO, password is passed to this function on newAccount struct, this is bad
+func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
+	accountToAdd := &account{
+		FirstName: 		newAccount.FirstName,
+		LastName: 		newAccount.LastName,
+		Email: 			newAccount.Email,
+		PasswordHash: 	passwordHash,
+		AccountLevel: 	accountLevel,
+		VoterLevel: 	voterLevel,
+		BonusVotes: 	bonusVotes,
+	}
+	
+	a.gorm.Create(accountToAdd)
+
+	return int(accountToAdd.ID)
 }
 
 func (a *AccountServiceGorm) GetAccountFromEmail(accountEmail string) *model.Account {
@@ -153,19 +170,7 @@ func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 	return true
 }
 
-// TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
-	accountToAdd := &account{
-		FirstName: 		newAccount.FirstName,
-		LastName: 		newAccount.LastName,
-		Email: 			newAccount.Email,
-		PasswordHash: 	passwordHash,
-		AccountLevel: 	accountLevel,
-		VoterLevel: 	voterLevel,
-		BonusVotes: 	bonusVotes,
-	}
-	
-	a.gorm.Create(accountToAdd)
-
-	return int(accountToAdd.ID)
+func (a *AccountServiceGorm) DeleteAccount(accountID int) {
+	var fullAccount account
+	a.gorm.Delete(&fullAccount, accountID)
 }

@@ -118,4 +118,6 @@ type Mutation {
   # Spotify
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlist: String!): SessionState!
+
+  deleteAccount(accountID: Int!): String!
 }

@@ -3,17 +3,35 @@ import { gql, Client, cacheExchange, fetchExchange } from '@urql/core';
 
 chai.config.truncateThreshold = 0; // 0 means "don't truncate unexpected value, ever".
 
-describe("Test GraphQL server", () => {
+describe("Register New User", () => {
     const gqlServerURL = "http://localhost:8080/query"
 
-    const gqlclient = new Client({
+    const gqlClientUnauthorized = new Client({
         url: gqlServerURL,
         exchanges: [cacheExchange, fetchExchange],
     });
 
-    it("Register New User", async () => {
-        let data, error = await CreateAccount(gqlclient)
-        assert.equal(error, undefined)
+    it("Integration Test 1", async () => {
+        let createAccountResult = await CreateAccount(gqlClientUnauthorized)
+        assert.isUndefined(createAccountResult.error)
+
+        let accountToken = createAccountResult.data.createAccount
+        let gqlClientAuthorized = new Client({
+            url: gqlServerURL,
+            exchanges: [cacheExchange, fetchExchange],
+            fetchOptions: () => {
+              return {
+                headers: { AccountAuthentication: accountToken ? `Bearer ${accountToken}` : '' },
+              };
+            },
+        })
+
+        let getAccountResult = await GetAccount(gqlClientAuthorized)
+        assert.isUndefined(getAccountResult.error)
+
+        let accountID = getAccountResult.data.account.id
+        console.log(accountID)
+
     })
 
 
@@ -33,18 +51,20 @@ async function CreateAccount(gqlclient: Client) {
         "password": "cantstop"
     };
 
-    try {
-        let result = await gqlclient
-        .mutation(CREATE_ACCOUNT, { newAccount: newAccount })
-        .toPromise()
-        console.log("Result: "+ result)
-        return result.data, result.error
+    let result = await gqlclient.mutation(CREATE_ACCOUNT, { newAccount: newAccount })
+    return result
+}
 
-    } catch (error) {
-        console.log("Error :" + error)
-    }
-    // .then(result => {
-    //   console.log(result);
-    // });
+async function GetAccount(gqlclient: Client) {
+    const GET_ACCOUNT = gql`
+        query getAccount {
+        account {
+            id
+            firstName
+            activeSession
+        }
+    }`
 
+    let result = await gqlclient.query(GET_ACCOUNT, {})
+    return result
 }
