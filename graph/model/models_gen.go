@@ -84,6 +84,49 @@ type VoterInfo struct {
 	BonusVotes     *int     `json:"bonusVotes"`
 }
 
+type AccountLevel string
+
+const (
+	AccountLevelFree       AccountLevel = "FREE"
+	AccountLevelSmallVenue AccountLevel = "SMALL_VENUE"
+	AccountLevelLargeVenue AccountLevel = "LARGE_VENUE"
+)
+
+var AllAccountLevel = []AccountLevel{
+	AccountLevelFree,
+	AccountLevelSmallVenue,
+	AccountLevelLargeVenue,
+}
+
+func (e AccountLevel) IsValid() bool {
+	switch e {
+	case AccountLevelFree, AccountLevelSmallVenue, AccountLevelLargeVenue:
+		return true
+	}
+	return false
+}
+
+func (e AccountLevel) String() string {
+	return string(e)
+}
+
+func (e *AccountLevel) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AccountLevel(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AccountLevel", str)
+	}
+	return nil
+}
+
+func (e AccountLevel) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 type QueueAction string
 
 const (
@@ -206,5 +249,48 @@ func (e *SongVoteDirection) UnmarshalGQL(v interface{}) error {
 }
 
 func (e SongVoteDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type VoterLevel string
+
+const (
+	VoterLevelFreeVoter       VoterLevel = "FREE_VOTER"
+	VoterLevelPrivilegedVoter VoterLevel = "PRIVILEGED_VOTER"
+	VoterLevelAdmin           VoterLevel = "ADMIN"
+)
+
+var AllVoterLevel = []VoterLevel{
+	VoterLevelFreeVoter,
+	VoterLevelPrivilegedVoter,
+	VoterLevelAdmin,
+}
+
+func (e VoterLevel) IsValid() bool {
+	switch e {
+	case VoterLevelFreeVoter, VoterLevelPrivilegedVoter, VoterLevelAdmin:
+		return true
+	}
+	return false
+}
+
+func (e VoterLevel) String() string {
+	return string(e)
+}
+
+func (e *VoterLevel) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VoterLevel(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid VoterLevel", str)
+	}
+	return nil
+}
+
+func (e VoterLevel) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

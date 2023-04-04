@@ -68,6 +68,18 @@ enum SongVoteAction {
   REMOVE
 }
 
+enum VoterLevel {
+  FREE_VOTER
+  PRIVILEGED_VOTER
+  ADMIN
+}
+
+enum AccountLevel {
+  FREE
+  SMALL_VENUE
+  LARGE_VENUE
+}
+
 input SongUpdate {
   id:     String!
   title:  String
@@ -104,20 +116,21 @@ type Query {
 }
 
 type Mutation {
-  # Sessions
   createSession: Account!
-  endSession(sessionID: Int!): String!
+  createAccount(newAccount: NewAccount!): String!
+
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
+  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
+  setPlaylist(sessionID: Int!, playlist: String!): SessionState!
+  setVoterLevel(targetAccountID: Int!, voterLevel: VoterLevel!): Account!
+  setAccountLevel(targetAccountID: Int!, accountLevel: AccountLevel!): Account!
+  addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
 
-  # Account
-  createAccount(newAccount: NewAccount!): String!
+
   login(accountLogin: AccountLogin!): String!
   joinVoters: String!
 
-  # Spotify
-  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
-  setPlaylist(sessionID: Int!, playlist: String!): SessionState!
-
-  deleteAccount(accountID: Int!): String!
+  endSession(sessionID: Int!): String!
+  deleteAccount(targetAccountID: Int!): String!
 }

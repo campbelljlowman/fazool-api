@@ -23,7 +23,10 @@ type AccountService interface {
 
 	SetAccountActiveSession(accountID int, sessionID int)
 	SetSpotifyRefreshToken(accountID int, refreshToken string)
-	SubtractBonusVotes(accountID, bonusVotes int)
+	SetAccountLevel(accountID int, accountLevel model.AccountLevel) *model.Account
+	SetVoterLevel(accountID int, voterLevel model.VoterLevel) *model.Account
+	AddBonusVotes(accountID, bonusVotes int) *model.Account
+	SubtractBonusVotes(accountID, bonusVotes int) 
 
 	DeleteAccount(accountID int)
 }
@@ -147,6 +150,29 @@ func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID int, refreshToken 
 
 	fullAccount.SpotifyRefreshToken = refreshToken
 	a.gorm.Save(&fullAccount)
+}
+
+func (a *AccountServiceGorm) SetAccountLevel(accountID int, accountLevel model.AccountLevel) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.AccountLevel = accountLevel.String()
+	return transformAccountType(fullAccount)
+}
+func (a *AccountServiceGorm) SetVoterLevel(accountID int, voterLevel model.VoterLevel) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.VoterLevel = voterLevel.String()
+	return transformAccountType(fullAccount)
+}
+
+func (a *AccountServiceGorm) AddBonusVotes(accountID, bonusVotes int) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.BonusVotes += bonusVotes
+	return transformAccountType(fullAccount)
 }
 
 func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {

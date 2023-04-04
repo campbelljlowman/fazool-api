@@ -5,4 +5,5 @@ const (
 	PrivilegedVoterType = "privileged-voter"
 	RegularVoterType = "regular-voter"
 	RegularAccountLevel = "free"
+	Small
 )

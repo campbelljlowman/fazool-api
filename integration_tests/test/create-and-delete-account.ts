@@ -1,18 +1,20 @@
 import { assert, default as chai } from "chai"
 import { gql, Client, cacheExchange, fetchExchange } from '@urql/core';
+import { gqlServerURL, gqlClientUnauthorized, CreateAccount } from "./test-helpers";
 
 chai.config.truncateThreshold = 0; // 0 means "don't truncate unexpected value, ever".
 
-describe("Create and Remove account", () => {
-    const gqlServerURL = "http://localhost:8080/query"
+describe("Create and Delete account", () => {
 
-    const gqlClientUnauthorized = new Client({
-        url: gqlServerURL,
-        exchanges: [cacheExchange, fetchExchange],
-    });
+    it("Integration Test 1", async (done) => {
+        const newAccount = {
+            "firstName": "Anthony",
+            "lastName": "Kedis",
+            "email": "red@hot.chilipepperssw",
+            "password": "cantstop"
+        };
 
-    it("Integration Test 1", async () => {
-        let createAccountResult = await CreateAccount(gqlClientUnauthorized)
+        let createAccountResult = await CreateAccount(gqlClientUnauthorized, newAccount)
         assert.isUndefined(createAccountResult.error)
 
         let accountToken = createAccountResult.data.createAccount
@@ -33,26 +35,9 @@ describe("Create and Remove account", () => {
         let deleteAccountResult = await DeleteAccount(gqlClientAuthorized, accountID)
 
         assert.isUndefined(deleteAccountResult.error)
+        done()
     })
 })
-
-async function CreateAccount(gqlclient: Client) {
-    const CREATE_ACCOUNT = gql`
-        mutation createAccount ($newAccount: NewAccount!) {
-            createAccount(newAccount: $newAccount)
-        }
-    `;
-
-    const newAccount = {
-        "firstName": "Anthony",
-        "lastName": "Kedis",
-        "email": "red@hot.chilipepperssw",
-        "password": "cantstop"
-    };
-
-    let result = await gqlclient.mutation(CREATE_ACCOUNT, { newAccount: newAccount })
-    return result
-}
 
 async function GetAccount(gqlclient: Client) {
     const GET_ACCOUNT = gql`
