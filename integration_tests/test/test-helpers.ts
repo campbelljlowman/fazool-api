@@ -2,10 +2,25 @@ import { gql, Client, cacheExchange, fetchExchange } from '@urql/core';
 
 export const gqlServerURL = "http://localhost:8080/query"
 
-export const gqlClientUnauthorized = new Client({
-    url: gqlServerURL,
-    exchanges: [cacheExchange, fetchExchange],
-});
+interface AuthTokens {
+    accountToken?: string,
+    voterToken?: string
+}
+
+export function newGqlClient(authTokens: AuthTokens) {
+    let gqlClient = new Client({
+        url: gqlServerURL,
+        exchanges: [cacheExchange, fetchExchange],
+        fetchOptions: () => {
+          return {
+            headers: {  AccountAuthentication: authTokens.accountToken ? `Bearer ${authTokens.accountToken}` : '' ,
+                        VoterAuthentication: authTokens.voterToken ? `Bearer ${authTokens.voterToken}` : '' },
+          };
+        },
+    })
+
+    return gqlClient
+}
 
 interface newAccount {
     firstName: string

@@ -109,6 +109,7 @@ input SpotifyCreds {
 type Query {
   sessionConfig(sessionID: Int!): SessionConfig
   sessionState(sessionID: Int!): SessionState
+  voterToken: String!
   voter(sessionID: Int!): VoterInfo!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
@@ -129,7 +130,6 @@ type Mutation {
 
 
   login(accountLogin: AccountLogin!): String!
-  joinVoters: String!
 
   endSession(sessionID: Int!): String!
   deleteAccount(targetAccountID: Int!): String!

@@ -239,10 +239,11 @@ func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, newVoter *v
 
 	session.votersMutex.Lock()
 	session.voters[newVoter.VoterID] = newVoter
+	numberOfVoters := len(session.voters)
 	session.votersMutex.Unlock()
 
 	session.sessionStateMutex.Lock()
-	session.sessionState.NumberOfVoters++
+	session.sessionState.NumberOfVoters = numberOfVoters
 	session.sessionStateMutex.Unlock()
 }
 
@@ -356,5 +357,5 @@ func (s *SessionServiceInMemory) EndSession(sessionID int, accountService accoun
 
 	accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
 
-	s.expireSession(sessionID)	
+	s.expireSession(session)	
 }
