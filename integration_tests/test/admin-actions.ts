@@ -1,4 +1,4 @@
-import { newGqlClient, CreateAccount } from "./test-helpers";
+import { newGqlClient } from "./test-helpers";
 import { assert, default as chai } from "chai"
 import { gql, Client } from '@urql/core';
 
@@ -8,30 +8,51 @@ chai.config.truncateThreshold = 0; // 0 means "don't truncate unexpected value, 
 describe("Session Actions", () => {
 
     it("Integration Test 1", async () => {
-        let gqlClientUnauthorized = newGqlClient({})
-        const loginParams = {
+        const adminLoginParams = {
             "email": "President@Biden.com",
             "password": "whitehouse"
         }
-        let loginResult = await Login(gqlClientUnauthorized, loginParams)
-        assert.isUndefined(loginResult.error)
+        let gqlAdminClient = await GetGqlClientForUser(adminLoginParams)
+        let createSessionResult = await CreateSession(gqlAdminClient)
 
-        let gqlAccountClient = newGqlClient({accountToken: loginResult.data.login})
-        let createSessionResult = await CreateSession(gqlAccountClient)
-        assert.isUndefined(createSessionResult.error)
-        let sessionID = createSessionResult.data.createSession.activeSession
+        let sessionID = createSessionResult.createSession.activeSession
+        RunSessionActions(gqlAdminClient, sessionID, "ADMIN")
 
-        // Join Voters
-        let getVoterTokenResult = await GetVoterToken(gqlAccountClient)
-        assert.isUndefined(getVoterTokenResult.error)
+        // const privilegedVoterLoginParams = {
+        //     "email": "mikey@gmail.com",
+        //     "password": "gobraves"
+        // }
+        // let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams)
+        // RunSessionActions(gqlPrivelegedVoterClient, sessionID, "ADMIN")
 
-        let gqlAccountAndVoterClient = newGqlClient({accountToken: loginResult.data.login, voterToken: getVoterTokenResult.data.voterToken})
-        let getVoterResult = await GetVoter(gqlAccountAndVoterClient, sessionID)
-        assert.isUndefined(getVoterResult.error)
+    })
 
-        let searchResult = await MusicSearch(gqlAccountAndVoterClient, sessionID, "The Jackie")
-        assert.isUndefined(searchResult.error)
-        let songToVoteFor = searchResult.data.musicSearch[0]
+})
+
+async function GetGqlClientForUser(loginParams?: LoginParams) {
+    let gqlClient = newGqlClient({})
+    let accountToken
+
+    if (loginParams) {
+        let loginResult = await Login(gqlClient, loginParams)
+        gqlClient = newGqlClient({accountToken: loginResult.login})
+        accountToken = loginResult.login
+    } else {
+        accountToken = ''
+    }
+
+    let getVoterTokenResult = await GetVoterToken(gqlClient)
+
+    gqlClient = newGqlClient({accountToken: accountToken, voterToken: getVoterTokenResult.voterToken})
+
+    return gqlClient  
+}
+
+async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLevel: String) {
+        await GetVoter(gqlclient, sessionID)
+
+        let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
+        let songToVoteFor = searchResult.musicSearch[0]
 
         let newSongAddition = {
             id:         songToVoteFor.id,
@@ -41,42 +62,37 @@ describe("Session Actions", () => {
             vote:       "UP",
             action:     "ADD"
         }
-        let voteResult = await UpdateQueue(gqlAccountAndVoterClient, sessionID, newSongAddition)
-        assert.isUndefined(voteResult.error)
+        await UpdateQueue(gqlclient, sessionID, newSongAddition)
 
-        let sessionResult = await GetSession(gqlAccountAndVoterClient, sessionID)
-        assert.isUndefined(sessionResult.error)
-        assert.equal(songToVoteFor.id, sessionResult.data.sessionState.queue[0].simpleSong.id)
+        let sessionResult = await GetSession(gqlclient, sessionID)
+        assert.equal(songToVoteFor.id, sessionResult.sessionState.queue[0].simpleSong.id)
+        assert.equal(2, sessionResult.sessionState.queue[0].simpleSong.id)
 
         let songUpvote = {
             id:         songToVoteFor.id,
             vote:       "UP",
             action:     "ADD"
         }
-        voteResult = await UpdateQueue(gqlAccountAndVoterClient, sessionID, songUpvote)
-        assert.isUndefined(voteResult.error)
+        await UpdateQueue(gqlclient, sessionID, songUpvote)
 
-        sessionResult = await GetSession(gqlAccountAndVoterClient, sessionID)
-        assert.isUndefined(sessionResult.error)
-        assert.equal(2, sessionResult.data.sessionState.queue[0].votes)
+        sessionResult = await GetSession(gqlclient, sessionID)
+        assert.equal(2, sessionResult.sessionState.queue[0].votes)
 
         let songDownvote = {
             id:         songToVoteFor.id,
             vote:       "DOWN",
             action:     "ADD"
         }
-        voteResult = await UpdateQueue(gqlAccountAndVoterClient, sessionID, songDownvote)
-        assert.isUndefined(voteResult.error)
+        await UpdateQueue(gqlclient, sessionID, songDownvote)
 
-        sessionResult = await GetSession(gqlAccountAndVoterClient, sessionID)
-        assert.isUndefined(sessionResult.error)
-        assert.equal(1, sessionResult.data.sessionState.queue[0].votes)
+        sessionResult = await GetSession(gqlclient, sessionID)
+        console.log("Value: " + sessionResult.sessionState.queue[0].votes)
+        // TODO: Find out why these are passing
+        assert.equal(12, sessionResult.sessionState.queue[0].votes)
+        assert.equal(2,3)
 
-        let endSessionResult = await EndSession(gqlAccountAndVoterClient, sessionID)
-        assert.isUndefined(endSessionResult.error)
-    })
-
-})
+        await EndSession(gqlclient, sessionID)
+}
 
 interface LoginParams {
     email: string,
@@ -89,7 +105,8 @@ async function Login(gqlclient: Client, loginParams: LoginParams) {
         }`
 
     let result = await gqlclient.mutation(LOGIN, { accountLogin: loginParams })
-    return result
+    assert.isUndefined(result.error)
+    return result.data
 }
 
 async function CreateSession(gqlclient: Client) {
@@ -102,7 +119,8 @@ async function CreateSession(gqlclient: Client) {
     `
 
     let result = await gqlclient.mutation(CREATE_SESSION, {})
-    return result
+    assert.isUndefined(result.error)
+    return result.data
 }
 
 async function MusicSearch(gqlclient: Client, sessionID: Number, query: String) {
@@ -118,7 +136,8 @@ async function MusicSearch(gqlclient: Client, sessionID: Number, query: String) 
     `
 
     let result = await gqlclient.query(MUSIC_SEARCH, { sessionID: sessionID, query: query })
-    return result
+    assert.isUndefined(result.error)
+    return result.data
 }
 
 async function GetVoterToken(gqlclient: Client) {
@@ -129,7 +148,8 @@ async function GetVoterToken(gqlclient: Client) {
     `
 
     let result = await gqlclient.query(GET_VOTER_TOKEN, {})
-    return result
+    assert.isUndefined(result.error)
+    return result.data
 }
 
 async function GetVoter(gqlclient: Client, sessionID: Number) {
@@ -145,7 +165,7 @@ async function GetVoter(gqlclient: Client, sessionID: Number) {
     `
     
     let result = await gqlclient.query(GET_VOTER, { sessionID: sessionID })
-    return result
+    assert.isUndefined(result.error)
 }
 
 interface SongUpdate {
@@ -165,8 +185,9 @@ async function UpdateQueue(gqlclient: Client, sessionID: Number, songUpdate: Son
         }
     `;
 
-    let result = gqlclient.mutation(UPDATE_QUEUE, { sessionID: sessionID, song: songUpdate })
-    return result
+    let result = await gqlclient.mutation(UPDATE_QUEUE, { sessionID: sessionID, song: songUpdate })
+    assert.isUndefined(result.error)
+    return result.data
 }
 
 async function GetSession(gqlclient: Client, sessionID: Number) {
@@ -197,7 +218,8 @@ async function GetSession(gqlclient: Client, sessionID: Number) {
     `;
 
     let result = await gqlclient.query(GET_SESSION_STATE, { sessionID: sessionID })
-    return result
+    assert.isUndefined(result.error)
+    return result.data
 }
 
 async function EndSession(gqlclient: Client, sessionID: Number) {
@@ -208,5 +230,5 @@ async function EndSession(gqlclient: Client, sessionID: Number) {
     `
 
     let result = await gqlclient.mutation(END_SESSION, { sessionID: sessionID })
-    return result
+    assert.isUndefined(result.error)
 }
