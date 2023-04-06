@@ -189,6 +189,7 @@ func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
+			slog.Info("No account found with email", "email", email)
 			return false
 		}
 		slog.Warn("Error checking if email has an account", "error", err)

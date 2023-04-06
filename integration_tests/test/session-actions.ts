@@ -16,15 +16,20 @@ describe("Session Actions", () => {
         let createSessionResult = await CreateSession(gqlAdminClient)
 
         let sessionID = createSessionResult.createSession.activeSession
+        
         await RunSessionActions(gqlAdminClient, sessionID, "ADMIN")
 
-        // const privilegedVoterLoginParams = {
-        //     "email": "mikey@gmail.com",
-        //     "password": "gobraves"
-        // }
-        // let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams)
-        // RunSessionActions(gqlPrivelegedVoterClient, sessionID, "ADMIN")
+        const privilegedVoterLoginParams = {
+            "email": "mikey@gmail.com",
+            "password": "gobraves"
+        }
+        let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams)
+        await RunSessionActions(gqlPrivelegedVoterClient, sessionID, "PRIVILEGED_VOTER")
+        
+        let gqlFreeVoterClient = await GetGqlClientForUser()
+        await RunSessionActions(gqlFreeVoterClient, sessionID, "FREE_VOTER")
 
+        await EndSession(gqlAdminClient, sessionID)
     })
 
 })
@@ -54,6 +59,7 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
         let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
         let songToVoteFor = searchResult.musicSearch[0]
 
+        // Add song to queue
         let newSongAddition = {
             id:         songToVoteFor.id,
             title:      songToVoteFor.title,
@@ -67,28 +73,58 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
         let sessionResult = await GetSession(gqlclient, sessionID)
         assert.equal(songToVoteFor.id, sessionResult.sessionState.queue[0].simpleSong.id)
 
-        let songUpvote = {
-            id:         songToVoteFor.id,
-            vote:       "UP",
-            action:     "ADD"
+        if (voterLevel === "ADMIN") {
+            let currentVotes = sessionResult.sessionState.queue[0].votes
+            // Admin can vote unlimited
+            let songUpvote = {
+                id:         songToVoteFor.id,
+                vote:       "UP",
+                action:     "ADD"
+            }
+            await UpdateQueue(gqlclient, sessionID, songUpvote)
+            sessionResult = await GetSession(gqlclient, sessionID)
+
+            assert.equal(currentVotes + 1, sessionResult.sessionState.queue[0].votes)
+
+            let songDownvote = {
+                id:         songToVoteFor.id,
+                vote:       "DOWN",
+                action:     "ADD"
+            }
+            await UpdateQueue(gqlclient, sessionID, songDownvote)
+            sessionResult = await GetSession(gqlclient, sessionID)
+
+            assert.equal(currentVotes, sessionResult.sessionState.queue[0].votes)
         }
-        await UpdateQueue(gqlclient, sessionID, songUpvote)
 
-        sessionResult = await GetSession(gqlclient, sessionID)
-        assert.equal(2, sessionResult.sessionState.queue[0].votes)
+        if (voterLevel === "PRIVILEGED_VOTER") {
+            let currentVotes = sessionResult.sessionState.queue[0].votes
+            // Bonus vote
+            let songUpvote = {
+                id:         songToVoteFor.id,
+                vote:       "UP",
+                action:     "ADD"
+            }
+            await UpdateQueue(gqlclient, sessionID, songUpvote)
+            sessionResult = await GetSession(gqlclient, sessionID)
 
-        let songDownvote = {
-            id:         songToVoteFor.id,
-            vote:       "DOWN",
-            action:     "ADD"
+            assert.equal(currentVotes + 1, sessionResult.sessionState.queue[0].votes)
         }
-        await UpdateQueue(gqlclient, sessionID, songDownvote)
 
-        sessionResult = await GetSession(gqlclient, sessionID)
-        console.log("Value: " + sessionResult.sessionState.queue[0].votes)
-        assert.equal(1, sessionResult.sessionState.queue[0].votes)
+        if(voterLevel === "FREE_VOTER") {
+            // Remove Upvote
+            let currentVotes = sessionResult.sessionState.queue[0].votes
+            let songDownvote = {
+                id:         songToVoteFor.id,
+                vote:       "UP",
+                action:     "REMOVE"
+            }
+            await UpdateQueue(gqlclient, sessionID, songDownvote)
+            sessionResult = await GetSession(gqlclient, sessionID)
 
-        await EndSession(gqlclient, sessionID)
+            assert.equal(currentVotes - 1, sessionResult.sessionState.queue[0].votes)
+        }
+
 }
 
 interface LoginParams {

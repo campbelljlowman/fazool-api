@@ -144,6 +144,7 @@ var calculateAndAddDownVoteTests = []struct {
 	expectedError bool
 }{
 	// Test voter types for regular vote
+	// TODO: Change the regular voter expected vote amount to 0!
 	{constants.RegularVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
 	{constants.PrivilegedVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
 	{constants.AdminVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
