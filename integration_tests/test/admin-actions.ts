@@ -16,7 +16,7 @@ describe("Session Actions", () => {
         let createSessionResult = await CreateSession(gqlAdminClient)
 
         let sessionID = createSessionResult.createSession.activeSession
-        RunSessionActions(gqlAdminClient, sessionID, "ADMIN")
+        await RunSessionActions(gqlAdminClient, sessionID, "ADMIN")
 
         // const privilegedVoterLoginParams = {
         //     "email": "mikey@gmail.com",
@@ -66,7 +66,6 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
 
         let sessionResult = await GetSession(gqlclient, sessionID)
         assert.equal(songToVoteFor.id, sessionResult.sessionState.queue[0].simpleSong.id)
-        assert.equal(2, sessionResult.sessionState.queue[0].simpleSong.id)
 
         let songUpvote = {
             id:         songToVoteFor.id,
@@ -87,9 +86,7 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
 
         sessionResult = await GetSession(gqlclient, sessionID)
         console.log("Value: " + sessionResult.sessionState.queue[0].votes)
-        // TODO: Find out why these are passing
-        assert.equal(12, sessionResult.sessionState.queue[0].votes)
-        assert.equal(2,3)
+        assert.equal(1, sessionResult.sessionState.queue[0].votes)
 
         await EndSession(gqlclient, sessionID)
 }
