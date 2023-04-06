@@ -47,11 +47,7 @@ func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string,
 	return nil
 }
 
-func (s *SessionServiceInMemory) expireSession(sessionID int) {
-	s.allSessionsMutex.Lock()
-	session := s.sessions[sessionID]
-	s.allSessionsMutex.Unlock()
-
+func (s *SessionServiceInMemory) expireSession(session *Session) {
 	session.expiryMutex.Lock()
 	session.expiresAt = time.Now()
 	session.expiryMutex.Unlock()

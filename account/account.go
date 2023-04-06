@@ -23,9 +23,12 @@ type AccountService interface {
 
 	SetAccountActiveSession(accountID int, sessionID int)
 	SetSpotifyRefreshToken(accountID int, refreshToken string)
-	SubtractBonusVotes(accountID, bonusVotes int)
+	SetAccountLevel(accountID int, accountLevel model.AccountLevel) *model.Account
+	SetVoterLevel(accountID int, voterLevel model.VoterLevel) *model.Account
+	AddBonusVotes(accountID, bonusVotes int) *model.Account
+	SubtractBonusVotes(accountID, bonusVotes int) 
 
-	// TODO: Delete account
+	DeleteAccount(accountID int)
 }
 
 type account struct {
@@ -47,7 +50,7 @@ type AccountServiceGorm struct {
 }
 
 func NewAccountServiceGormImpl() *AccountServiceGorm {
-	postgresURL := os.Getenv("POSTRGRES_URL")
+	postgresURL := os.Getenv("POSTGRES_URL")
 
     gormDB, err := gorm.Open(postgres.Open(postgresURL), &gorm.Config{})
 	if err != nil {
@@ -61,6 +64,23 @@ func NewAccountServiceGormImpl() *AccountServiceGorm {
 
 	accountGorm := AccountServiceGorm{gorm: gormDB}
 	return &accountGorm
+}
+
+// TODO, password is passed to this function on newAccount struct, this is bad
+func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
+	accountToAdd := &account{
+		FirstName: 		newAccount.FirstName,
+		LastName: 		newAccount.LastName,
+		Email: 			newAccount.Email,
+		PasswordHash: 	passwordHash,
+		AccountLevel: 	accountLevel,
+		VoterLevel: 	voterLevel,
+		BonusVotes: 	bonusVotes,
+	}
+	
+	a.gorm.Create(accountToAdd)
+
+	return int(accountToAdd.ID)
 }
 
 func (a *AccountServiceGorm) GetAccountFromEmail(accountEmail string) *model.Account {
@@ -132,6 +152,29 @@ func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID int, refreshToken 
 	a.gorm.Save(&fullAccount)
 }
 
+func (a *AccountServiceGorm) SetAccountLevel(accountID int, accountLevel model.AccountLevel) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.AccountLevel = accountLevel.String()
+	return transformAccountType(fullAccount)
+}
+func (a *AccountServiceGorm) SetVoterLevel(accountID int, voterLevel model.VoterLevel) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.VoterLevel = voterLevel.String()
+	return transformAccountType(fullAccount)
+}
+
+func (a *AccountServiceGorm) AddBonusVotes(accountID, bonusVotes int) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.BonusVotes += bonusVotes
+	return transformAccountType(fullAccount)
+}
+
 func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
@@ -146,6 +189,7 @@ func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
+			slog.Info("No account found with email", "email", email)
 			return false
 		}
 		slog.Warn("Error checking if email has an account", "error", err)
@@ -153,19 +197,7 @@ func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 	return true
 }
 
-// TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
-	accountToAdd := &account{
-		FirstName: 		newAccount.FirstName,
-		LastName: 		newAccount.LastName,
-		Email: 			newAccount.Email,
-		PasswordHash: 	passwordHash,
-		AccountLevel: 	accountLevel,
-		VoterLevel: 	voterLevel,
-		BonusVotes: 	bonusVotes,
-	}
-	
-	a.gorm.Create(accountToAdd)
-
-	return int(accountToAdd.ID)
+func (a *AccountServiceGorm) DeleteAccount(accountID int) {
+	var fullAccount account
+	a.gorm.Delete(&fullAccount, accountID)
 }

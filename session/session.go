@@ -8,7 +8,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/streamingService"
+	"github.com/campbelljlowman/fazool-api/streaming_service"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"golang.org/x/exp/slices"
@@ -239,11 +239,11 @@ func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, newVoter *v
 
 	session.votersMutex.Lock()
 	session.voters[newVoter.VoterID] = newVoter
+	numberOfVoters := len(session.voters)
 	session.votersMutex.Unlock()
-	// TODO: update number of active voters in session
 
 	session.sessionStateMutex.Lock()
-	session.sessionState.NumberOfVoters++
+	session.sessionState.NumberOfVoters = numberOfVoters
 	session.sessionStateMutex.Unlock()
 }
 
@@ -357,5 +357,5 @@ func (s *SessionServiceInMemory) EndSession(sessionID int, accountService accoun
 
 	accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
 
-	s.expireSession(sessionID)	
+	s.expireSession(session)	
 }

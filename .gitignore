@@ -16,3 +16,6 @@
 
 # Env file
 .env
+
+/integration_tests/node_modules/*
+*.js

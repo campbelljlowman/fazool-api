@@ -11,7 +11,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/streamingService"
+	streamingService "github.com/campbelljlowman/fazool-api/streaming_service"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
@@ -20,6 +20,7 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, error) {
+	// TODO: Check if account has an active session already
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID is required to create session", nil)
@@ -55,25 +56,33 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	return account, nil
 }
 
-// EndSession is the resolver for the endSession field.
-func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
-	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return "", utils.LogAndReturnError("Account ID is required to end session", nil)
+// CreateAccount is the resolver for the createAccount field.
+func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error) {
+	// Get this from new account request!
+	accountLevel := constants.RegularAccountLevel
+	voterLevel := constants.RegularVoterType
+
+	isVaildEmail := utils.ValidateEmail(newAccount.Email)
+	if !isVaildEmail {
+		return "", utils.LogAndReturnError("Invalid email format", nil)
 	}
 
-	exists := r.sessionService.DoesSessionExist(sessionID)
-	if !exists {
-		return "", utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
+	accountExists := r.accountService.CheckIfEmailHasAccount(newAccount.Email)
+
+	if accountExists {
+		return "", utils.LogAndReturnError("Account with this email already exists!", nil)
 	}
 
-	if accountID != r.sessionService.GetSessionAdminAccountID(sessionID) {
-		return "", utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
+	passwordHash := utils.HashHelper(newAccount.Password)
+
+	accountID := r.accountService.CreateAccount(newAccount, passwordHash, accountLevel, voterLevel, 0)
+
+	jwtToken, err := auth.GenerateJWTForAccount(accountID)
+	if err != nil {
+		return "", utils.LogAndReturnError("Error creating account token", err)
 	}
 
-	r.sessionService.EndSession(sessionID, r.accountService)
-
-	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
+	return jwtToken, nil
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
@@ -135,57 +144,6 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	return r.sessionService.GetSessionState(sessionID), nil
 }
 
-// CreateAccount is the resolver for the createAccount field.
-func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error) {
-	// Get this from new account request!
-	accountLevel := constants.RegularAccountLevel
-	voterLevel := constants.RegularVoterType
-
-	isVaildEmail := utils.ValidateEmail(newAccount.Email)
-	if !isVaildEmail {
-		return "", utils.LogAndReturnError("Invalid email format", nil)
-	}
-
-	accountExists := r.accountService.CheckIfEmailHasAccount(newAccount.Email)
-
-	if accountExists {
-		return "", utils.LogAndReturnError("Account with this email already exists!", nil)
-	}
-
-	passwordHash := utils.HashHelper(newAccount.Password)
-
-	accountID := r.accountService.CreateAccount(newAccount, passwordHash, accountLevel, voterLevel, 0)
-
-	jwtToken, err := auth.GenerateJWTForAccount(accountID)
-	if err != nil {
-		return "", utils.LogAndReturnError("Error creating account token", err)
-	}
-
-	return jwtToken, nil
-}
-
-// Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, accountLogin model.AccountLogin) (string, error) {
-	accountID, accountPassword := r.accountService.GetAccountIDAndPassHash(accountLogin.Email)
-
-	if utils.HashHelper(accountLogin.Password) != accountPassword {
-		return "", utils.LogAndReturnError("Invalid Login Credentials!", nil)
-	}
-
-	jwtToken, err := auth.GenerateJWTForAccount(accountID)
-	if err != nil {
-		return "", utils.LogAndReturnError("Error creating account token", err)
-	}
-
-	return jwtToken, nil
-}
-
-// JoinVoters is the resolver for the joinVoters field.
-func (r *mutationResolver) JoinVoters(ctx context.Context) (string, error) {
-	voterToken := uuid.New()
-	return voterToken.String(), nil
-}
-
 // UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
 func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
@@ -222,6 +180,83 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 	return r.sessionService.GetSessionState(sessionID), nil
 }
 
+// SetVoterLevel is the resolver for the setVoterLevel field.
+func (r *mutationResolver) SetVoterLevel(ctx context.Context, targetAccountID int, voterLevel model.VoterLevel) (*model.Account, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID != targetAccountID {
+		return nil, utils.LogAndReturnError("You can only set your own voter level!", nil)
+	}
+
+	return r.accountService.SetVoterLevel(targetAccountID, voterLevel), nil
+}
+
+// SetAccountLevel is the resolver for the setAccountLevel field.
+func (r *mutationResolver) SetAccountLevel(ctx context.Context, targetAccountID int, accountLevel model.AccountLevel) (*model.Account, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID != targetAccountID {
+		return nil, utils.LogAndReturnError("You can only set your own account level!", nil)
+	}
+
+	return r.accountService.SetAccountLevel(targetAccountID, accountLevel), nil
+}
+
+// AddBonusVotes is the resolver for the addBonusVotes field.
+func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID != targetAccountID {
+		return nil, utils.LogAndReturnError("You can only set your own bonus votes!", nil)
+	}
+
+	return r.accountService.AddBonusVotes(targetAccountID, bonusVotes), nil
+}
+
+// Login is the resolver for the login field.
+func (r *mutationResolver) Login(ctx context.Context, accountLogin model.AccountLogin) (string, error) {
+	accountID, accountPassword := r.accountService.GetAccountIDAndPassHash(accountLogin.Email)
+
+	if utils.HashHelper(accountLogin.Password) != accountPassword {
+		return "", utils.LogAndReturnError("Invalid Login Credentials!", nil)
+	}
+
+	jwtToken, err := auth.GenerateJWTForAccount(accountID)
+	if err != nil {
+		return "", utils.LogAndReturnError("Error creating account token", err)
+	}
+
+	return jwtToken, nil
+}
+
+// EndSession is the resolver for the endSession field.
+func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID == 0 {
+		return "", utils.LogAndReturnError("Account ID is required to end session", nil)
+	}
+
+	exists := r.sessionService.DoesSessionExist(sessionID)
+	if !exists {
+		return "", utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
+	}
+
+	if accountID != r.sessionService.GetSessionAdminAccountID(sessionID) {
+		return "", utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
+	}
+
+	r.sessionService.EndSession(sessionID, r.accountService)
+
+	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
+}
+
+// DeleteAccount is the resolver for the deleteAccount field.
+func (r *mutationResolver) DeleteAccount(ctx context.Context, targetAccountID int) (string, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID != targetAccountID {
+		return "Failed to delete account", utils.LogAndReturnError("You can only delete your own account!", nil)
+	}
+	r.accountService.DeleteAccount(targetAccountID)
+	return fmt.Sprintf("Account %v successfully deleted", targetAccountID), nil
+}
+
 // SessionConfig is the resolver for the sessionConfig field.
 func (r *queryResolver) SessionConfig(ctx context.Context, sessionID int) (*model.SessionConfig, error) {
 	voterID, _ := ctx.Value("voterID").(string)
@@ -252,6 +287,12 @@ func (r *queryResolver) SessionState(ctx context.Context, sessionID int) (*model
 	}
 
 	return r.sessionService.GetSessionState(sessionID), nil
+}
+
+// VoterToken is the resolver for the voterToken field.
+func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
+	voterToken := uuid.New()
+	return voterToken.String(), nil
 }
 
 // Voter is the resolver for the voter field.
@@ -307,7 +348,6 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 
 // Account is the resolver for the account field.
 func (r *queryResolver) Account(ctx context.Context) (*model.Account, error) {
-	slog.Info("account ID")
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("No account found on token for getting account", nil)
