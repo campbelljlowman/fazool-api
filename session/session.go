@@ -8,7 +8,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"github.com/campbelljlowman/fazool-api/streaming_service"
+	"github.com/campbelljlowman/fazool-api/streaming"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"golang.org/x/exp/slices"
@@ -16,7 +16,7 @@ import (
 )
 
 type SessionService interface {
-	CreateSession(adminAccountID int, accountLevel string, streamingService streamingService.StreamingService, accountService account.AccountService) (int, error)
+	CreateSession(adminAccountID int, accountLevel string, streaming streaming.StreamingService, accountService account.AccountService) (int, error)
 
 	GetSessionConfig(sessionID int) *model.SessionConfig
 	GetSessionState(sessionID int) *model.SessionState
@@ -32,6 +32,7 @@ type SessionService interface {
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error
 	AdvanceQueue(sessionID int, force bool, accountService account.AccountService) error
 	AddBonusVote(songID string, accountID, numberOfVotes, sessionID int)
+	AddChannel(sessionID int, channel chan *model.SessionState)
 	SetPlaylist(sessionID int, playlist string) error
 
 	EndSession(sessionID int, accountService account.AccountService)
@@ -40,12 +41,14 @@ type SessionService interface {
 type Session struct {
 	sessionConfig    	*model.SessionConfig
 	sessionState    	*model.SessionState
+	channels 			[]chan *model.SessionState
 	voters         		map[string]*voter.Voter
-	streamingService    streamingService.StreamingService
+	streaming    streaming.StreamingService
 	expiresAt      		time.Time
 	// Map of [song][account][votes]
 	bonusVotes     		map[string]map[int]int
 	sessionStateMutex	*sync.Mutex
+	channelMutex 		*sync.Mutex
 	votersMutex    		*sync.Mutex
 	expiryMutex    		*sync.Mutex
 	bonusVoteMutex 		*sync.Mutex
@@ -58,7 +61,7 @@ type SessionServiceInMemory struct {
 
 const sessionWatchFrequency time.Duration = 10 // Seconds
 const sessionTimeout time.Duration = 30 // Minutes
-const spotifyWatchFrequency time.Duration = 250 // Milliseconds
+const spotifyWatchFrequency time.Duration = 1000 // Milliseconds
 const voterWatchFrequency time.Duration = 1 // Seconds
 
 func NewSessionServiceInMemoryImpl(accountService account.AccountService) *SessionServiceInMemory{
@@ -71,7 +74,7 @@ func NewSessionServiceInMemoryImpl(accountService account.AccountService) *Sessi
 	return sessionInMemory
 }
 
-func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel string, streamingService streamingService.StreamingService, accountService account.AccountService) (int, error) {
+func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel string, streaming streaming.StreamingService, accountService account.AccountService) (int, error) {
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
 		return 0, err
@@ -99,12 +102,14 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel 
 
 	session := Session{
 		sessionConfig:    	sessionConfig,
-		sessionState: 		sessionState,	
+		sessionState: 		sessionState,
+		channels: 			nil,
 		voters:         	make(map[string]*voter.Voter),
-		streamingService:   streamingService,
+		streaming:   streaming,
 		expiresAt:      	time.Now().Add(sessionTimeout * time.Minute),
 		bonusVotes:     	make(map[string]map[int]int),
 		sessionStateMutex:	&sync.Mutex{},
+		channelMutex: 		&sync.Mutex{},
 		votersMutex:    	&sync.Mutex{},
 		expiryMutex:    	&sync.Mutex{},
 		bonusVoteMutex: 	&sync.Mutex{},
@@ -165,7 +170,7 @@ func (s *SessionServiceInMemory) GetPlaylists(sessionID int) ([]*model.Playlist,
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
-	return session.streamingService.GetPlaylists()
+	return session.streaming.GetPlaylists()
 }
 
 func (s *SessionServiceInMemory) IsSessionFull(sessionID int) bool {
@@ -199,7 +204,7 @@ func (s *SessionServiceInMemory) SearchForSongs(sessionID int, query string) ([]
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
-	return session.streamingService.Search(query)
+	return session.streaming.Search(query)
 }
 
 func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.SongUpdate) {
@@ -226,10 +231,9 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.Son
 		queuedSong.Votes += vote
 	}
 
-	// Sort queue
 	sort.Slice(session.sessionState.Queue, func(i, j int) bool { return session.sessionState.Queue[i].Votes > session.sessionState.Queue[j].Votes })
 	session.sessionStateMutex.Unlock()
-	s.refreshSession(sessionID)
+	s.sendUpdatedState(sessionID)
 }
 
 func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, newVoter *voter.Voter){
@@ -245,6 +249,7 @@ func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, newVoter *v
 	session.sessionStateMutex.Lock()
 	session.sessionState.NumberOfVoters = numberOfVoters
 	session.sessionStateMutex.Unlock()
+	s.sendUpdatedState(sessionID)
 }
 
 func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error {
@@ -254,12 +259,12 @@ func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action mo
 
 	switch action {
 	case "PLAY":
-		err := session.streamingService.Play()
+		err := session.streaming.Play()
 		if err != nil {
 			return err
 		}
 	case "PAUSE":
-		err := session.streamingService.Pause()
+		err := session.streaming.Pause()
 		if err != nil {
 			return err
 		}
@@ -289,7 +294,9 @@ func (s *SessionServiceInMemory) AdvanceQueue(sessionID int, force bool, account
 	song, session.sessionState.Queue = session.sessionState.Queue[0].SimpleSong, session.sessionState.Queue[1:]
 	session.sessionStateMutex.Unlock()
 
-	err := session.streamingService.QueueSong(song.ID)
+	s.sendUpdatedState(sessionID)
+
+	err := session.streaming.QueueSong(song.ID)
 	if err != nil {
 		return err
 	}
@@ -303,7 +310,7 @@ func (s *SessionServiceInMemory) AdvanceQueue(sessionID int, force bool, account
 		return nil
 	}
 
-	err = session.streamingService.Next()
+	err = session.streaming.Next()
 	if err != nil {
 		return err
 	}
@@ -324,12 +331,23 @@ func (s *SessionServiceInMemory) AddBonusVote(songID string, accountID, numberOf
 	session.bonusVoteMutex.Unlock()
 }
 
+func (s *SessionServiceInMemory) AddChannel(sessionID int, channel chan *model.SessionState) {
+	s.allSessionsMutex.Lock()
+	session := s.sessions[sessionID]
+	s.allSessionsMutex.Unlock()
+	
+	session.channelMutex.Lock()
+	session.channels = append(session.channels, channel)
+	session.channelMutex.Unlock()
+}
+
+
 func (s *SessionServiceInMemory) SetPlaylist(sessionID int, playlist string) error {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
-	songs, err := session.streamingService.GetSongsInPlaylist(playlist)
+	songs, err := session.streaming.GetSongsInPlaylist(playlist)
 	if err != nil {
 		return err
 	}
@@ -353,9 +371,11 @@ func (s *SessionServiceInMemory) EndSession(sessionID int, accountService accoun
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	delete(s.sessions, sessionID)
-	s.allSessionsMutex.Unlock()
 
 	accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
 
-	s.expireSession(session)	
+	expireSession(session)
+	closeChannels(session)
+
+	s.allSessionsMutex.Unlock()
 }

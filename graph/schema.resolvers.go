@@ -11,7 +11,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	streamingService "github.com/campbelljlowman/fazool-api/streaming_service"
+	"github.com/campbelljlowman/fazool-api/streaming"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
@@ -32,12 +32,12 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 		return nil, utils.LogAndReturnError("No spotify refresh token found", nil)
 	}
 
-	spotifyToken, err := streamingService.RefreshSpotifyToken(refreshToken)
+	spotifyToken, err := streaming.RefreshSpotifyToken(refreshToken)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error refreshing Spotify Token", err)
 	}
 
-	client := streamingService.NewSpotifyClient(spotifyToken)
+	client := streaming.NewSpotifyClient(spotifyToken)
 
 	accountLevel := r.accountService.GetAccountLevel(accountID)
 
@@ -408,11 +408,29 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 	return searchResult, nil
 }
 
+// SubscribeSessionState is the resolver for the subscribeSessionState field.
+func (r *subscriptionResolver) SubscribeSessionState(ctx context.Context, sessionID int) (<-chan *model.SessionState, error) {
+	exists := r.sessionService.DoesSessionExist(sessionID)
+	if !exists {
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
+	}
+
+	newChannel := make(chan *model.SessionState)
+
+	r.sessionService.AddChannel(sessionID, newChannel)
+
+	return newChannel, nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// Subscription returns generated.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }
