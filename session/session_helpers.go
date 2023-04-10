@@ -11,7 +11,7 @@ import (
 )
 
 func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
-	go func() {
+	go func(){
 		var activeChannels []chan *model.SessionState
 
 		s.allSessionsMutex.Lock()
@@ -23,16 +23,16 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 
 		for _, ch := range channels {
 			select {
-			case ch <- session.sessionState: // This is the actual send.
-				// Our message went through, do nothing
+			case ch <- session.sessionState: 
+				slog.Info("Sent update 1")
 				activeChannels = append(activeChannels, ch)
-			default: // This is run when our send does not work.
-				slog.Info("Channel closed in update.")
-				// You can handle any deregistration of the channel here.
+			case  <-time.After(100 * time.Millisecond):
+				slog.Info("Waiting for channel to become unblocked timed out")
 			}
 		}
 
 		session.channels = activeChannels
+		slog.Info("channels ", "channels", len(channels))
 		session.channelMutex.Unlock()
 
 		session.expiryMutex.Lock()

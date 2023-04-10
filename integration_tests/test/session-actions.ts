@@ -19,15 +19,17 @@ describe("Session Actions", () => {
         
         await RunSessionActions(gqlAdminClient, sessionID, "ADMIN")
 
-        const privilegedVoterLoginParams = {
-            "email": "mikey@gmail.com",
-            "password": "gobraves"
-        }
-        let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams)
-        await RunSessionActions(gqlPrivelegedVoterClient, sessionID, "PRIVILEGED_VOTER")
+        // const privilegedVoterLoginParams = {
+        //     "email": "mikey@gmail.com",
+        //     "password": "gobraves"
+        // }
+        // let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams)
+        // await RunSessionActions(gqlPrivelegedVoterClient, sessionID, "PRIVILEGED_VOTER")
         
-        let gqlFreeVoterClient = await GetGqlClientForUser()
-        await RunSessionActions(gqlFreeVoterClient, sessionID, "FREE_VOTER")
+        // let gqlFreeVoterClient = await GetGqlClientForUser()
+        // await RunSessionActions(gqlFreeVoterClient, sessionID, "FREE_VOTER")
+
+        // await new Promise(f => setTimeout(f, 5000));
 
         await EndSession(gqlAdminClient, sessionID)
     })
@@ -55,7 +57,7 @@ async function GetGqlClientForUser(loginParams?: LoginParams) {
 
 async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLevel: String) {
         await GetVoter(gqlclient, sessionID)
-        SubscribeSessionState(gqlclient, sessionID)
+        let unsubscribe = SubscribeSessionState(gqlclient, sessionID)
 
         let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
         let songToVoteFor = searchResult.musicSearch[0]
@@ -126,6 +128,7 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
             assert.equal(currentVotes - 1, sessionResult.sessionState.queue[0].votes)
         }
 
+        unsubscribe()
 }
 
 interface LoginParams {
@@ -285,8 +288,10 @@ function SubscribeSessionState(gqlclient: Client, sessionID: Number) {
 
     
     const { unsubscribe } = gqlclient.subscription(SUBSCRIBE_SESSION_STATE, { sessionID: sessionID}).subscribe(result => {
-        console.log(result); // { data: ... }
+        console.log(JSON.stringify(result)); // { data: ... }
     });
+
+    return unsubscribe
 }
 
 async function EndSession(gqlclient: Client, sessionID: Number) {

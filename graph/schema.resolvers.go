@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	// "time"
 
 	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/constants"
@@ -114,7 +115,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	existingVoter.RefreshVoterExpiration()
 	r.sessionService.UpsertVoterInSession(sessionID, existingVoter)
-
+	// time.Sleep(500 * time.Millisecond)
 	r.sessionService.UpsertQueue(sessionID, numberOfVotes, song)
 
 	return r.sessionService.GetSessionState(sessionID), nil
