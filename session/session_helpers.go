@@ -28,10 +28,10 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 		for _, ch := range channels {
 			select {
 			case ch <- session.sessionState: 
-				slog.Info("Sent update")
+				slog.Debug("Sent update")
 				activeChannels = append(activeChannels, ch)
 			case  <-time.After(100 * time.Millisecond):
-				slog.Info("Waiting for channel to become unblocked timed out")
+				slog.Debug("Waiting for channel to become unblocked timed out")
 			}
 		}
 
