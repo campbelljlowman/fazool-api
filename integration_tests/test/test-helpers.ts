@@ -1,6 +1,14 @@
-import { gql, Client, cacheExchange, fetchExchange } from '@urql/core';
+import { gql, Client, cacheExchange, fetchExchange, subscriptionExchange } from '@urql/core';
+import { createClient as createWSClient } from 'graphql-ws';
+import { WebSocket}  from 'ws';
 
-export const gqlServerURL = "http://localhost:8080/query"
+const gqlHTTPServerURL = "http://localhost:8080/query"
+const gqlWSServerURL = "ws://localhost:8080/query"
+
+const wsClient = createWSClient({
+    url: gqlWSServerURL,
+    webSocketImpl: WebSocket
+});
 
 interface AuthTokens {
     accountToken?: string,
@@ -9,8 +17,22 @@ interface AuthTokens {
 
 export function newGqlClient(authTokens: AuthTokens) {
     let gqlClient = new Client({
-        url: gqlServerURL,
-        exchanges: [cacheExchange, fetchExchange],
+        url: gqlHTTPServerURL,
+        exchanges: [
+            cacheExchange, 
+            fetchExchange,
+            subscriptionExchange({
+                forwardSubscription(request) {
+                  const input = { ...request, query: request.query || '' }
+                  return {
+                    subscribe(sink) {
+                      const unsubscribe = wsClient.subscribe(input, sink)
+                      return { unsubscribe };
+                    },
+                  };
+                },
+              }),
+            ],
         fetchOptions: () => {
           return {
             headers: {  AccountAuthentication: authTokens.accountToken ? `Bearer ${authTokens.accountToken}` : '' ,

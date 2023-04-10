@@ -55,6 +55,7 @@ async function GetGqlClientForUser(loginParams?: LoginParams) {
 
 async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLevel: String) {
         await GetVoter(gqlclient, sessionID)
+        let unsubscribe = SubscribeSessionState(gqlclient, sessionID)
 
         let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
         let songToVoteFor = searchResult.musicSearch[0]
@@ -124,7 +125,7 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
 
             assert.equal(currentVotes - 1, sessionResult.sessionState.queue[0].votes)
         }
-
+        unsubscribe()
 }
 
 interface LoginParams {
@@ -253,6 +254,41 @@ async function GetSession(gqlclient: Client, sessionID: Number) {
     let result = await gqlclient.query(GET_SESSION_STATE, { sessionID: sessionID })
     assert.isUndefined(result.error)
     return result.data
+}
+
+function SubscribeSessionState(gqlclient: Client, sessionID: Number) {
+    const SUBSCRIBE_SESSION_STATE = gql`
+        subscription subscribeSessionState($sessionID: Int!){
+            subscribeSessionState(sessionID: $sessionID){
+                currentlyPlaying {
+                    simpleSong{
+                        id
+                        title
+                        artist
+                        image
+                    }
+                    playing
+                }
+                queue {
+                    simpleSong {
+                        id
+                        title
+                        artist
+                        image
+                    }
+                    votes
+                }
+                numberOfVoters
+            }
+        }
+    `;
+
+    
+    const { unsubscribe } = gqlclient.subscription(SUBSCRIBE_SESSION_STATE, { sessionID: sessionID}).subscribe(result => {
+        assert.isUndefined(result.error)
+    });
+
+    return unsubscribe
 }
 
 async function EndSession(gqlclient: Client, sessionID: Number) {

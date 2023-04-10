@@ -10,18 +10,34 @@ import (
 
 )
 
-func (s *SessionServiceInMemory) sendUpdate(sessionID int) {
-	//fill this in
-}
+func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
+	go func(){
+		var activeChannels []chan *model.SessionState
 
-func (s *SessionServiceInMemory) refreshSession(sessionID int) {
-	s.allSessionsMutex.Lock()
-	session := s.sessions[sessionID]
-	s.allSessionsMutex.Unlock()
+		s.allSessionsMutex.Lock()
+		session := s.sessions[sessionID]
+		s.allSessionsMutex.Unlock()
 
-	session.expiryMutex.Lock()
-	session.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
-	session.expiryMutex.Unlock()
+		session.expiryMutex.Lock()
+		session.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
+		session.expiryMutex.Unlock()
+
+		session.channelMutex.Lock()
+		channels := session.channels
+
+		for _, ch := range channels {
+			select {
+			case ch <- session.sessionState: 
+				slog.Info("Sent update")
+				activeChannels = append(activeChannels, ch)
+			case  <-time.After(100 * time.Millisecond):
+				slog.Info("Waiting for channel to become unblocked timed out")
+			}
+		}
+
+		session.channels = activeChannels
+		session.channelMutex.Unlock()
+	}()
 }
 
 // TODO: This code hasn't been tested
@@ -47,10 +63,18 @@ func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string,
 	return nil
 }
 
-func (s *SessionServiceInMemory) expireSession(session *Session) {
+func expireSession(session *Session) {
 	session.expiryMutex.Lock()
 	session.expiresAt = time.Now()
 	session.expiryMutex.Unlock()
+}
+
+func closeChannels(session *Session) {
+	session.channelMutex.Lock()
+	for _, ch := range session.channels {
+		close(ch)
+	}
+	session.channelMutex.Unlock()
 }
 
 func (s *SessionServiceInMemory) setQueue(sessionID int, newQueue [] *model.QueuedSong) {
@@ -61,6 +85,8 @@ func (s *SessionServiceInMemory) setQueue(sessionID int, newQueue [] *model.Queu
 	session.sessionStateMutex.Lock()
 	session.sessionState.Queue = newQueue
 	session.sessionStateMutex.Unlock()
+
+	s.sendUpdatedState(sessionID)
 }
 
 func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, accountService account.AccountService) {
@@ -73,6 +99,9 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 	advanceQueueFlag := false
 
 	for {
+		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
+		time.Sleep(spotifyWatchFrequency * time.Millisecond)
+
 		session.expiryMutex.Lock()
 		sessionExpired := time.Now().After(session.expiresAt)
 		session.expiryMutex.Unlock()
@@ -83,7 +112,7 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 		}
 
 		sendUpdateFlag = false
-		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := session.streamingService.CurrentSong()
+		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := session.streaming.CurrentSong()
 		if err != nil {
 			slog.Warn("Error getting music player state", "error", err)
 			continue
@@ -105,7 +134,7 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
 			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's
 			// Safe to add song
-			timeLeft, err := session.streamingService.TimeRemaining()
+			timeLeft, err := session.streaming.TimeRemaining()
 			if err != nil {
 				slog.Warn("Error getting song time remaining", "error", err)
 				continue
@@ -130,12 +159,8 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 			advanceQueueFlag = false
 		}
 		if sendUpdateFlag {
-			s.refreshSession(sessionID)
-			s.sendUpdate(sessionID)
+			s.sendUpdatedState(sessionID)
 		}
-
-		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
-		time.Sleep(spotifyWatchFrequency * time.Millisecond)
 	}
 }
 
@@ -168,6 +193,7 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 				session.sessionStateMutex.Lock()
 				session.sessionState.NumberOfVoters--
 				session.sessionStateMutex.Unlock()
+				s.sendUpdatedState(sessionID)
 			}
 
 		}

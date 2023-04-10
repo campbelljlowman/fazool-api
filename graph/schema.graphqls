@@ -134,3 +134,7 @@ type Mutation {
   endSession(sessionID: Int!): String!
   deleteAccount(targetAccountID: Int!): String!
 }
+
+type Subscription {
+  subscribeSessionState(sessionID: Int!): SessionState!
+}
