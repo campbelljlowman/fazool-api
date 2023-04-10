@@ -18,13 +18,17 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 		session := s.sessions[sessionID]
 		s.allSessionsMutex.Unlock()
 
+		session.expiryMutex.Lock()
+		session.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
+		session.expiryMutex.Unlock()
+
 		session.channelMutex.Lock()
 		channels := session.channels
 
 		for _, ch := range channels {
 			select {
 			case ch <- session.sessionState: 
-				slog.Info("Sent update 1")
+				slog.Info("Sent update")
 				activeChannels = append(activeChannels, ch)
 			case  <-time.After(100 * time.Millisecond):
 				slog.Info("Waiting for channel to become unblocked timed out")
@@ -32,12 +36,7 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 		}
 
 		session.channels = activeChannels
-		slog.Info("channels ", "channels", len(channels))
 		session.channelMutex.Unlock()
-
-		session.expiryMutex.Lock()
-		session.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
-		session.expiryMutex.Unlock()
 	}()
 }
 
