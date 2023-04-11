@@ -410,6 +410,11 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 
 // SubscribeSessionState is the resolver for the subscribeSessionState field.
 func (r *subscriptionResolver) SubscribeSessionState(ctx context.Context, sessionID int) (<-chan *model.SessionState, error) {
+	voterID, _ := ctx.Value("voterID").(string)
+	if voterID == "" {
+		return nil, utils.LogAndReturnError("Voter ID is required to subscribe to session state", nil)
+	}
+
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
