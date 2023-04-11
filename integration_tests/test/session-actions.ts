@@ -55,7 +55,6 @@ async function GetGqlClientForUser(loginParams?: LoginParams) {
 
 async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLevel: String) {
         await GetVoter(gqlclient, sessionID)
-        let unsubscribe = SubscribeSessionState(gqlclient, sessionID)
 
         let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
         let songToVoteFor = searchResult.musicSearch[0]
@@ -125,7 +124,6 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
 
             assert.equal(currentVotes - 1, sessionResult.sessionState.queue[0].votes)
         }
-        unsubscribe()
 }
 
 interface LoginParams {
@@ -288,7 +286,7 @@ function SubscribeSessionState(gqlclient: Client, sessionID: Number) {
         assert.isUndefined(result.error)
     });
 
-    return unsubscribe
+    unsubscribe()
 }
 
 async function EndSession(gqlclient: Client, sessionID: Number) {

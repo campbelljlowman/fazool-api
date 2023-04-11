@@ -28,7 +28,6 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 	}
 
 	refreshToken := r.accountService.GetSpotifyRefreshToken(accountID)
-	slog.Info("spotify refersh token: ", "t", refreshToken)
 	if refreshToken == "" {
 		return nil, utils.LogAndReturnError("No spotify refresh token found", nil)
 	}
@@ -334,13 +333,13 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		}
 	}
 
-	slog.Info("Generating new voter", "voter", voterID, "bonus-votes", bonusVotes)
+	slog.Debug("Generating new voter", "voter", voterID, "bonus-votes", bonusVotes)
 	newVoter, err := voter.NewVoter(voterID, voterType, accountID, bonusVotes)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)
 	}
 
-	slog.Info("New voter created:", "voter", newVoter)
+	slog.Debug("New voter created:", "voter", newVoter)
 	r.sessionService.UpsertVoterInSession(sessionID, newVoter)
 
 	return newVoter.GetVoterInfo(), nil

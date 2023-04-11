@@ -144,8 +144,7 @@ var calculateAndAddDownVoteTests = []struct {
 	expectedError bool
 }{
 	// Test voter types for regular vote
-	// TODO: Change the regular voter expected vote amount to 0!
-	{constants.RegularVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
+	{constants.RegularVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", 0, false},
 	{constants.PrivilegedVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
 	{constants.AdminVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
 	// Test if song already exists 
@@ -153,7 +152,7 @@ var calculateAndAddDownVoteTests = []struct {
 	{constants.PrivilegedVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", 0, true},
 	{constants.AdminVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", -1, false},
 	// Test vote adjustment
-	{constants.RegularVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", -2, true},
+	{constants.RegularVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", 0, true},
 	{constants.PrivilegedVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", -3, true},
 	{constants.AdminVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", -1, false},
 }
@@ -180,15 +179,20 @@ func TestCalculateAndAddDownVote(t *testing.T){
 
 		}
 
-		_, downVoteExists := voter.SongsDownVoted[testCase.songVotingFor]
-		if !downVoteExists {
-			t.Errorf("calculateAndAddUpVote() failed! Song not in map of downvoted songs")
+		if voter.VoterType != constants.RegularVoterType {
+			_, downVoteExists := voter.SongsDownVoted[testCase.songVotingFor]
+			if !downVoteExists {
+				t.Errorf("calculateAndAddUpVote() failed! Song not in map of downvoted songs")
+			}
 		}
 
-		_, upVoteExists := voter.SongsUpVoted[testCase.songVotingFor]
-		if upVoteExists {
-			t.Errorf("calculateAndAddUpVote() failed! Song in map of upvoted songs")
+		if voter.VoterType != constants.RegularVoterType {
+			_, upVoteExists := voter.SongsUpVoted[testCase.songVotingFor]
+			if upVoteExists {
+				t.Errorf("calculateAndAddUpVote() failed! Song in map of upvoted songs")
+			}
 		}
+
 	}
 }
 

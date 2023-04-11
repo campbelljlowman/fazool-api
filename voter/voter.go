@@ -7,7 +7,6 @@ import (
 
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	"golang.org/x/exp/slog"
 )
 
 type Voter struct {
@@ -40,7 +39,6 @@ func NewVoter(voterID, voterType string, accountID, BonusVotes int) (*Voter, err
 		SongsDownVoted: make(map[string]struct{}),
 		BonusVotes: BonusVotes,
 	}
-	slog.Info("Created voter in constructor", "voter", v, "bonus-votes", v.BonusVotes)
 	return &v, nil
 }
 
@@ -110,8 +108,12 @@ func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error){
 }
 
 func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
+	if v.VoterType == constants.RegularVoterType {
+		return 0, false, nil
+	}
+
 	voteAdjustment := 0
-	if v.VoterType != constants.AdminVoterType {
+	if v.VoterType == constants.PrivilegedVoterType {
 		if _, exists := v.SongsDownVoted[song]; exists {
 			return 0, false, errors.New("You've already voted for this song!")
 		}
