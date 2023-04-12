@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"fmt"
-	// "time"
 
 	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/constants"
