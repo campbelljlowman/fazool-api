@@ -40,7 +40,7 @@ type Account {
 }
 
 type VoterInfo {
-  type:           String!
+  type:           VoterType!
   songsUpVoted:   [String!]
   songsDownVoted: [String!]
   bonusVotes:     Int
@@ -68,13 +68,13 @@ enum SongVoteAction {
   REMOVE
 }
 
-enum VoterLevel {
-  FREE_VOTER
-  PRIVILEGED_VOTER
+enum VoterType {
+  FREE
+  PRIVILEGED
   ADMIN
 }
 
-enum AccountLevel {
+enum AccountType {
   FREE
   SMALL_VENUE
   LARGE_VENUE
@@ -124,8 +124,8 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlist: String!): SessionState!
-  setVoterLevel(targetAccountID: Int!, voterLevel: VoterLevel!): Account!
-  setAccountLevel(targetAccountID: Int!, accountLevel: AccountLevel!): Account!
+  setVoterType(targetAccountID: Int!, voterType: VoterType!): Account!
+  setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
 
 

@@ -78,52 +78,52 @@ type SpotifyCreds struct {
 }
 
 type VoterInfo struct {
-	Type           string   `json:"type"`
-	SongsUpVoted   []string `json:"songsUpVoted"`
-	SongsDownVoted []string `json:"songsDownVoted"`
-	BonusVotes     *int     `json:"bonusVotes"`
+	Type           VoterType `json:"type"`
+	SongsUpVoted   []string  `json:"songsUpVoted"`
+	SongsDownVoted []string  `json:"songsDownVoted"`
+	BonusVotes     *int      `json:"bonusVotes"`
 }
 
-type AccountLevel string
+type AccountType string
 
 const (
-	AccountLevelFree       AccountLevel = "FREE"
-	AccountLevelSmallVenue AccountLevel = "SMALL_VENUE"
-	AccountLevelLargeVenue AccountLevel = "LARGE_VENUE"
+	AccountTypeFree       AccountType = "FREE"
+	AccountTypeSmallVenue AccountType = "SMALL_VENUE"
+	AccountTypeLargeVenue AccountType = "LARGE_VENUE"
 )
 
-var AllAccountLevel = []AccountLevel{
-	AccountLevelFree,
-	AccountLevelSmallVenue,
-	AccountLevelLargeVenue,
+var AllAccountType = []AccountType{
+	AccountTypeFree,
+	AccountTypeSmallVenue,
+	AccountTypeLargeVenue,
 }
 
-func (e AccountLevel) IsValid() bool {
+func (e AccountType) IsValid() bool {
 	switch e {
-	case AccountLevelFree, AccountLevelSmallVenue, AccountLevelLargeVenue:
+	case AccountTypeFree, AccountTypeSmallVenue, AccountTypeLargeVenue:
 		return true
 	}
 	return false
 }
 
-func (e AccountLevel) String() string {
+func (e AccountType) String() string {
 	return string(e)
 }
 
-func (e *AccountLevel) UnmarshalGQL(v interface{}) error {
+func (e *AccountType) UnmarshalGQL(v interface{}) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = AccountLevel(str)
+	*e = AccountType(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid AccountLevel", str)
+		return fmt.Errorf("%s is not a valid AccountType", str)
 	}
 	return nil
 }
 
-func (e AccountLevel) MarshalGQL(w io.Writer) {
+func (e AccountType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
@@ -252,45 +252,45 @@ func (e SongVoteDirection) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-type VoterLevel string
+type VoterType string
 
 const (
-	VoterLevelFreeVoter       VoterLevel = "FREE_VOTER"
-	VoterLevelPrivilegedVoter VoterLevel = "PRIVILEGED_VOTER"
-	VoterLevelAdmin           VoterLevel = "ADMIN"
+	VoterTypeFree       VoterType = "FREE"
+	VoterTypePrivileged VoterType = "PRIVILEGED"
+	VoterTypeAdmin      VoterType = "ADMIN"
 )
 
-var AllVoterLevel = []VoterLevel{
-	VoterLevelFreeVoter,
-	VoterLevelPrivilegedVoter,
-	VoterLevelAdmin,
+var AllVoterType = []VoterType{
+	VoterTypeFree,
+	VoterTypePrivileged,
+	VoterTypeAdmin,
 }
 
-func (e VoterLevel) IsValid() bool {
+func (e VoterType) IsValid() bool {
 	switch e {
-	case VoterLevelFreeVoter, VoterLevelPrivilegedVoter, VoterLevelAdmin:
+	case VoterTypeFree, VoterTypePrivileged, VoterTypeAdmin:
 		return true
 	}
 	return false
 }
 
-func (e VoterLevel) String() string {
+func (e VoterType) String() string {
 	return string(e)
 }
 
-func (e *VoterLevel) UnmarshalGQL(v interface{}) error {
+func (e *VoterType) UnmarshalGQL(v interface{}) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = VoterLevel(str)
+	*e = VoterType(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid VoterLevel", str)
+		return fmt.Errorf("%s is not a valid VoterType", str)
 	}
 	return nil
 }
 
-func (e VoterLevel) MarshalGQL(w io.Writer) {
+func (e VoterType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

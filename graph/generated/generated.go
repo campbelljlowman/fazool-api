@@ -66,9 +66,9 @@ type ComplexityRoot struct {
 		DeleteAccount          func(childComplexity int, targetAccountID int) int
 		EndSession             func(childComplexity int, sessionID int) int
 		Login                  func(childComplexity int, accountLogin model.AccountLogin) int
-		SetAccountLevel        func(childComplexity int, targetAccountID int, accountLevel model.AccountLevel) int
+		SetAccountType         func(childComplexity int, targetAccountID int, accountType model.AccountType) int
 		SetPlaylist            func(childComplexity int, sessionID int, playlist string) int
-		SetVoterLevel          func(childComplexity int, targetAccountID int, voterLevel model.VoterLevel) int
+		SetVoterType           func(childComplexity int, targetAccountID int, voterType model.VoterType) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
 		UpsertSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
@@ -133,8 +133,8 @@ type MutationResolver interface {
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionState, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error)
 	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionState, error)
-	SetVoterLevel(ctx context.Context, targetAccountID int, voterLevel model.VoterLevel) (*model.Account, error)
-	SetAccountLevel(ctx context.Context, targetAccountID int, accountLevel model.AccountLevel) (*model.Account, error)
+	SetVoterType(ctx context.Context, targetAccountID int, voterType model.VoterType) (*model.Account, error)
+	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
 	AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
@@ -284,17 +284,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.Login(childComplexity, args["accountLogin"].(model.AccountLogin)), true
 
-	case "Mutation.setAccountLevel":
-		if e.complexity.Mutation.SetAccountLevel == nil {
+	case "Mutation.setAccountType":
+		if e.complexity.Mutation.SetAccountType == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_setAccountLevel_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_setAccountType_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetAccountLevel(childComplexity, args["targetAccountID"].(int), args["accountLevel"].(model.AccountLevel)), true
+		return e.complexity.Mutation.SetAccountType(childComplexity, args["targetAccountID"].(int), args["accountType"].(model.AccountType)), true
 
 	case "Mutation.setPlaylist":
 		if e.complexity.Mutation.SetPlaylist == nil {
@@ -308,17 +308,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.SetPlaylist(childComplexity, args["sessionID"].(int), args["playlist"].(string)), true
 
-	case "Mutation.setVoterLevel":
-		if e.complexity.Mutation.SetVoterLevel == nil {
+	case "Mutation.setVoterType":
+		if e.complexity.Mutation.SetVoterType == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_setVoterLevel_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_setVoterType_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetVoterLevel(childComplexity, args["targetAccountID"].(int), args["voterLevel"].(model.VoterLevel)), true
+		return e.complexity.Mutation.SetVoterType(childComplexity, args["targetAccountID"].(int), args["voterType"].(model.VoterType)), true
 
 	case "Mutation.updateCurrentlyPlaying":
 		if e.complexity.Mutation.UpdateCurrentlyPlaying == nil {
@@ -706,7 +706,7 @@ type Account {
 }
 
 type VoterInfo {
-  type:           String!
+  type:           VoterType!
   songsUpVoted:   [String!]
   songsDownVoted: [String!]
   bonusVotes:     Int
@@ -734,13 +734,13 @@ enum SongVoteAction {
   REMOVE
 }
 
-enum VoterLevel {
-  FREE_VOTER
-  PRIVILEGED_VOTER
+enum VoterType {
+  FREE
+  PRIVILEGED
   ADMIN
 }
 
-enum AccountLevel {
+enum AccountType {
   FREE
   SMALL_VENUE
   LARGE_VENUE
@@ -790,8 +790,8 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlist: String!): SessionState!
-  setVoterLevel(targetAccountID: Int!, voterLevel: VoterLevel!): Account!
-  setAccountLevel(targetAccountID: Int!, accountLevel: AccountLevel!): Account!
+  setVoterType(targetAccountID: Int!, voterType: VoterType!): Account!
+  setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
 
 
@@ -895,7 +895,7 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_setAccountLevel_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_setAccountType_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -907,15 +907,15 @@ func (ec *executionContext) field_Mutation_setAccountLevel_args(ctx context.Cont
 		}
 	}
 	args["targetAccountID"] = arg0
-	var arg1 model.AccountLevel
-	if tmp, ok := rawArgs["accountLevel"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accountLevel"))
-		arg1, err = ec.unmarshalNAccountLevel2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountLevel(ctx, tmp)
+	var arg1 model.AccountType
+	if tmp, ok := rawArgs["accountType"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accountType"))
+		arg1, err = ec.unmarshalNAccountType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountType(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["accountLevel"] = arg1
+	args["accountType"] = arg1
 	return args, nil
 }
 
@@ -943,7 +943,7 @@ func (ec *executionContext) field_Mutation_setPlaylist_args(ctx context.Context,
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_setVoterLevel_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_setVoterType_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -955,15 +955,15 @@ func (ec *executionContext) field_Mutation_setVoterLevel_args(ctx context.Contex
 		}
 	}
 	args["targetAccountID"] = arg0
-	var arg1 model.VoterLevel
-	if tmp, ok := rawArgs["voterLevel"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("voterLevel"))
-		arg1, err = ec.unmarshalNVoterLevel2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterLevel(ctx, tmp)
+	var arg1 model.VoterType
+	if tmp, ok := rawArgs["voterType"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("voterType"))
+		arg1, err = ec.unmarshalNVoterType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterType(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["voterLevel"] = arg1
+	args["voterType"] = arg1
 	return args, nil
 }
 
@@ -1855,8 +1855,8 @@ func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_setVoterLevel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_setVoterLevel(ctx, field)
+func (ec *executionContext) _Mutation_setVoterType(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setVoterType(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1869,7 +1869,7 @@ func (ec *executionContext) _Mutation_setVoterLevel(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetVoterLevel(rctx, fc.Args["targetAccountID"].(int), fc.Args["voterLevel"].(model.VoterLevel))
+		return ec.resolvers.Mutation().SetVoterType(rctx, fc.Args["targetAccountID"].(int), fc.Args["voterType"].(model.VoterType))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1886,7 +1886,7 @@ func (ec *executionContext) _Mutation_setVoterLevel(ctx context.Context, field g
 	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_setVoterLevel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_setVoterType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1915,15 +1915,15 @@ func (ec *executionContext) fieldContext_Mutation_setVoterLevel(ctx context.Cont
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setVoterLevel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_setVoterType_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_setAccountLevel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_setAccountLevel(ctx, field)
+func (ec *executionContext) _Mutation_setAccountType(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setAccountType(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1936,7 +1936,7 @@ func (ec *executionContext) _Mutation_setAccountLevel(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetAccountLevel(rctx, fc.Args["targetAccountID"].(int), fc.Args["accountLevel"].(model.AccountLevel))
+		return ec.resolvers.Mutation().SetAccountType(rctx, fc.Args["targetAccountID"].(int), fc.Args["accountType"].(model.AccountType))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1953,7 +1953,7 @@ func (ec *executionContext) _Mutation_setAccountLevel(ctx context.Context, field
 	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_setAccountLevel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_setAccountType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1982,7 +1982,7 @@ func (ec *executionContext) fieldContext_Mutation_setAccountLevel(ctx context.Co
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setAccountLevel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_setAccountType_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -3536,9 +3536,9 @@ func (ec *executionContext) _VoterInfo_type(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(model.VoterType)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNVoterType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_VoterInfo_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3548,7 +3548,7 @@ func (ec *executionContext) fieldContext_VoterInfo_type(ctx context.Context, fie
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type VoterType does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5802,19 +5802,19 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "setVoterLevel":
+		case "setVoterType":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setVoterLevel(ctx, field)
+				return ec._Mutation_setVoterType(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "setAccountLevel":
+		case "setAccountType":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setAccountLevel(ctx, field)
+				return ec._Mutation_setAccountType(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -6654,19 +6654,19 @@ func (ec *executionContext) marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋ
 	return ec._Account(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNAccountLevel2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountLevel(ctx context.Context, v interface{}) (model.AccountLevel, error) {
-	var res model.AccountLevel
+func (ec *executionContext) unmarshalNAccountLogin2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountLogin(ctx context.Context, v interface{}) (model.AccountLogin, error) {
+	res, err := ec.unmarshalInputAccountLogin(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNAccountType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountType(ctx context.Context, v interface{}) (model.AccountType, error) {
+	var res model.AccountType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNAccountLevel2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountLevel(ctx context.Context, sel ast.SelectionSet, v model.AccountLevel) graphql.Marshaler {
+func (ec *executionContext) marshalNAccountType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountType(ctx context.Context, sel ast.SelectionSet, v model.AccountType) graphql.Marshaler {
 	return v
-}
-
-func (ec *executionContext) unmarshalNAccountLogin2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountLogin(ctx context.Context, v interface{}) (model.AccountLogin, error) {
-	res, err := ec.unmarshalInputAccountLogin(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
@@ -6817,13 +6817,13 @@ func (ec *executionContext) marshalNVoterInfo2ᚖgithubᚗcomᚋcampbelljlowman�
 	return ec._VoterInfo(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNVoterLevel2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterLevel(ctx context.Context, v interface{}) (model.VoterLevel, error) {
-	var res model.VoterLevel
+func (ec *executionContext) unmarshalNVoterType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterType(ctx context.Context, v interface{}) (model.VoterType, error) {
+	var res model.VoterType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNVoterLevel2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterLevel(ctx context.Context, sel ast.SelectionSet, v model.VoterLevel) graphql.Marshaler {
+func (ec *executionContext) marshalNVoterType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterType(ctx context.Context, sel ast.SelectionSet, v model.VoterType) graphql.Marshaler {
 	return v
 }
 

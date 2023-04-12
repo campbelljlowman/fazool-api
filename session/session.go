@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/campbelljlowman/fazool-api/account"
-	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/streaming"
 	"github.com/campbelljlowman/fazool-api/utils"
@@ -16,7 +15,7 @@ import (
 )
 
 type SessionService interface {
-	CreateSession(adminAccountID int, accountLevel string, streaming streaming.StreamingService, accountService account.AccountService) (int, error)
+	CreateSession(adminAccountID int, accountType model.AccountType, streaming streaming.StreamingService, accountService account.AccountService) (int, error)
 
 	GetSessionConfig(sessionID int) *model.SessionConfig
 	GetSessionState(sessionID int) *model.SessionState
@@ -74,14 +73,14 @@ func NewSessionServiceInMemoryImpl(accountService account.AccountService) *Sessi
 	return sessionInMemory
 }
 
-func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountLevel string, streaming streaming.StreamingService, accountService account.AccountService) (int, error) {
+func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType model.AccountType, streaming streaming.StreamingService, accountService account.AccountService) (int, error) {
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
 		return 0, err
 	}
 
 	maximumVoters := 0
-	if accountLevel == constants.RegularAccountLevel {
+	if accountType == model.AccountTypeFree {
 		maximumVoters = 50
 	}
 

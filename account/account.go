@@ -11,20 +11,20 @@ import (
 )
 
 type AccountService interface {
-	CreateAccount(newAccount model.NewAccount, passwordHash, account_level, voter_level string, bonusVotes int) int 
+	CreateAccount(newAccount model.NewAccount, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int 
 
 	GetAccountFromEmail(accountEmail string) *model.Account
 	GetAccountFromID(accountID int) *model.Account
 	GetAccountIDAndPassHash(accountEmail string) (int, string)
 	GetSpotifyRefreshToken(accountID int) string
-	GetAccountLevel(accountID int) string
-	GetVoterLevelAndBonusVotes(accountID int) (string, int)
+	GetAccountType(accountID int) model.AccountType
+	GetVoterTypeAndBonusVotes(accountID int) (model.VoterType, int)
 	CheckIfEmailHasAccount(email string) bool
 
 	SetAccountActiveSession(accountID int, sessionID int)
 	SetSpotifyRefreshToken(accountID int, refreshToken string)
-	SetAccountLevel(accountID int, accountLevel model.AccountLevel) *model.Account
-	SetVoterLevel(accountID int, voterLevel model.VoterLevel) *model.Account
+	SetAccountType(accountID int, accountType model.AccountType) *model.Account
+	SetVoterType(accountID int, voterType model.VoterType) *model.Account
 	AddBonusVotes(accountID, bonusVotes int) *model.Account
 	SubtractBonusVotes(accountID, bonusVotes int) 
 
@@ -37,8 +37,8 @@ type account struct {
 	LastName 				string
 	Email 					string
 	PasswordHash 			string
-	AccountLevel			string
-	VoterLevel 				string
+	AccountType				model.AccountType
+	VoterType 				model.VoterType
 	BonusVotes 				int
 	ActiveSession			int
 	SpotifyAccessToken 		string
@@ -67,14 +67,14 @@ func NewAccountServiceGormImpl() *AccountServiceGorm {
 }
 
 // TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash, accountLevel, voterLevel string, bonusVotes int) int {
+func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int {
 	accountToAdd := &account{
 		FirstName: 		newAccount.FirstName,
 		LastName: 		newAccount.LastName,
 		Email: 			newAccount.Email,
 		PasswordHash: 	passwordHash,
-		AccountLevel: 	accountLevel,
-		VoterLevel: 	voterLevel,
+		AccountType: 	accountType,
+		VoterType: 		voterType,
 		BonusVotes: 	bonusVotes,
 	}
 	
@@ -122,18 +122,18 @@ func (a *AccountServiceGorm) GetSpotifyRefreshToken(accountID int) string {
 	return fullAccount.SpotifyRefreshToken
 }
 
-func (a *AccountServiceGorm) GetAccountLevel(accountID int) string {
+func (a *AccountServiceGorm) GetAccountType(accountID int) model.AccountType {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
-	return fullAccount.AccountLevel
+	return fullAccount.AccountType
 }
 
-func (a *AccountServiceGorm) GetVoterLevelAndBonusVotes(accountID int) (string, int) {
+func (a *AccountServiceGorm) GetVoterTypeAndBonusVotes(accountID int) (model.VoterType, int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
-	return fullAccount.VoterLevel, fullAccount.BonusVotes
+	return fullAccount.VoterType, fullAccount.BonusVotes
 }
 
 func (a *AccountServiceGorm) SetAccountActiveSession(accountID int, sessionID int) {
@@ -152,18 +152,18 @@ func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID int, refreshToken 
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountServiceGorm) SetAccountLevel(accountID int, accountLevel model.AccountLevel) *model.Account {
+func (a *AccountServiceGorm) SetAccountType(accountID int, accountType model.AccountType) *model.Account {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
-	fullAccount.AccountLevel = accountLevel.String()
+	fullAccount.AccountType = accountType
 	return transformAccountType(fullAccount)
 }
-func (a *AccountServiceGorm) SetVoterLevel(accountID int, voterLevel model.VoterLevel) *model.Account {
+func (a *AccountServiceGorm) SetVoterType(accountID int, voterType model.VoterType) *model.Account {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
-	fullAccount.VoterLevel = voterLevel.String()
+	fullAccount.VoterType = voterType
 	return transformAccountType(fullAccount)
 }
 
