@@ -24,10 +24,10 @@ describe("Session Actions", () => {
             "password": "gobraves"
         }
         let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams)
-        await RunSessionActions(gqlPrivelegedVoterClient, sessionID, "PRIVILEGED_VOTER")
+        await RunSessionActions(gqlPrivelegedVoterClient, sessionID, "PRIVILEGED")
         
         let gqlFreeVoterClient = await GetGqlClientForUser()
-        await RunSessionActions(gqlFreeVoterClient, sessionID, "FREE_VOTER")
+        await RunSessionActions(gqlFreeVoterClient, sessionID, "FREE")
 
         await EndSession(gqlAdminClient, sessionID)
     })
@@ -53,7 +53,7 @@ async function GetGqlClientForUser(loginParams?: LoginParams) {
     return gqlClient  
 }
 
-async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLevel: String) {
+async function RunSessionActions(gqlclient: Client, sessionID: Number, voterType: String) {
         await GetVoter(gqlclient, sessionID)
 
         let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
@@ -73,7 +73,7 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
         let sessionResult = await GetSession(gqlclient, sessionID)
         assert.equal(songToVoteFor.id, sessionResult.sessionState.queue[0].simpleSong.id)
 
-        if (voterLevel === "ADMIN") {
+        if (voterType === "ADMIN") {
             let currentVotes = sessionResult.sessionState.queue[0].votes
             // Admin can vote unlimited
             let songUpvote = {
@@ -97,7 +97,7 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
             assert.equal(currentVotes, sessionResult.sessionState.queue[0].votes)
         }
 
-        if (voterLevel === "PRIVILEGED_VOTER") {
+        if (voterType === "PRIVILEGED") {
             let currentVotes = sessionResult.sessionState.queue[0].votes
             // Bonus vote
             let songUpvote = {
@@ -111,7 +111,7 @@ async function RunSessionActions(gqlclient: Client, sessionID: Number, voterLeve
             assert.equal(currentVotes + 1, sessionResult.sessionState.queue[0].votes)
         }
 
-        if(voterLevel === "FREE_VOTER") {
+        if(voterType === "FREE") {
             // Remove Upvote
             let currentVotes = sessionResult.sessionState.queue[0].votes
             let songDownvote = {

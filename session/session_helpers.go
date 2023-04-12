@@ -4,7 +4,6 @@ import (
 	"time"
 	
 	"github.com/campbelljlowman/fazool-api/account"
-	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"golang.org/x/exp/slog"
 
@@ -182,7 +181,7 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 
 		session.votersMutex.Lock()
 		for _, voter := range session.voters {
-			if voter.VoterType == constants.AdminVoterType {
+			if voter.VoterType == model.VoterTypeAdmin {
 				continue
 			}
 			

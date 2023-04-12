@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 )
 
@@ -16,13 +15,13 @@ var GetVoterInfoTests = []struct {
 	{Voter{
 		VoterID: "asdf",
 		AccountID: 1234,
-		VoterType: constants.RegularVoterType,
+		VoterType: model.VoterTypeFree,
 		ExpiresAt: time.Now(),
 		SongsUpVoted: map[string]struct{}{"song1": emptyStructValue},
 		SongsDownVoted:  make(map[string]struct{}),
 		BonusVotes: 2,
 	}, model.VoterInfo{
-		Type: constants.RegularVoterType,
+		Type: model.VoterTypeFree,
 		SongsUpVoted: []string{"song1"},
 		SongsDownVoted: []string{},
 		BonusVotes: &two,
@@ -79,7 +78,7 @@ func TestGetVoterInfo(t *testing.T){
 
 
 var calculateAndAddUpVoteTests = []struct {
-	voterType string
+	voterType model.VoterType
 	SongsUpVoted map[string]struct{}
 	SongsDownVoted map[string]struct{}
 	bonusVotes int
@@ -89,17 +88,17 @@ var calculateAndAddUpVoteTests = []struct {
 	expectedError bool
 }{
 	// Test voter types for regular vote
-	{constants.RegularVoterType, map[string]struct{}{}, map[string]struct{}{},  0, "song1", 1, false, false},
-	{constants.PrivilegedVoterType, map[string]struct{}{}, map[string]struct{}{}, 0, "song1", 2, false, false},
-	{constants.AdminVoterType, map[string]struct{}{}, map[string]struct{}{}, 0, "song1", 1, false, false},
+	{model.VoterTypeFree, map[string]struct{}{}, map[string]struct{}{},  0, "song1", 1, false, false},
+	{model.VoterTypePrivileged, map[string]struct{}{}, map[string]struct{}{}, 0, "song1", 2, false, false},
+	{model.VoterTypeAdmin, map[string]struct{}{}, map[string]struct{}{}, 0, "song1", 1, false, false},
 	// Test if song already exists 
-	{constants.RegularVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, 0, "song1", 0, false, true},
-	{constants.RegularVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, 1, "song1", 1, true, false},
-	{constants.AdminVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, 0, "song1", 1, false, false},
+	{model.VoterTypeFree, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, 0, "song1", 0, false, true},
+	{model.VoterTypeFree, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, 1, "song1", 1, true, false},
+	{model.VoterTypeAdmin, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, 0, "song1", 1, false, false},
 	// Test vote adjustment
-	{constants.RegularVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, 0, "song1", 2, false, false},
-	{constants.PrivilegedVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, 0, "song1", 3, false, false},
-	{constants.AdminVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, 0, "song1", 1, false, false},
+	{model.VoterTypeFree, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, 0, "song1", 2, false, false},
+	{model.VoterTypePrivileged, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, 0, "song1", 3, false, false},
+	{model.VoterTypeAdmin, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, 0, "song1", 1, false, false},
 }
 func TestCalculateAndAddUpVote(t *testing.T){
 	for _, testCase := range(calculateAndAddUpVoteTests) {
@@ -136,7 +135,7 @@ func TestCalculateAndAddUpVote(t *testing.T){
 }
 
 var calculateAndAddDownVoteTests = []struct {
-	voterType string
+	voterType model.VoterType
 	SongsUpVoted map[string]struct{}
 	SongsDownVoted map[string]struct{}
 	songVotingFor string
@@ -144,17 +143,17 @@ var calculateAndAddDownVoteTests = []struct {
 	expectedError bool
 }{
 	// Test voter types for regular vote
-	{constants.RegularVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", 0, false},
-	{constants.PrivilegedVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
-	{constants.AdminVoterType, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
+	{model.VoterTypeFree, map[string]struct{}{}, map[string]struct{}{}, "song1", 0, false},
+	{model.VoterTypePrivileged, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
+	{model.VoterTypeAdmin, map[string]struct{}{}, map[string]struct{}{}, "song1", -1, false},
 	// Test if song already exists 
-	{constants.RegularVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", 0, true},
-	{constants.PrivilegedVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", 0, true},
-	{constants.AdminVoterType, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", -1, false},
+	{model.VoterTypeFree, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", 0, true},
+	{model.VoterTypePrivileged, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", 0, true},
+	{model.VoterTypeAdmin, map[string]struct{}{}, map[string]struct{}{"song1": emptyStructValue}, "song1", -1, false},
 	// Test vote adjustment
-	{constants.RegularVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", 0, true},
-	{constants.PrivilegedVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", -3, true},
-	{constants.AdminVoterType, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", -1, false},
+	{model.VoterTypeFree, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", 0, true},
+	{model.VoterTypePrivileged, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", -3, true},
+	{model.VoterTypeAdmin, map[string]struct{}{"song1": emptyStructValue}, map[string]struct{}{}, "song1", -1, false},
 }
 
 func TestCalculateAndAddDownVote(t *testing.T){
@@ -179,14 +178,14 @@ func TestCalculateAndAddDownVote(t *testing.T){
 
 		}
 
-		if voter.VoterType != constants.RegularVoterType {
+		if voter.VoterType != model.VoterTypeFree {
 			_, downVoteExists := voter.SongsDownVoted[testCase.songVotingFor]
 			if !downVoteExists {
 				t.Errorf("calculateAndAddUpVote() failed! Song not in map of downvoted songs")
 			}
 		}
 
-		if voter.VoterType != constants.RegularVoterType {
+		if voter.VoterType != model.VoterTypeFree {
 			_, upVoteExists := voter.SongsUpVoted[testCase.songVotingFor]
 			if upVoteExists {
 				t.Errorf("calculateAndAddUpVote() failed! Song in map of upvoted songs")
@@ -198,15 +197,15 @@ func TestCalculateAndAddDownVote(t *testing.T){
 
 
 var calculateAndRemoveUpVoteTests = []struct {
-	voterType string
+	voterType model.VoterType
 	SongsUpVoted map[string]struct{}
 	songVotingFor string
 	expectedVoteAmount int
 }{
 	// Test voter types for regular vote
-	{constants.RegularVoterType, map[string]struct{}{"song1": emptyStructValue}, "song1", -1},
-	{constants.PrivilegedVoterType, map[string]struct{}{"song1": emptyStructValue}, "song1", -2},
-	{constants.AdminVoterType, map[string]struct{}{"song1": emptyStructValue},"song1", -1},
+	{model.VoterTypeFree, map[string]struct{}{"song1": emptyStructValue}, "song1", -1},
+	{model.VoterTypePrivileged, map[string]struct{}{"song1": emptyStructValue}, "song1", -2},
+	{model.VoterTypeAdmin, map[string]struct{}{"song1": emptyStructValue},"song1", -1},
 }
 func TestCalculateAndRemoveUpVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveUpVoteTests) {
@@ -237,15 +236,15 @@ func TestCalculateAndRemoveUpVote(t *testing.T){
 }
 
 var calculateAndRemoveDownVoteTests = []struct {
-	voterType string
+	voterType model.VoterType
 	SongsDownVoted map[string]struct{}
 	songVotingFor string
 	expectedVoteAmount int
 }{
 	// Test voter types for regular vote
-	{constants.RegularVoterType, map[string]struct{}{"song1": emptyStructValue}, "song1", 1},
-	{constants.PrivilegedVoterType, map[string]struct{}{"song1": emptyStructValue}, "song1", 1},
-	{constants.AdminVoterType, map[string]struct{}{"song1": emptyStructValue},"song1", 1},
+	{model.VoterTypeFree, map[string]struct{}{"song1": emptyStructValue}, "song1", 1},
+	{model.VoterTypePrivileged, map[string]struct{}{"song1": emptyStructValue}, "song1", 1},
+	{model.VoterTypeAdmin, map[string]struct{}{"song1": emptyStructValue},"song1", 1},
 }
 func TestCalculateAndRemoveDownVote(t *testing.T){
 	for _, testCase := range(calculateAndRemoveDownVoteTests) {
@@ -276,12 +275,12 @@ func TestCalculateAndRemoveDownVote(t *testing.T){
 }
 
 var GetVoteAmountFromTypeTests = []struct {
-	voterType string
+	voterType model.VoterType
 	expectedVoteAmount int
 }{
-	{constants.RegularVoterType, 1},
-	{constants.PrivilegedVoterType, 2},
-	{constants.AdminVoterType, 1},
+	{model.VoterTypeFree, 1},
+	{model.VoterTypePrivileged, 2},
+	{model.VoterTypeAdmin, 1},
 	{"not a voter type", 1},
 }
 func TestGetVoteAmountFromType(t *testing.T){
@@ -295,12 +294,12 @@ func TestGetVoteAmountFromType(t *testing.T){
 }
 
 var GetVoterDurationTests = []struct {
-	voterType string
+	voterType model.VoterType
 	expectedVoteDuration time.Duration
 }{
-	{constants.RegularVoterType, regularVoterDurationInMinutes},
-	{constants.PrivilegedVoterType, priviledgedVoterDurationInMinutes},
-	{constants.AdminVoterType, regularVoterDurationInMinutes},
+	{model.VoterTypeFree, regularVoterDurationInMinutes},
+	{model.VoterTypePrivileged, priviledgedVoterDurationInMinutes},
+	{model.VoterTypeAdmin, regularVoterDurationInMinutes},
 	{"not a voter type", regularVoterDurationInMinutes},
 }
 func TestGetVoterDuration(t *testing.T){
@@ -314,12 +313,12 @@ func TestGetVoterDuration(t *testing.T){
 }
 
 var ContainsTests = []struct {
-	testSlice []string
-	searchValue string
+	testSlice []model.VoterType
+	searchValue model.VoterType
 	expectedExists bool
 }{
-	{[]string{"test string"}, "test string", true},
-	{[]string{"test string"}, "string doesn't exist", false},
+	{[]model.VoterType{model.VoterTypeAdmin}, model.VoterTypeAdmin, true},
+	{[]model.VoterType{model.VoterTypeAdmin}, model.VoterTypeFree, false},
 }
 func TestContains(t *testing.T){
 	for _, testCase := range(ContainsTests) {

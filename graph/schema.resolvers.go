@@ -6,10 +6,8 @@ package graph
 import (
 	"context"
 	"fmt"
-	// "time"
 
 	"github.com/campbelljlowman/fazool-api/auth"
-	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/streaming"
@@ -39,9 +37,9 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 	client := streaming.NewSpotifyClient(spotifyToken)
 
-	accountLevel := r.accountService.GetAccountLevel(accountID)
+	accountType := r.accountService.GetAccountType(accountID)
 
-	sessionID, err := r.sessionService.CreateSession(accountID, accountLevel, client, r.accountService)
+	sessionID, err := r.sessionService.CreateSession(accountID, accountType, client, r.accountService)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error creating new session", err)
 	}
@@ -59,8 +57,8 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 // CreateAccount is the resolver for the createAccount field.
 func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error) {
 	// Get this from new account request!
-	accountLevel := constants.RegularAccountLevel
-	voterLevel := constants.RegularVoterType
+	accountType := model.AccountTypeFree
+	voterType := model.VoterTypeFree
 
 	isVaildEmail := utils.ValidateEmail(newAccount.Email)
 	if !isVaildEmail {
@@ -75,7 +73,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 
 	passwordHash := utils.HashHelper(newAccount.Password)
 
-	accountID := r.accountService.CreateAccount(newAccount, passwordHash, accountLevel, voterLevel, 0)
+	accountID := r.accountService.CreateAccount(newAccount, passwordHash, accountType, voterType, 0)
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
 	if err != nil {
@@ -179,24 +177,24 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 	return r.sessionService.GetSessionState(sessionID), nil
 }
 
-// SetVoterLevel is the resolver for the setVoterLevel field.
-func (r *mutationResolver) SetVoterLevel(ctx context.Context, targetAccountID int, voterLevel model.VoterLevel) (*model.Account, error) {
+// SetVoterType is the resolver for the setVoterType field.
+func (r *mutationResolver) SetVoterType(ctx context.Context, targetAccountID int, voterType model.VoterType) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("You can only set your own voter level!", nil)
 	}
 
-	return r.accountService.SetVoterLevel(targetAccountID, voterLevel), nil
+	return r.accountService.SetVoterType(targetAccountID, voterType), nil
 }
 
-// SetAccountLevel is the resolver for the setAccountLevel field.
-func (r *mutationResolver) SetAccountLevel(ctx context.Context, targetAccountID int, accountLevel model.AccountLevel) (*model.Account, error) {
+// SetAccountType is the resolver for the setAccountType field.
+func (r *mutationResolver) SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("You can only set your own account level!", nil)
 	}
 
-	return r.accountService.SetAccountLevel(targetAccountID, accountLevel), nil
+	return r.accountService.SetAccountType(targetAccountID, accountType), nil
 }
 
 // AddBonusVotes is the resolver for the addBonusVotes field.
@@ -318,22 +316,22 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}
 
-	voterType := constants.RegularVoterType
+	voterType := model.VoterTypeFree
 	bonusVotes := 0
 
 	if accountID != 0 {
-		voterLevel, bonusVotesValue := r.accountService.GetVoterLevelAndBonusVotes(accountID)
+		voterTypeLocal, bonusVotesValue := r.accountService.GetVoterTypeAndBonusVotes(accountID)
 		bonusVotes = bonusVotesValue
 
-		if voterLevel == constants.PrivilegedVoterType {
-			voterType = constants.PrivilegedVoterType
+		if voterTypeLocal == model.VoterTypePrivileged {
+			voterType = model.VoterTypePrivileged
 		}
 		if r.sessionService.GetSessionAdminAccountID(sessionID) == accountID {
-			voterType = constants.AdminVoterType
+			voterType = model.VoterTypeAdmin
 		}
 	}
 
-	slog.Debug("Generating new voter", "voter", voterID, "bonus-votes", bonusVotes)
+
 	newVoter, err := voter.NewVoter(voterID, voterType, accountID, bonusVotes)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error generating new voter", nil)

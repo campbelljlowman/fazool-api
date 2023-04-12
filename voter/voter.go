@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 )
 
 type Voter struct {
 	VoterID string
 	AccountID int
-	VoterType string
+	VoterType model.VoterType
 	ExpiresAt time.Time
 	SongsUpVoted map[string]struct{}
 	SongsDownVoted map[string]struct{}
@@ -22,10 +21,10 @@ type Voter struct {
 var emptyStructValue struct{}
 const regularVoterDurationInMinutes time.Duration = 15
 const priviledgedVoterDurationInMinutes time.Duration = 15
-var validVoterTypes = []string{constants.AdminVoterType, constants.PrivilegedVoterType, constants.RegularVoterType}
+var validVoterTypes = []model.VoterType{model.VoterTypeFree, model.VoterTypePrivileged, model.VoterTypeAdmin}
 
 
-func NewVoter(voterID, voterType string, accountID, BonusVotes int) (*Voter, error) {
+func NewVoter(voterID string, voterType model.VoterType, accountID, BonusVotes int) (*Voter, error) {
 	if !contains(validVoterTypes, voterType) {
 		return nil, fmt.Errorf("Invalid voter type passed!")
 	}
@@ -85,7 +84,7 @@ func (v *Voter) CalculateAndProcessVote(song string, direction *model.SongVoteDi
 
 func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error){
 	voteAdjustment := 0
-	if v.VoterType != constants.AdminVoterType {
+	if v.VoterType != model.VoterTypeAdmin {
 		if _, exists := v.SongsUpVoted[song]; exists {
 			if v.BonusVotes <= 0 {
 				return 0, false, errors.New("You've already voted for this song!")
@@ -108,12 +107,12 @@ func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error){
 }
 
 func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
-	if v.VoterType == constants.RegularVoterType {
+	if v.VoterType == model.VoterTypeFree {
 		return 0, false, nil
 	}
 
 	voteAdjustment := 0
-	if v.VoterType == constants.PrivilegedVoterType {
+	if v.VoterType == model.VoterTypePrivileged {
 		if _, exists := v.SongsDownVoted[song]; exists {
 			return 0, false, errors.New("You've already voted for this song!")
 		}
@@ -143,21 +142,21 @@ func (v *Voter) RefreshVoterExpiration() {
 	v.ExpiresAt = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
 }
 
-func getNumberOfVotesFromType (voterType string) int {
-	if voterType == constants.PrivilegedVoterType {
+func getNumberOfVotesFromType (voterType model.VoterType) int {
+	if voterType == model.VoterTypePrivileged {
 		return 2
 	}
 	return 1
 }
 
-func getVoterDuration (voterType string) time.Duration {
-	if voterType == constants.PrivilegedVoterType {
+func getVoterDuration (voterType model.VoterType) time.Duration {
+	if voterType == model.VoterTypePrivileged {
 		return priviledgedVoterDurationInMinutes
 	}
 	return regularVoterDurationInMinutes
 }
 
-func contains(elems []string, v string) bool {
+func contains(elems []model.VoterType, v model.VoterType) bool {
     for _, s := range elems {
         if v == s {
             return true
