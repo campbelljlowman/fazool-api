@@ -110,7 +110,6 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 		case <-time.After(streamingServiceWatchFrequencyMilliseconds * time.Millisecond):
 		case <-session.streamingServiceUpdater:
 		}
-		slog.Info("Checking spotify")
 
 		session.expiryMutex.Lock()
 		sessionExpired := time.Now().After(session.expiresAt)
