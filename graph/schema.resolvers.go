@@ -34,16 +34,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 		return nil, utils.LogAndReturnError("No spotify refresh token found", nil)
 	}
 
-	spotifyToken, err := streaming.RefreshSpotifyToken(refreshToken)
-	if err != nil {
-		return nil, utils.LogAndReturnError("Error refreshing Spotify Token", err)
-	}
-
-	client := streaming.NewSpotifyClient(spotifyToken)
+	client := streaming.NewSpotifyClient(refreshToken)
 
 	accountType := r.accountService.GetAccountType(accountID)
 
-	sessionID, err = r.sessionService.CreateSession(accountID, accountType, client, r.accountService)
+	sessionID, err := r.sessionService.CreateSession(accountID, accountType, client, r.accountService)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error creating new session", err)
 	}
