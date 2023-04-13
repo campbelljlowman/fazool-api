@@ -18,7 +18,7 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 		s.allSessionsMutex.Unlock()
 
 		session.expiryMutex.Lock()
-		session.expiresAt = time.Now().Add(sessionTimeout * time.Minute)
+		session.expiresAt = time.Now().Add(sessionTimeoutMinutes * time.Minute)
 		session.expiryMutex.Unlock()
 
 		session.channelMutex.Lock()
@@ -88,18 +88,29 @@ func (s *SessionServiceInMemory) setQueue(sessionID int, newQueue [] *model.Queu
 	s.sendUpdatedState(sessionID)
 }
 
-func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, accountService account.AccountService) {
+func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID int, accountService account.AccountService) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
 	sendUpdateFlag := false
-	addNextSongFlag := false
-	advanceQueueFlag := false
+	addNextSongFlag := true
+	popQueueFlag := false
+	streamingServiceWatchFrequencyMilliseconds := streamingServiceWatchFrequencySlowMilliseconds
 
 	for {
-		// TODO: Maybe make this refresh value dynamic to adjust refresh frequency at the end of a song
-		time.Sleep(spotifyWatchFrequency * time.Millisecond)
+		// Refresh value is dynamic to increase the sensitivity when the song is about to change
+		if addNextSongFlag == false {
+			streamingServiceWatchFrequencyMilliseconds = streamingServiceWatchFrequencyFastMilliseconds
+		} else {
+			streamingServiceWatchFrequencyMilliseconds = streamingServiceWatchFrequencySlowMilliseconds
+		}
+
+		select{
+		case <-time.After(streamingServiceWatchFrequencyMilliseconds * time.Millisecond):
+		case <-session.streamingServiceUpdater:
+		}
+		slog.Info("Checking spotify")
 
 		session.expiryMutex.Lock()
 		sessionExpired := time.Now().After(session.expiresAt)
@@ -116,7 +127,7 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 			slog.Warn("Error getting music player state", "error", err)
 			continue
 		}
-
+	
 		session.sessionStateMutex.Lock()
 		if spotifyCurrentlyPlaying == true {
 			if session.sessionState.CurrentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
@@ -129,7 +140,7 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 				session.sessionState.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
 				sendUpdateFlag = true
 			}
-
+	
 			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
 			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's
 			// Safe to add song
@@ -138,9 +149,9 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 				slog.Warn("Error getting song time remaining", "error", err)
 				continue
 			}
-
+	
 			if timeLeft < 5000 && addNextSongFlag {
-				advanceQueueFlag = true
+				popQueueFlag = true
 				sendUpdateFlag = true
 				addNextSongFlag = false
 			}
@@ -152,10 +163,10 @@ func (s *SessionServiceInMemory) watchSpotifyCurrentlyPlaying(sessionID int, acc
 			}
 		}
 		session.sessionStateMutex.Unlock()
-
-		if advanceQueueFlag {
-			s.AdvanceQueue(sessionID, false, accountService)
-			advanceQueueFlag = false
+	
+		if popQueueFlag {
+			s.PopQueue(sessionID, accountService)
+			popQueueFlag = false
 		}
 		if sendUpdateFlag {
 			s.sendUpdatedState(sessionID)
@@ -198,7 +209,7 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 		}
 		session.votersMutex.Unlock()
 
-		time.Sleep(voterWatchFrequency * time.Second)
+		time.Sleep(voterWatchFrequencySeconds * time.Second)
 	}
 }
 
@@ -226,6 +237,6 @@ func (s *SessionServiceInMemory) watchSessions(accountService account.AccountSer
 		}
 		sessionsToEnd = nil
 
-		time.Sleep(sessionWatchFrequency * time.Second)
+		time.Sleep(sessionWatchFrequencySeconds * time.Second)
 	}
 }

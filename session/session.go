@@ -29,7 +29,7 @@ type SessionService interface {
 	UpsertQueue(sessionID, vote int, song model.SongUpdate)
 	UpsertVoterInSession(sessionID int, newVoter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error
-	AdvanceQueue(sessionID int, force bool, accountService account.AccountService) error
+	PopQueue(sessionID int, accountService account.AccountService) error
 	AddBonusVote(songID string, accountID, numberOfVotes, sessionID int)
 	AddChannel(sessionID int, channel chan *model.SessionState)
 	SetPlaylist(sessionID int, playlist string) error
@@ -38,19 +38,20 @@ type SessionService interface {
 }
 
 type Session struct {
-	sessionConfig    	*model.SessionConfig
-	sessionState    	*model.SessionState
-	channels 			[]chan *model.SessionState
-	voters         		map[string]*voter.Voter
-	streaming    streaming.StreamingService
-	expiresAt      		time.Time
+	sessionConfig    		*model.SessionConfig
+	sessionState    		*model.SessionState
+	channels 				[]chan *model.SessionState
+	voters         			map[string]*voter.Voter
+	streaming    			streaming.StreamingService
+	expiresAt      			time.Time
 	// Map of [song][account][votes]
-	bonusVotes     		map[string]map[int]int
-	sessionStateMutex	*sync.Mutex
-	channelMutex 		*sync.Mutex
-	votersMutex    		*sync.Mutex
-	expiryMutex    		*sync.Mutex
-	bonusVoteMutex 		*sync.Mutex
+	bonusVotes     			map[string]map[int]int
+	streamingServiceUpdater	chan string
+	sessionStateMutex		*sync.Mutex
+	channelMutex 			*sync.Mutex
+	votersMutex    			*sync.Mutex
+	expiryMutex    			*sync.Mutex
+	bonusVoteMutex 			*sync.Mutex
 }
 
 type SessionServiceInMemory struct {
@@ -58,10 +59,11 @@ type SessionServiceInMemory struct {
 	allSessionsMutex 	*sync.Mutex
 }
 
-const sessionWatchFrequency time.Duration = 10 // Seconds
-const sessionTimeout time.Duration = 30 // Minutes
-const spotifyWatchFrequency time.Duration = 1000 // Milliseconds
-const voterWatchFrequency time.Duration = 1 // Seconds
+const sessionWatchFrequencySeconds time.Duration = 10 
+const sessionTimeoutMinutes time.Duration = 30 
+const streamingServiceWatchFrequencySlowMilliseconds time.Duration = 5000
+const streamingServiceWatchFrequencyFastMilliseconds time.Duration = 250
+const voterWatchFrequencySeconds time.Duration = 1
 
 func NewSessionServiceInMemoryImpl(accountService account.AccountService) *SessionServiceInMemory{
 	sessionInMemory := &SessionServiceInMemory{
@@ -100,25 +102,26 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 	}
 
 	session := Session{
-		sessionConfig:    	sessionConfig,
-		sessionState: 		sessionState,
-		channels: 			nil,
-		voters:         	make(map[string]*voter.Voter),
-		streaming:   streaming,
-		expiresAt:      	time.Now().Add(sessionTimeout * time.Minute),
-		bonusVotes:     	make(map[string]map[int]int),
-		sessionStateMutex:	&sync.Mutex{},
-		channelMutex: 		&sync.Mutex{},
-		votersMutex:    	&sync.Mutex{},
-		expiryMutex:    	&sync.Mutex{},
-		bonusVoteMutex: 	&sync.Mutex{},
+		sessionConfig:    			sessionConfig,
+		sessionState: 				sessionState,
+		channels: 					nil,
+		voters:         			make(map[string]*voter.Voter),
+		streaming:   				streaming,
+		expiresAt:      			time.Now().Add(sessionTimeoutMinutes * time.Minute),
+		bonusVotes:     			make(map[string]map[int]int),
+		streamingServiceUpdater:	make(chan string),
+		sessionStateMutex:			&sync.Mutex{},
+		channelMutex: 				&sync.Mutex{},
+		votersMutex:    			&sync.Mutex{},
+		expiryMutex:    			&sync.Mutex{},
+		bonusVoteMutex: 			&sync.Mutex{},
 	}
 
 	s.allSessionsMutex.Lock()
 	s.sessions[sessionID] = &session
 	s.allSessionsMutex.Unlock()
 
-	go s.watchSpotifyCurrentlyPlaying(sessionID, accountService)
+	go s.watchStreamingServiceCurrentlyPlaying(sessionID, accountService)
 	go s.watchVotersExpirations(sessionID)
 	
 	
@@ -268,16 +271,24 @@ func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action mo
 			return err
 		}
 	case "ADVANCE":
-		err := s.AdvanceQueue(sessionID, true, accountService)
+		err := s.PopQueue(sessionID, accountService)
+		if err != nil {
+			return err
+		}
+		err = session.streaming.Next()
 		if err != nil {
 			return err
 		}
 	}
 
+	// Do this twice bc ADVANCE updates spotify too slow for the first one to get the new state
+	session.streamingServiceUpdater <- "Update!"
+	session.streamingServiceUpdater <- "Update!"
+
 	return nil
 }
 
-func (s *SessionServiceInMemory) AdvanceQueue(sessionID int, force bool, accountService account.AccountService) error { 
+func (s *SessionServiceInMemory) PopQueue(sessionID int, accountService account.AccountService) error { 
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
@@ -301,15 +312,6 @@ func (s *SessionServiceInMemory) AdvanceQueue(sessionID int, force bool, account
 	}
 
 	err = s.processBonusVotes(sessionID, song.ID, accountService)
-	if err != nil {
-		return err
-	}
-
-	if !force {
-		return nil
-	}
-
-	err = session.streaming.Next()
 	if err != nil {
 		return err
 	}
