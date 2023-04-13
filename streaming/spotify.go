@@ -158,11 +158,19 @@ func (s *SpotifyWrapper) Search(query string) ([]*model.SimpleSong, error){
 }
 
 func SpotifyFullTrackToSimpleSong(track *spotify.FullTrack) *model.SimpleSong {
+	artists := track.Artists[0].Name
+
+	if len(track.Artists) > 1 {
+		for _, artist := range(track.Artists[1:]) {
+			artists += ", "
+			artists += artist.Name
+		}
+	}
+
 	song := &model.SimpleSong{
 		ID: track.ID.String(),
 		Title: track.Name,
-		// TODO: Loop through all artists and combine
-		Artist: track.Artists[0].Name,
+		Artist: artists,
 		Image: track.Album.Images[0].URL,
 	}
 	return song

@@ -11,7 +11,7 @@ import (
 )
 
 type AccountService interface {
-	CreateAccount(newAccount model.NewAccount, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int 
+	CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int 
 
 	GetAccountFromEmail(accountEmail string) *model.Account
 	GetAccountFromID(accountID int) *model.Account
@@ -67,12 +67,11 @@ func NewAccountServiceGormImpl() *AccountServiceGorm {
 	return &accountGorm
 }
 
-// TODO, password is passed to this function on newAccount struct, this is bad
-func (a *AccountServiceGorm) CreateAccount(newAccount model.NewAccount, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int {
+func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int {
 	accountToAdd := &account{
-		FirstName: 		newAccount.FirstName,
-		LastName: 		newAccount.LastName,
-		Email: 			newAccount.Email,
+		FirstName: 		firstName,
+		LastName: 		lastName,
+		Email: 			email,
 		PasswordHash: 	passwordHash,
 		AccountType: 	accountType,
 		VoterType: 		voterType,
