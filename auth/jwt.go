@@ -15,7 +15,6 @@ const accountTokenDurationMinutes time.Duration = 30
 var jwtSecretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func GenerateJWTForAccount(accountID int) (string, error){
-	// Validate inputs
 	if (accountID == 0) {
 		return "", fmt.Errorf("Account ID is a required field for generating JWT Token!")
 	}
@@ -54,7 +53,6 @@ func GetAccountIDFromJWT(tokenString string) (int, error) {
 
 	accountID, err := strconv.Atoi(fmt.Sprintf("%v", jwtClaims["accountID"]))
 
-	// accountID, err := strconv.Atoi(jwtClaims["accountID"].(string))
 	if err != nil {
 		slog.Warn("Error converting account ID passed on JWT token to int")
 	}

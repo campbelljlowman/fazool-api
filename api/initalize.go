@@ -3,7 +3,6 @@ package api
 import (
 	"net/http"
 
-	"golang.org/x/exp/slog"
 
 	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/graph"
@@ -15,7 +14,6 @@ import (
 )
 
 func InitializeRoutes() *gin.Engine {
-	slog.Debug("Initializing routes")
 	router := gin.Default()
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true

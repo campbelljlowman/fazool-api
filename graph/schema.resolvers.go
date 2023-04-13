@@ -84,7 +84,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 
 // UpdateQueue is the resolver for the updateQueue field.
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionState, error) {
-	// slog.Info("Updating queue", "sessionID", sessionID, "song", song.Title)
+	slog.Debug("Updating queue", "sessionID", sessionID, "song", song.Title)
 	voterID, _ := ctx.Value("voterID").(string)
 	if voterID == "" {
 		return nil, utils.LogAndReturnError("Voter ID is required to update queue", nil)
@@ -307,7 +307,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 	existingVoter, exists := r.sessionService.GetVoterInSession(sessionID, voterID)
 
 	if exists {
-		slog.Info("Return existing voter", "voter", existingVoter.VoterID)
+		slog.Debug("Return existing voter", "voter", existingVoter.VoterID)
 		return existingVoter.GetVoterInfo(), nil
 	}
 
@@ -385,7 +385,6 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 		return nil, utils.LogAndReturnError("Voter ID required for searching for music", nil)
 	}
 
-	slog.Info("Session ID", "sessionID", sessionID)
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)

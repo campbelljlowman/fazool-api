@@ -86,8 +86,8 @@ func (s *SpotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
 
 	playerContext := currentlyPlaying.PlaybackContext
 	if playerContext.Type == "playlist" {
-		slog.Info("Getting information for currently playing playlist", "playlist-URI", playerContext.URI)
-		// Kind of a hack, but can't find an easy to convert URI into spotify ID besides trimming the string
+		slog.Debug("Getting information for currently playing playlist", "playlist-URI", playerContext.URI)
+		// Kind of a hack, but can't find an easy way to convert URI into spotify ID besides trimming the string
 		currentPlaylist, err := s.client.GetPlaylist(context.Background(), spotify.ID(playerContext.URI[17:]))
 		if err != nil {
 			slog.Warn("Error getting information for currently playing spotify playlist", "error", err)
