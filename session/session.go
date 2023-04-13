@@ -281,7 +281,7 @@ func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action mo
 		}
 	}
 
-	// Do this twice bc ADVANCE updates spotify too slow for the first one to get the new state
+	// Do this twice bc ADVANCE updates streaming service too slow for the first one to get the new state
 	session.streamingServiceUpdater <- "Update!"
 	session.streamingServiceUpdater <- "Update!"
 

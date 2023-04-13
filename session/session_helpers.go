@@ -116,32 +116,32 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 		session.expiryMutex.Unlock()
 
 		if sessionExpired {
-			slog.Info("Session has expired, ending session spotify watcher", "session_id", sessionID)
+			slog.Info("Session has expired, ending session streaming service watcher", "session_id", sessionID)
 			return
 		}
 
 		sendUpdateFlag = false
-		spotifyCurrentlyPlayingSong, spotifyCurrentlyPlaying, err := session.streaming.CurrentSong()
+		currentlyPlayingSong, currentlyPlayingFlag, err := session.streaming.CurrentSong()
 		if err != nil {
 			slog.Warn("Error getting music player state", "error", err)
 			continue
 		}
 	
 		session.sessionStateMutex.Lock()
-		if spotifyCurrentlyPlaying == true {
-			if session.sessionState.CurrentlyPlaying.SimpleSong.ID != spotifyCurrentlyPlayingSong.SimpleSong.ID {
+		if currentlyPlayingFlag == true {
+			if session.sessionState.CurrentlyPlaying.SimpleSong.ID != currentlyPlayingSong.SimpleSong.ID {
 				// If song has changed, update currently playing, send update, and set flag to pop next song from queue
-				session.sessionState.CurrentlyPlaying = spotifyCurrentlyPlayingSong
+				session.sessionState.CurrentlyPlaying = currentlyPlayingSong
 				sendUpdateFlag = true
 				addNextSongFlag = true
-			} else if session.sessionState.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
+			} else if session.sessionState.CurrentlyPlaying.Playing != currentlyPlayingFlag {
 				// If same song is paused and then played, set the new state
-				session.sessionState.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
+				session.sessionState.CurrentlyPlaying.Playing = currentlyPlayingFlag
 				sendUpdateFlag = true
 			}
 	
-			// If the currently playing song is about to end, pop the top of the session and add to spotify queue
-			// If go spotify client adds API for checking current queue, checking this is a better way to tell if it's
+			// If the currently playing song is about to end, pop the top of the session and add to streaming service queue
+			// If go streaming service clients adds API for checking current queue, checking this is a better way to tell if it's
 			// Safe to add song
 			timeLeft, err := session.streaming.TimeRemaining()
 			if err != nil {
@@ -156,8 +156,8 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 			}
 		} else {
 			// Change currently playing to false if music gets paused
-			if session.sessionState.CurrentlyPlaying.Playing != spotifyCurrentlyPlaying {
-				session.sessionState.CurrentlyPlaying.Playing = spotifyCurrentlyPlaying
+			if session.sessionState.CurrentlyPlaying.Playing != currentlyPlayingFlag {
+				session.sessionState.CurrentlyPlaying.Playing = currentlyPlayingFlag
 				sendUpdateFlag = true
 			}
 		}
