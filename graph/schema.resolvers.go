@@ -19,10 +19,14 @@ import (
 
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, error) {
-	// TODO: Check if account has an active session already
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID is required to create session", nil)
+	}
+
+	sessionID := r.accountService.GetAccountActiveSession(accountID)
+	if sessionID != 0 {
+		return nil, utils.LogAndReturnError("You already have an active session", nil)
 	}
 
 	refreshToken := r.accountService.GetSpotifyRefreshToken(accountID)
@@ -39,7 +43,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 	accountType := r.accountService.GetAccountType(accountID)
 
-	sessionID, err := r.sessionService.CreateSession(accountID, accountType, client, r.accountService)
+	sessionID, err = r.sessionService.CreateSession(accountID, accountType, client, r.accountService)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error creating new session", err)
 	}

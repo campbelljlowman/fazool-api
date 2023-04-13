@@ -9,7 +9,6 @@ type StreamingService interface {
   Pause() error
   Next() error
   QueueSong(song string) error
-  // TODO: Remove the bool from this function since it's part of the currently playing song
   CurrentSong() (*model.CurrentlyPlayingSong, bool, error)
   TimeRemaining() (int, error)
   GetPlaylists() ([]*model.Playlist, error)

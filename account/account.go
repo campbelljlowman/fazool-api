@@ -19,6 +19,7 @@ type AccountService interface {
 	GetSpotifyRefreshToken(accountID int) string
 	GetAccountType(accountID int) model.AccountType
 	GetVoterTypeAndBonusVotes(accountID int) (model.VoterType, int)
+	GetAccountActiveSession(accountID int) int
 	CheckIfEmailHasAccount(email string) bool
 
 	SetAccountActiveSession(accountID int, sessionID int)
@@ -134,6 +135,13 @@ func (a *AccountServiceGorm) GetVoterTypeAndBonusVotes(accountID int) (model.Vot
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.VoterType, fullAccount.BonusVotes
+}
+
+func (a *AccountServiceGorm) GetAccountActiveSession(accountID int) int {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	return fullAccount.ActiveSession
 }
 
 func (a *AccountServiceGorm) SetAccountActiveSession(accountID int, sessionID int) {
