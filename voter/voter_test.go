@@ -304,7 +304,7 @@ var GetVoterDurationTests = []struct {
 }
 func TestGetVoterDuration(t *testing.T){
 	for _, testCase := range(GetVoterDurationTests) {
-		voteDuration := getVoterDuration(testCase.voterType)
+		voteDuration := GetVoterDuration(testCase.voterType)
 
 		if voteDuration != testCase.expectedVoteDuration{
 			t.Errorf("getVoterDuration() failed! Wanted vote duration: %v, got %v", testCase.expectedVoteDuration, voteDuration)

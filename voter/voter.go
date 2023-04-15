@@ -33,7 +33,7 @@ func NewVoter(voterID string, voterType model.VoterType, accountID, BonusVotes i
 		VoterID: voterID,
 		AccountID: accountID,
 		VoterType: voterType,
-		ExpiresAt: time.Now().Add(getVoterDuration(voterType) * time.Minute),
+		ExpiresAt: time.Now().Add(GetVoterDuration(voterType) * time.Minute),
 		SongsUpVoted: make(map[string]struct{}),
 		SongsDownVoted: make(map[string]struct{}),
 		BonusVotes: BonusVotes,
@@ -138,18 +138,14 @@ func (v *Voter) calculateAndRemoveDownVote(song string) (int, bool, error) {
 	return 1, false, nil
 }
 
-func (v *Voter) RefreshVoterExpiration() {
-	v.ExpiresAt = time.Now().Add(getVoterDuration(v.VoterType) * time.Minute)
-}
-
-func getNumberOfVotesFromType (voterType model.VoterType) int {
+func getNumberOfVotesFromType(voterType model.VoterType) int {
 	if voterType == model.VoterTypePrivileged {
 		return 2
 	}
 	return 1
 }
 
-func getVoterDuration (voterType model.VoterType) time.Duration {
+func GetVoterDuration(voterType model.VoterType) time.Duration {
 	if voterType == model.VoterTypePrivileged {
 		return priviledgedVoterDurationInMinutes
 	}

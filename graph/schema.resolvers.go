@@ -109,7 +109,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 		r.sessionService.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes, sessionID)
 	}
 
-	existingVoter.RefreshVoterExpiration()
+	r.sessionService.RefreshVoterExpiration(sessionID, voterID)
 	r.sessionService.UpsertVoterInSession(sessionID, existingVoter)
 	r.sessionService.UpsertQueue(sessionID, numberOfVotes, song)
 

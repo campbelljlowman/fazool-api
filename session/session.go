@@ -33,6 +33,7 @@ type SessionService interface {
 	AddBonusVote(songID string, accountID, numberOfVotes, sessionID int)
 	AddChannel(sessionID int, channel chan *model.SessionState)
 	SetPlaylist(sessionID int, playlist string) error
+	RefreshVoterExpiration(sessionID int, voterID string)
 
 	EndSession(sessionID int, accountService account.AccountService)
 }
@@ -364,6 +365,18 @@ func (s *SessionServiceInMemory) SetPlaylist(sessionID int, playlist string) err
 
 	s.setQueue(sessionID, songsToQueue)
 	return nil
+}
+
+func (s *SessionServiceInMemory) RefreshVoterExpiration(sessionID int, voterID string) {
+	s.allSessionsMutex.Lock()
+	session := s.sessions[sessionID]
+	s.allSessionsMutex.Unlock()
+	
+	session.votersMutex.Lock()
+	v := session.voters[voterID]
+	v.ExpiresAt = time.Now().Add(voter.GetVoterDuration(v.VoterType) * time.Minute)
+	session.votersMutex.Unlock()
+
 }
 
 func (s *SessionServiceInMemory) EndSession(sessionID int, accountService account.AccountService) {
