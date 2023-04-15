@@ -5,19 +5,24 @@ import (
 	"testing"
 )
 
-var hashHelperTests = []struct {
+var passwordFunctionsTests = []struct {
 	input string
-	expectedOutput string
 }{
-	{"asdf", "8OTC92xYkW7CWPJGhRvqCR0U1CR6L8PhhpRGGxgW4Ts="},
-	{"", "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU="},
+	{"asdf"},
+	{"1234"},
 }
-func TestHashHelper(t *testing.T) {
-	for _, testCase := range(hashHelperTests) {
-		resultString := HashHelper(testCase.input)
+func TestPasswordFunctions(t *testing.T) {
+	for _, testCase := range(passwordFunctionsTests) {
+		passwordHash, err := HashPassword(testCase.input)
 
-		if resultString != testCase.expectedOutput {
-			t.Errorf("HashHelper(%v) failed! Wanted: %v, got: %v", testCase.input, testCase.expectedOutput, resultString)
+		if err != nil {
+			t.Errorf("Error while running HashPassword(%v): %v", testCase.input, err)
+		}
+
+		match := CompareHashAndPassword(passwordHash, testCase.input)
+
+		if match != true {
+			t.Errorf("Password %v doesn't match for hash %v!", testCase.input, passwordHash)
 		}
 	}
 }

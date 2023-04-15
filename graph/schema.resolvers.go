@@ -55,8 +55,11 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 // CreateAccount is the resolver for the createAccount field.
 func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error) {
-	passwordHash := utils.HashHelper(newAccount.Password)
+	passwordHash, err := utils.HashPassword(newAccount.Password)
 	newAccount.Password = "BLANK"
+	if err != nil {
+		utils.LogAndReturnError("Error processing credentials", err)
+	}
 	// Get this from new account request!
 	accountType := model.AccountTypeFree
 	voterType := model.VoterTypeFree
@@ -208,9 +211,9 @@ func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID in
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, accountLogin model.AccountLogin) (string, error) {
-	accountID, accountPassword := r.accountService.GetAccountIDAndPassHash(accountLogin.Email)
+	accountID, accountPasswordHash := r.accountService.GetAccountIDAndPassHash(accountLogin.Email)
 
-	if utils.HashHelper(accountLogin.Password) != accountPassword {
+	if !utils.CompareHashAndPassword(accountPasswordHash, accountLogin.Password) {
 		return "", utils.LogAndReturnError("Invalid Login Credentials!", nil)
 	}
 

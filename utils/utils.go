@@ -2,18 +2,32 @@ package utils
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"math/big"
 	"net/mail"
 
 	"golang.org/x/exp/slog"
+	"golang.org/x/crypto/bcrypt"
 )
 
-func HashHelper(s string) string {
-	passwordHashByteArray := sha256.Sum256([]byte(s))
-	return base64.URLEncoding.EncodeToString(passwordHashByteArray[:])
+func HashPassword(password string) (string, error) {
+	passwordBytes := []byte(password)
+
+	passwordHash, err := bcrypt.GenerateFromPassword(passwordBytes, bcrypt.MinCost)
+
+	return string(passwordHash), err
+}
+
+func CompareHashAndPassword(passwordHash, password string) bool {
+	passwordHashBytes := []byte(passwordHash)
+	passwordBytes := []byte(password)
+
+	err := bcrypt.CompareHashAndPassword(passwordHashBytes, passwordBytes)
+	if err != nil {
+        return false
+    }
+    
+    return true
 }
 
 func ValidateEmail(email string) bool {
