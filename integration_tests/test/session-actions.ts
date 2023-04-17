@@ -53,7 +53,7 @@ async function GetGqlClientForUser(loginParams?: LoginParams) {
     return gqlClient  
 }
 
-async function RunSessionActions(gqlclient: Client, sessionID: number, voterType: string) {
+async function RunSessionActions(gqlclient: Client, sessionID: number, voterType: String) {
         await GetVoter(gqlclient, sessionID)
 
         let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
@@ -127,8 +127,8 @@ async function RunSessionActions(gqlclient: Client, sessionID: number, voterType
 }
 
 interface LoginParams {
-    email: string,
-    password: string
+    email: String,
+    password: String
 }
 async function Login(gqlclient: Client, loginParams: LoginParams) {
     const LOGIN = gql`
@@ -155,9 +155,9 @@ async function CreateSession(gqlclient: Client) {
     return result.data
 }
 
-async function MusicSearch(gqlclient: Client, sessionID: number, query: string) {
+async function MusicSearch(gqlclient: Client, sessionID: number, query: String) {
     const MUSIC_SEARCH = gql`
-        query musicSearch ($sessionID: Int!, $query: string!){
+        query musicSearch ($sessionID: Int!, $query: String!){
             musicSearch (sessionID: $sessionID, query: $query){
                 id
                 title
@@ -174,12 +174,12 @@ async function MusicSearch(gqlclient: Client, sessionID: number, query: string) 
 
 async function GetVoterToken(gqlclient: Client) {
     const GET_VOTER_TOKEN = gql`
-        query getVoterToken {
+        mutation getVoterToken {
             voterToken
         }
     `
 
-    let result = await gqlclient.query(GET_VOTER_TOKEN, {})
+    let result = await gqlclient.mutation(GET_VOTER_TOKEN, {})
     assert.isUndefined(result.error)
     return result.data
 }
@@ -201,12 +201,12 @@ async function GetVoter(gqlclient: Client, sessionID: number) {
 }
 
 interface SongUpdate {
-    id:         string
-    title?:     string
-    artist?:    string
-    image?:     string
-    vote:       string
-    action:     string
+    id:         String
+    title?:     String
+    artist?:    String
+    image?:     String
+    vote:       String
+    action:     String
 }
 async function UpdateQueue(gqlclient: Client, sessionID: number, songUpdate: SongUpdate) {
     const UPDATE_QUEUE = gql`

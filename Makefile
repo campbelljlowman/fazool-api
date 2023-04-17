@@ -30,7 +30,6 @@ run:
 	POSTGRES_URL=${POSTGRES_DEV_URL} \
 	go run .
 
-
 pg-up:
 	sudo service postgresql start
 
