@@ -41,7 +41,7 @@ func NewVoter(voterID string, voterType model.VoterType, accountID, BonusVotes i
 	return &v, nil
 }
 
-func (v *Voter) GetVoterInfo() *model.VoterInfo {
+func (v *Voter) GetVoterInfo() *model.Voter {
 	SongsUpVotedList := make([]string, len(v.SongsUpVoted))
 	SongsDownVotedList := make([]string, len(v.SongsDownVoted))
 
@@ -57,7 +57,7 @@ func (v *Voter) GetVoterInfo() *model.VoterInfo {
 		i++
 	}
 
-	voter := model.VoterInfo{
+	voter := model.Voter{
 		Type: v.VoterType,
 		SongsUpVoted: SongsUpVotedList,
 		SongsDownVoted: SongsDownVotedList,

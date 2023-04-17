@@ -295,7 +295,7 @@ func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
 }
 
 // Voter is the resolver for the voter field.
-func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error) {
+func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter, error) {
 	voterID, _ := ctx.Value("voterID").(string)
 	accountID, _ := ctx.Value("accountID").(int)
 	if voterID == "" {
@@ -332,7 +332,6 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.VoterI
 			voterType = model.VoterTypeAdmin
 		}
 	}
-
 
 	newVoter, err := voter.NewVoter(voterID, voterType, accountID, bonusVotes)
 	if err != nil {

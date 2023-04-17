@@ -118,7 +118,7 @@ type ComplexityRoot struct {
 		SubscribeSessionState func(childComplexity int, sessionID int) int
 	}
 
-	VoterInfo struct {
+	Voter struct {
 		BonusVotes     func(childComplexity int) int
 		SongsDownVoted func(childComplexity int) int
 		SongsUpVoted   func(childComplexity int) int
@@ -144,7 +144,7 @@ type QueryResolver interface {
 	SessionConfig(ctx context.Context, sessionID int) (*model.SessionConfig, error)
 	SessionState(ctx context.Context, sessionID int) (*model.SessionState, error)
 	VoterToken(ctx context.Context) (string, error)
-	Voter(ctx context.Context, sessionID int) (*model.VoterInfo, error)
+	Voter(ctx context.Context, sessionID int) (*model.Voter, error)
 	Account(ctx context.Context) (*model.Account, error)
 	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
 	MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error)
@@ -547,33 +547,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Subscription.SubscribeSessionState(childComplexity, args["sessionID"].(int)), true
 
-	case "VoterInfo.bonusVotes":
-		if e.complexity.VoterInfo.BonusVotes == nil {
+	case "Voter.bonusVotes":
+		if e.complexity.Voter.BonusVotes == nil {
 			break
 		}
 
-		return e.complexity.VoterInfo.BonusVotes(childComplexity), true
+		return e.complexity.Voter.BonusVotes(childComplexity), true
 
-	case "VoterInfo.songsDownVoted":
-		if e.complexity.VoterInfo.SongsDownVoted == nil {
+	case "Voter.songsDownVoted":
+		if e.complexity.Voter.SongsDownVoted == nil {
 			break
 		}
 
-		return e.complexity.VoterInfo.SongsDownVoted(childComplexity), true
+		return e.complexity.Voter.SongsDownVoted(childComplexity), true
 
-	case "VoterInfo.songsUpVoted":
-		if e.complexity.VoterInfo.SongsUpVoted == nil {
+	case "Voter.songsUpVoted":
+		if e.complexity.Voter.SongsUpVoted == nil {
 			break
 		}
 
-		return e.complexity.VoterInfo.SongsUpVoted(childComplexity), true
+		return e.complexity.Voter.SongsUpVoted(childComplexity), true
 
-	case "VoterInfo.type":
-		if e.complexity.VoterInfo.Type == nil {
+	case "Voter.type":
+		if e.complexity.Voter.Type == nil {
 			break
 		}
 
-		return e.complexity.VoterInfo.Type(childComplexity), true
+		return e.complexity.Voter.Type(childComplexity), true
 
 	}
 	return 0, false
@@ -705,7 +705,7 @@ type Account {
   activeSession:  Int
 }
 
-type VoterInfo {
+type Voter {
   type:           VoterType!
   songsUpVoted:   [String!]
   songsDownVoted: [String!]
@@ -773,10 +773,10 @@ input SpotifyCreds {
 }
 
 type Query {
-  sessionConfig(sessionID: Int!): SessionConfig
-  sessionState(sessionID: Int!): SessionState
+  sessionConfig(sessionID: Int!): SessionConfig!
+  sessionState(sessionID: Int!): SessionState!
   voterToken: String!
-  voter(sessionID: Int!): VoterInfo!
+  voter(sessionID: Int!): Voter!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
@@ -2374,11 +2374,14 @@ func (ec *executionContext) _Query_sessionConfig(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.SessionConfig)
 	fc.Result = res
-	return ec.marshalOSessionConfig2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionConfig(ctx, field.Selections, res)
+	return ec.marshalNSessionConfig2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionConfig(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_sessionConfig(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2434,11 +2437,14 @@ func (ec *executionContext) _Query_sessionState(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.SessionState)
 	fc.Result = res
-	return ec.marshalOSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx, field.Selections, res)
+	return ec.marshalNSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_sessionState(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2543,9 +2549,9 @@ func (ec *executionContext) _Query_voter(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.VoterInfo)
+	res := resTmp.(*model.Voter)
 	fc.Result = res
-	return ec.marshalNVoterInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterInfo(ctx, field.Selections, res)
+	return ec.marshalNVoter2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_voter(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2557,15 +2563,15 @@ func (ec *executionContext) fieldContext_Query_voter(ctx context.Context, field 
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "type":
-				return ec.fieldContext_VoterInfo_type(ctx, field)
+				return ec.fieldContext_Voter_type(ctx, field)
 			case "songsUpVoted":
-				return ec.fieldContext_VoterInfo_songsUpVoted(ctx, field)
+				return ec.fieldContext_Voter_songsUpVoted(ctx, field)
 			case "songsDownVoted":
-				return ec.fieldContext_VoterInfo_songsDownVoted(ctx, field)
+				return ec.fieldContext_Voter_songsDownVoted(ctx, field)
 			case "bonusVotes":
-				return ec.fieldContext_VoterInfo_bonusVotes(ctx, field)
+				return ec.fieldContext_Voter_bonusVotes(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type VoterInfo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Voter", field.Name)
 		},
 	}
 	defer func() {
@@ -3510,8 +3516,8 @@ func (ec *executionContext) fieldContext_Subscription_subscribeSessionState(ctx 
 	return fc, nil
 }
 
-func (ec *executionContext) _VoterInfo_type(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_VoterInfo_type(ctx, field)
+func (ec *executionContext) _Voter_type(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_type(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3541,9 +3547,9 @@ func (ec *executionContext) _VoterInfo_type(ctx context.Context, field graphql.C
 	return ec.marshalNVoterType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterType(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_VoterInfo_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Voter_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "VoterInfo",
+		Object:     "Voter",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3554,8 +3560,8 @@ func (ec *executionContext) fieldContext_VoterInfo_type(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _VoterInfo_songsUpVoted(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_VoterInfo_songsUpVoted(ctx, field)
+func (ec *executionContext) _Voter_songsUpVoted(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_songsUpVoted(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3582,9 +3588,9 @@ func (ec *executionContext) _VoterInfo_songsUpVoted(ctx context.Context, field g
 	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_VoterInfo_songsUpVoted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Voter_songsUpVoted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "VoterInfo",
+		Object:     "Voter",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3595,8 +3601,8 @@ func (ec *executionContext) fieldContext_VoterInfo_songsUpVoted(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _VoterInfo_songsDownVoted(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_VoterInfo_songsDownVoted(ctx, field)
+func (ec *executionContext) _Voter_songsDownVoted(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_songsDownVoted(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3623,9 +3629,9 @@ func (ec *executionContext) _VoterInfo_songsDownVoted(ctx context.Context, field
 	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_VoterInfo_songsDownVoted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Voter_songsDownVoted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "VoterInfo",
+		Object:     "Voter",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3636,8 +3642,8 @@ func (ec *executionContext) fieldContext_VoterInfo_songsDownVoted(ctx context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _VoterInfo_bonusVotes(ctx context.Context, field graphql.CollectedField, obj *model.VoterInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_VoterInfo_bonusVotes(ctx, field)
+func (ec *executionContext) _Voter_bonusVotes(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_bonusVotes(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3664,9 +3670,9 @@ func (ec *executionContext) _VoterInfo_bonusVotes(ctx context.Context, field gra
 	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_VoterInfo_bonusVotes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Voter_bonusVotes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "VoterInfo",
+		Object:     "Voter",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -5938,6 +5944,9 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_sessionConfig(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 
@@ -5958,6 +5967,9 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_sessionState(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 
@@ -6282,34 +6294,34 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	}
 }
 
-var voterInfoImplementors = []string{"VoterInfo"}
+var voterImplementors = []string{"Voter"}
 
-func (ec *executionContext) _VoterInfo(ctx context.Context, sel ast.SelectionSet, obj *model.VoterInfo) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, voterInfoImplementors)
+func (ec *executionContext) _Voter(ctx context.Context, sel ast.SelectionSet, obj *model.Voter) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, voterImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("VoterInfo")
+			out.Values[i] = graphql.MarshalString("Voter")
 		case "type":
 
-			out.Values[i] = ec._VoterInfo_type(ctx, field, obj)
+			out.Values[i] = ec._Voter_type(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "songsUpVoted":
 
-			out.Values[i] = ec._VoterInfo_songsUpVoted(ctx, field, obj)
+			out.Values[i] = ec._Voter_songsUpVoted(ctx, field, obj)
 
 		case "songsDownVoted":
 
-			out.Values[i] = ec._VoterInfo_songsDownVoted(ctx, field, obj)
+			out.Values[i] = ec._Voter_songsDownVoted(ctx, field, obj)
 
 		case "bonusVotes":
 
-			out.Values[i] = ec._VoterInfo_bonusVotes(ctx, field, obj)
+			out.Values[i] = ec._Voter_bonusVotes(ctx, field, obj)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -6734,6 +6746,20 @@ func (ec *executionContext) marshalNQueuedSong2ᚖgithubᚗcomᚋcampbelljlowman
 	return ec._QueuedSong(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNSessionConfig2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionConfig(ctx context.Context, sel ast.SelectionSet, v model.SessionConfig) graphql.Marshaler {
+	return ec._SessionConfig(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSessionConfig2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionConfig(ctx context.Context, sel ast.SelectionSet, v *model.SessionConfig) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SessionConfig(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNSessionState2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx context.Context, sel ast.SelectionSet, v model.SessionState) graphql.Marshaler {
 	return ec._SessionState(ctx, sel, &v)
 }
@@ -6803,18 +6829,18 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNVoterInfo2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterInfo(ctx context.Context, sel ast.SelectionSet, v model.VoterInfo) graphql.Marshaler {
-	return ec._VoterInfo(ctx, sel, &v)
+func (ec *executionContext) marshalNVoter2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx context.Context, sel ast.SelectionSet, v model.Voter) graphql.Marshaler {
+	return ec._Voter(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNVoterInfo2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterInfo(ctx context.Context, sel ast.SelectionSet, v *model.VoterInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNVoter2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoter(ctx context.Context, sel ast.SelectionSet, v *model.Voter) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._VoterInfo(ctx, sel, v)
+	return ec._Voter(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNVoterType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterType(ctx context.Context, v interface{}) (model.VoterType, error) {
@@ -7221,20 +7247,6 @@ func (ec *executionContext) marshalOQueuedSong2ᚕᚖgithubᚗcomᚋcampbelljlow
 	}
 
 	return ret
-}
-
-func (ec *executionContext) marshalOSessionConfig2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionConfig(ctx context.Context, sel ast.SelectionSet, v *model.SessionConfig) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._SessionConfig(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx context.Context, sel ast.SelectionSet, v *model.SessionState) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._SessionState(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSimpleSong2ᚕᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSimpleSongᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SimpleSong) graphql.Marshaler {

@@ -39,7 +39,7 @@ type Account {
   activeSession:  Int
 }
 
-type VoterInfo {
+type Voter {
   type:           VoterType!
   songsUpVoted:   [String!]
   songsDownVoted: [String!]
@@ -107,10 +107,10 @@ input SpotifyCreds {
 }
 
 type Query {
-  sessionConfig(sessionID: Int!): SessionConfig
-  sessionState(sessionID: Int!): SessionState
+  sessionConfig(sessionID: Int!): SessionConfig!
+  sessionState(sessionID: Int!): SessionState!
   voterToken: String!
-  voter(sessionID: Int!): VoterInfo!
+  voter(sessionID: Int!): Voter!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]

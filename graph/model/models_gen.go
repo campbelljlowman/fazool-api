@@ -77,7 +77,7 @@ type SpotifyCreds struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-type VoterInfo struct {
+type Voter struct {
 	Type           VoterType `json:"type"`
 	SongsUpVoted   []string  `json:"songsUpVoted"`
 	SongsDownVoted []string  `json:"songsDownVoted"`

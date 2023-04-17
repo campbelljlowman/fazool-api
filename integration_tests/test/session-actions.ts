@@ -53,7 +53,7 @@ async function GetGqlClientForUser(loginParams?: LoginParams) {
     return gqlClient  
 }
 
-async function RunSessionActions(gqlclient: Client, sessionID: Number, voterType: String) {
+async function RunSessionActions(gqlclient: Client, sessionID: number, voterType: string) {
         await GetVoter(gqlclient, sessionID)
 
         let searchResult = await MusicSearch(gqlclient, sessionID, "The Jackie")
@@ -155,9 +155,9 @@ async function CreateSession(gqlclient: Client) {
     return result.data
 }
 
-async function MusicSearch(gqlclient: Client, sessionID: Number, query: String) {
+async function MusicSearch(gqlclient: Client, sessionID: number, query: string) {
     const MUSIC_SEARCH = gql`
-        query musicSearch ($sessionID: Int!, $query: String!){
+        query musicSearch ($sessionID: Int!, $query: string!){
             musicSearch (sessionID: $sessionID, query: $query){
                 id
                 title
@@ -184,7 +184,7 @@ async function GetVoterToken(gqlclient: Client) {
     return result.data
 }
 
-async function GetVoter(gqlclient: Client, sessionID: Number) {
+async function GetVoter(gqlclient: Client, sessionID: number) {
     const GET_VOTER = gql`
         query voter ($sessionID: Int!){
             voter (sessionID: $sessionID){
@@ -201,14 +201,14 @@ async function GetVoter(gqlclient: Client, sessionID: Number) {
 }
 
 interface SongUpdate {
-    id:         String
-    title?:     String
-    artist?:    String
-    image?:     String
-    vote:       String
-    action:     String
+    id:         string
+    title?:     string
+    artist?:    string
+    image?:     string
+    vote:       string
+    action:     string
 }
-async function UpdateQueue(gqlclient: Client, sessionID: Number, songUpdate: SongUpdate) {
+async function UpdateQueue(gqlclient: Client, sessionID: number, songUpdate: SongUpdate) {
     const UPDATE_QUEUE = gql`
         mutation UpdateQueue($sessionID: Int!, $song: SongUpdate!) {
             updateQueue(sessionID: $sessionID, song: $song) {
@@ -222,7 +222,7 @@ async function UpdateQueue(gqlclient: Client, sessionID: Number, songUpdate: Son
     return result.data
 }
 
-async function GetSession(gqlclient: Client, sessionID: Number) {
+async function GetSession(gqlclient: Client, sessionID: number) {
     const GET_SESSION_STATE = gql`
         query getSessionState($sessionID: Int!){
             sessionState(sessionID: $sessionID){
@@ -254,7 +254,7 @@ async function GetSession(gqlclient: Client, sessionID: Number) {
     return result.data
 }
 
-function SubscribeSessionState(gqlclient: Client, sessionID: Number) {
+function SubscribeSessionState(gqlclient: Client, sessionID: number) {
     const SUBSCRIBE_SESSION_STATE = gql`
         subscription subscribeSessionState($sessionID: Int!){
             subscribeSessionState(sessionID: $sessionID){
@@ -289,7 +289,7 @@ function SubscribeSessionState(gqlclient: Client, sessionID: Number) {
     unsubscribe()
 }
 
-async function EndSession(gqlclient: Client, sessionID: Number) {
+async function EndSession(gqlclient: Client, sessionID: number) {
     const END_SESSION = gql`
         mutation endSession($sessionID: Int!){
             endSession(sessionID: $sessionID)

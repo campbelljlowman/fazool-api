@@ -10,7 +10,7 @@ import (
 var two = 2
 var GetVoterInfoTests = []struct {
 	inputVoter Voter
-	expectedOutputVoter model.VoterInfo
+	expectedOutputVoter model.Voter
 }{
 	{Voter{
 		VoterID: "asdf",
@@ -20,7 +20,7 @@ var GetVoterInfoTests = []struct {
 		SongsUpVoted: map[string]struct{}{"song1": emptyStructValue},
 		SongsDownVoted:  make(map[string]struct{}),
 		BonusVotes: 2,
-	}, model.VoterInfo{
+	}, model.Voter{
 		Type: model.VoterTypeFree,
 		SongsUpVoted: []string{"song1"},
 		SongsDownVoted: []string{},
