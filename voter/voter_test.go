@@ -8,7 +8,7 @@ import (
 )
 
 var two = 2
-var GetVoterInfoTests = []struct {
+var ConvertVoterTypeTests = []struct {
 	inputVoter Voter
 	expectedOutputVoter model.Voter
 }{
@@ -27,27 +27,27 @@ var GetVoterInfoTests = []struct {
 		BonusVotes: &two,
 	}},
 }
-func TestGetVoterInfo(t *testing.T){
-	for _, testCase := range(GetVoterInfoTests) {
-		resultVoter := testCase.inputVoter.GetVoterInfo()
+func TestConvertVoterType(t *testing.T){
+	for _, testCase := range(ConvertVoterTypeTests) {
+		resultVoter := testCase.inputVoter.ConvertVoterType()
 
 		if resultVoter.Type != testCase.expectedOutputVoter.Type {
-			t.Errorf("GetVoterInfo() Type failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.Type, resultVoter.Type)
+			t.Errorf("ConvertVoterType() Type failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.Type, resultVoter.Type)
 
 		}
 
 		if resultVoter.SongsUpVoted[0] != testCase.expectedOutputVoter.SongsUpVoted[0] {
-			t.Errorf("GetVoterInfo() SongsUpVoted failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.SongsUpVoted, resultVoter.SongsUpVoted)
+			t.Errorf("ConvertVoterType() SongsUpVoted failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.SongsUpVoted, resultVoter.SongsUpVoted)
 
 		}
 
 		if len(resultVoter.SongsDownVoted) != len(testCase.expectedOutputVoter.SongsDownVoted) {
-			t.Errorf("GetVoterInfo() SongsDownVoted failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.SongsDownVoted, resultVoter.SongsDownVoted)
+			t.Errorf("ConvertVoterType() SongsDownVoted failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.SongsDownVoted, resultVoter.SongsDownVoted)
 
 		}
 
 		if *resultVoter.BonusVotes != *testCase.expectedOutputVoter.BonusVotes {
-			t.Errorf("GetVoterInfo() BonusVotes failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.BonusVotes, resultVoter.BonusVotes)
+			t.Errorf("ConvertVoterType() BonusVotes failed! Wanted: %v, got: %v", testCase.expectedOutputVoter.BonusVotes, resultVoter.BonusVotes)
 
 		}
 	}
@@ -69,7 +69,7 @@ func TestGetVoterInfo(t *testing.T){
 // 		resulteVote, resultBonusVote, err := testCase.inputVoter.GetVoteAmountAndType(testCase.inputSong, &testCase.inputVoteDirection, &testCase.inputVoteAction)
 
 // 		if resultVoter != &testCase.expectedOutputVoter {
-// 			t.Errorf("GetVoterInfo() failed! Wanted: %v, got: %v", testCase.expectedOutputVoter, resultVoter)
+// 			t.Errorf("ConvertVoterType() failed! Wanted: %v, got: %v", testCase.expectedOutputVoter, resultVoter)
 
 // 		}
 

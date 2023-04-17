@@ -311,7 +311,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 
 	if exists {
 		slog.Debug("Return existing voter", "voter", existingVoter.VoterID)
-		return existingVoter.GetVoterInfo(), nil
+		return existingVoter.ConvertVoterType(), nil
 	}
 
 	if r.sessionService.IsSessionFull(sessionID) {
@@ -341,7 +341,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 	slog.Debug("New voter created:", "voter", newVoter)
 	r.sessionService.UpsertVoterInSession(sessionID, newVoter)
 
-	return newVoter.GetVoterInfo(), nil
+	return newVoter.ConvertVoterType(), nil
 }
 
 // Account is the resolver for the account field.
