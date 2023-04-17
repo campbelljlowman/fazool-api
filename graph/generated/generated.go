@@ -120,6 +120,7 @@ type ComplexityRoot struct {
 
 	Voter struct {
 		BonusVotes     func(childComplexity int) int
+		ID             func(childComplexity int) int
 		SongsDownVoted func(childComplexity int) int
 		SongsUpVoted   func(childComplexity int) int
 		Type           func(childComplexity int) int
@@ -554,6 +555,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Voter.BonusVotes(childComplexity), true
 
+	case "Voter.id":
+		if e.complexity.Voter.ID == nil {
+			break
+		}
+
+		return e.complexity.Voter.ID(childComplexity), true
+
 	case "Voter.songsDownVoted":
 		if e.complexity.Voter.SongsDownVoted == nil {
 			break
@@ -706,6 +714,7 @@ type Account {
 }
 
 type Voter {
+  id:             String!
   type:           VoterType!
   songsUpVoted:   [String!]
   songsDownVoted: [String!]
@@ -2562,6 +2571,8 @@ func (ec *executionContext) fieldContext_Query_voter(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Voter_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Voter_type(ctx, field)
 			case "songsUpVoted":
@@ -3512,6 +3523,50 @@ func (ec *executionContext) fieldContext_Subscription_subscribeSessionState(ctx 
 	if fc.Args, err = ec.field_Subscription_subscribeSessionState_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voter_id(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voter_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -6290,6 +6345,13 @@ func (ec *executionContext) _Voter(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Voter")
+		case "id":
+
+			out.Values[i] = ec._Voter_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "type":
 
 			out.Values[i] = ec._Voter_type(ctx, field, obj)

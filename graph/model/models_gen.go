@@ -78,6 +78,7 @@ type SpotifyCreds struct {
 }
 
 type Voter struct {
+	ID             string    `json:"id"`
 	Type           VoterType `json:"type"`
 	SongsUpVoted   []string  `json:"songsUpVoted"`
 	SongsDownVoted []string  `json:"songsDownVoted"`
