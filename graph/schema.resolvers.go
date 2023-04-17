@@ -55,6 +55,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 // CreateAccount is the resolver for the createAccount field.
 func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error) {
+	slog.Debug("Creating new account")
 	passwordHash, err := utils.HashPassword(newAccount.Password)
 	newAccount.Password = "BLANK"
 	if err != nil {
@@ -227,6 +228,7 @@ func (r *mutationResolver) Login(ctx context.Context, accountLogin model.Account
 
 // VoterToken is the resolver for the voterToken field.
 func (r *mutationResolver) VoterToken(ctx context.Context) (string, error) {
+	slog.Debug("Giving new voter token")
 	voterToken := uuid.New()
 	return voterToken.String(), nil
 }
@@ -407,10 +409,11 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 
 // SubscribeSessionState is the resolver for the subscribeSessionState field.
 func (r *subscriptionResolver) SubscribeSessionState(ctx context.Context, sessionID int) (<-chan *model.SessionState, error) {
-	voterID, _ := ctx.Value("voterID").(string)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID is required to subscribe to session state", nil)
-	}
+	slog.Debug("Creating new subscription")
+	// voterID, _ := ctx.Value("voterID").(string)
+	// if voterID == "" {
+	// 	return nil, utils.LogAndReturnError("Voter ID is required to subscribe to session state", nil)
+	// }
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 	"time"
-	"errors"
 
 	"github.com/campbelljlowman/fazool-api/graph/generated"
+	"golang.org/x/exp/slog"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -41,13 +41,14 @@ func NewGraphQLServer(resolver *Resolver) *handler.Server {
 }
 
 func authenticateSubscription(ctx context.Context, initalPayload transport.InitPayload) (context.Context, error) {
+	slog.Debug("init payload: ", "p", initalPayload)
 	authToken, ok := initalPayload["SubscriptionAuthentication"].(string)
 	if !ok || authToken == "" {
-		return nil, errors.New("authToken not found in transport payload")
+		return ctx, nil
 	}
 
 	if authToken != "Subscription-Allowed" {
-		return nil, errors.New("authToken not found in transport payload")
+		return ctx, nil
 	}
 
 	// TODO: Once voter token is passed dynamically, check the value
