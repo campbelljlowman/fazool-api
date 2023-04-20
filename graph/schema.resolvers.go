@@ -226,13 +226,6 @@ func (r *mutationResolver) Login(ctx context.Context, accountLogin model.Account
 	return jwtToken, nil
 }
 
-// VoterToken is the resolver for the voterToken field.
-func (r *mutationResolver) VoterToken(ctx context.Context) (string, error) {
-	slog.Debug("Giving new voter token")
-	voterToken := uuid.New()
-	return voterToken.String(), nil
-}
-
 // EndSession is the resolver for the endSession field.
 func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
 	accountID, _ := ctx.Value("accountID").(int)
@@ -344,6 +337,13 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 	r.sessionService.UpsertVoterInSession(sessionID, newVoter)
 
 	return newVoter.ConvertVoterType(), nil
+}
+
+// VoterToken is the resolver for the voterToken field.
+func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
+	slog.Debug("Giving new voter token")
+	voterToken := uuid.New()
+	return voterToken.String(), nil
 }
 
 // Account is the resolver for the account field.

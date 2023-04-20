@@ -111,6 +111,7 @@ type Query {
   sessionConfig(sessionID: Int!): SessionConfig!
   sessionState(sessionID: Int!): SessionState!
   voter(sessionID: Int!): Voter!
+  voterToken: String!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
@@ -130,7 +131,6 @@ type Mutation {
 
 
   login(accountLogin: AccountLogin!): String!
-  voterToken: String!
 
   endSession(sessionID: Int!): String!
   deleteAccount(targetAccountID: Int!): String!

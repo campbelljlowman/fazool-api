@@ -140,8 +140,12 @@ func (s *SpotifyWrapper) Search(query string) ([]*model.SimpleSong, error){
 		return nil, err
 	}
 	
+	numberSongsToReturn := 5
+	if len(searchResult.Tracks.Tracks) < 5 {
+		numberSongsToReturn = len(searchResult.Tracks.Tracks)
+	}
 	var simpleSongList []*model.SimpleSong
-	for i := 1; i <= 5; i++ {
+	for i := 0; i < numberSongsToReturn; i++ {
 		track := searchResult.Tracks.Tracks[i]
 		song := SpotifyFullTrackToSimpleSong(&track)
 		simpleSongList = append(simpleSongList, song)
