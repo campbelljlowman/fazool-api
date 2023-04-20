@@ -231,7 +231,7 @@ func (s *SessionServiceInMemory) watchSessions(accountService account.AccountSer
 		s.allSessionsMutex.Unlock()
 
 
-		for sessionID := range sessionsToEnd {
+		for _, sessionID := range sessionsToEnd {
 			s.EndSession(sessionID, accountService)
 		}
 		sessionsToEnd = nil
