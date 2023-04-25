@@ -22,8 +22,10 @@ type AccountLogin struct {
 }
 
 type CurrentlyPlayingSong struct {
-	SimpleSong *SimpleSong `json:"simpleSong"`
-	Playing    bool        `json:"playing"`
+	SimpleSong          *SimpleSong `json:"simpleSong"`
+	IsPlaying           bool        `json:"isPlaying"`
+	SongProgressSeconds int         `json:"songProgressSeconds"`
+	SongDurationSeconds int         `json:"songDurationSeconds"`
 }
 
 type NewAccount struct {

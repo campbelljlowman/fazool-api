@@ -62,7 +62,7 @@ type SessionServiceInMemory struct {
 
 const sessionWatchFrequencySeconds time.Duration = 10 
 const sessionTimeoutMinutes time.Duration = 30 
-const streamingServiceWatchFrequencySlowMilliseconds time.Duration = 5000
+const streamingServiceWatchFrequencySlowMilliseconds time.Duration = 4000
 const streamingServiceWatchFrequencyFastMilliseconds time.Duration = 250
 const voterWatchFrequencySeconds time.Duration = 1
 
@@ -96,7 +96,9 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 	sessionState := &model.SessionState{
 		CurrentlyPlaying: &model.CurrentlyPlayingSong{
 			SimpleSong: &model.SimpleSong{},
-			Playing:    false,
+			IsPlaying:    false,
+			SongProgressSeconds: 0,
+			SongDurationSeconds: 0,
 		},
 		Queue: nil,
 		NumberOfVoters: 0,

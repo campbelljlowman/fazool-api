@@ -15,8 +15,10 @@ type QueuedSong {
 }
 
 type CurrentlyPlayingSong {
-  simpleSong: SimpleSong!
-  playing:    Boolean!
+  simpleSong:           SimpleSong!
+  isPlaying:            Boolean!
+  songProgressSeconds:  Int!
+  songDurationSeconds:  Int!
 }
 
 type SessionState {

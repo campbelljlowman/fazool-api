@@ -60,7 +60,9 @@ func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error
 	simpleSong := SpotifyFullTrackToSimpleSong(status.Item)
 	song := &model.CurrentlyPlayingSong{
 		SimpleSong: simpleSong,
-		Playing: status.Playing,
+		IsPlaying: status.Playing,
+		SongProgressSeconds: status.Progress/1000,
+		SongDurationSeconds: status.Item.Duration/1000,
 	}
 
 

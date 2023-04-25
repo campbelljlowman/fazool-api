@@ -55,8 +55,10 @@ type ComplexityRoot struct {
 	}
 
 	CurrentlyPlayingSong struct {
-		Playing    func(childComplexity int) int
-		SimpleSong func(childComplexity int) int
+		IsPlaying           func(childComplexity int) int
+		SimpleSong          func(childComplexity int) int
+		SongDurationSeconds func(childComplexity int) int
+		SongProgressSeconds func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -204,12 +206,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Account.LastName(childComplexity), true
 
-	case "CurrentlyPlayingSong.playing":
-		if e.complexity.CurrentlyPlayingSong.Playing == nil {
+	case "CurrentlyPlayingSong.isPlaying":
+		if e.complexity.CurrentlyPlayingSong.IsPlaying == nil {
 			break
 		}
 
-		return e.complexity.CurrentlyPlayingSong.Playing(childComplexity), true
+		return e.complexity.CurrentlyPlayingSong.IsPlaying(childComplexity), true
 
 	case "CurrentlyPlayingSong.simpleSong":
 		if e.complexity.CurrentlyPlayingSong.SimpleSong == nil {
@@ -217,6 +219,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.CurrentlyPlayingSong.SimpleSong(childComplexity), true
+
+	case "CurrentlyPlayingSong.songDurationSeconds":
+		if e.complexity.CurrentlyPlayingSong.SongDurationSeconds == nil {
+			break
+		}
+
+		return e.complexity.CurrentlyPlayingSong.SongDurationSeconds(childComplexity), true
+
+	case "CurrentlyPlayingSong.songProgressSeconds":
+		if e.complexity.CurrentlyPlayingSong.SongProgressSeconds == nil {
+			break
+		}
+
+		return e.complexity.CurrentlyPlayingSong.SongProgressSeconds(childComplexity), true
 
 	case "Mutation.addBonusVotes":
 		if e.complexity.Mutation.AddBonusVotes == nil {
@@ -689,8 +705,10 @@ type QueuedSong {
 }
 
 type CurrentlyPlayingSong {
-  simpleSong: SimpleSong!
-  playing:    Boolean!
+  simpleSong:           SimpleSong!
+  isPlaying:            Boolean!
+  songProgressSeconds:  Int!
+  songDurationSeconds:  Int!
 }
 
 type SessionState {
@@ -1453,8 +1471,8 @@ func (ec *executionContext) fieldContext_CurrentlyPlayingSong_simpleSong(ctx con
 	return fc, nil
 }
 
-func (ec *executionContext) _CurrentlyPlayingSong_playing(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_CurrentlyPlayingSong_playing(ctx, field)
+func (ec *executionContext) _CurrentlyPlayingSong_isPlaying(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_isPlaying(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1467,7 +1485,7 @@ func (ec *executionContext) _CurrentlyPlayingSong_playing(ctx context.Context, f
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Playing, nil
+		return obj.IsPlaying, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1484,7 +1502,7 @@ func (ec *executionContext) _CurrentlyPlayingSong_playing(ctx context.Context, f
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_CurrentlyPlayingSong_playing(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_isPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CurrentlyPlayingSong",
 		Field:      field,
@@ -1492,6 +1510,94 @@ func (ec *executionContext) fieldContext_CurrentlyPlayingSong_playing(ctx contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CurrentlyPlayingSong_songProgressSeconds(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_songProgressSeconds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SongProgressSeconds, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_songProgressSeconds(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CurrentlyPlayingSong",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CurrentlyPlayingSong_songDurationSeconds(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CurrentlyPlayingSong_songDurationSeconds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SongDurationSeconds, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CurrentlyPlayingSong_songDurationSeconds(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CurrentlyPlayingSong",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3174,8 +3280,12 @@ func (ec *executionContext) fieldContext_SessionState_currentlyPlaying(ctx conte
 			switch field.Name {
 			case "simpleSong":
 				return ec.fieldContext_CurrentlyPlayingSong_simpleSong(ctx, field)
-			case "playing":
-				return ec.fieldContext_CurrentlyPlayingSong_playing(ctx, field)
+			case "isPlaying":
+				return ec.fieldContext_CurrentlyPlayingSong_isPlaying(ctx, field)
+			case "songProgressSeconds":
+				return ec.fieldContext_CurrentlyPlayingSong_songProgressSeconds(ctx, field)
+			case "songDurationSeconds":
+				return ec.fieldContext_CurrentlyPlayingSong_songDurationSeconds(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CurrentlyPlayingSong", field.Name)
 		},
@@ -5772,9 +5882,23 @@ func (ec *executionContext) _CurrentlyPlayingSong(ctx context.Context, sel ast.S
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "playing":
+		case "isPlaying":
 
-			out.Values[i] = ec._CurrentlyPlayingSong_playing(ctx, field, obj)
+			out.Values[i] = ec._CurrentlyPlayingSong_isPlaying(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "songProgressSeconds":
+
+			out.Values[i] = ec._CurrentlyPlayingSong_songProgressSeconds(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "songDurationSeconds":
+
+			out.Values[i] = ec._CurrentlyPlayingSong_songDurationSeconds(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++

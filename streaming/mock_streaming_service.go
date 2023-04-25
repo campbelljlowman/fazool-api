@@ -33,7 +33,9 @@ func (m *MockStreamingService) CurrentSong() (*model.CurrentlyPlayingSong, bool,
 			Artist: "Campbell Lowman",
 			Image: "Not an image link",
 		},
-		Playing: false,
+		IsPlaying: false,
+		SongProgressSeconds: 69,
+		SongDurationSeconds: 420,
 	}
 	return fakeSong, false, nil
 }
