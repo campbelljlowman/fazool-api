@@ -99,8 +99,8 @@ type ComplexityRoot struct {
 
 	SessionConfig struct {
 		AdminAccountID func(childComplexity int) int
-		ID             func(childComplexity int) int
 		MaximumVoters  func(childComplexity int) int
+		SessionID      func(childComplexity int) int
 	}
 
 	SessionState struct {
@@ -489,19 +489,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SessionConfig.AdminAccountID(childComplexity), true
 
-	case "SessionConfig.id":
-		if e.complexity.SessionConfig.ID == nil {
-			break
-		}
-
-		return e.complexity.SessionConfig.ID(childComplexity), true
-
 	case "SessionConfig.maximumVoters":
 		if e.complexity.SessionConfig.MaximumVoters == nil {
 			break
 		}
 
 		return e.complexity.SessionConfig.MaximumVoters(childComplexity), true
+
+	case "SessionConfig.sessionID":
+		if e.complexity.SessionConfig.SessionID == nil {
+			break
+		}
+
+		return e.complexity.SessionConfig.SessionID(childComplexity), true
 
 	case "SessionState.currentlyPlaying":
 		if e.complexity.SessionState.CurrentlyPlaying == nil {
@@ -718,7 +718,7 @@ type SessionState {
 }
 
 type SessionConfig {
-  id:             Int!
+  sessionID:             Int!
   adminAccountID: Int!
   maximumVoters:  Int!
 }
@@ -2507,8 +2507,8 @@ func (ec *executionContext) fieldContext_Query_sessionConfig(ctx context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_SessionConfig_id(ctx, field)
+			case "sessionID":
+				return ec.fieldContext_SessionConfig_sessionID(ctx, field)
 			case "adminAccountID":
 				return ec.fieldContext_SessionConfig_adminAccountID(ctx, field)
 			case "maximumVoters":
@@ -3110,8 +3110,8 @@ func (ec *executionContext) fieldContext_QueuedSong_votes(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionConfig_id(ctx context.Context, field graphql.CollectedField, obj *model.SessionConfig) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SessionConfig_id(ctx, field)
+func (ec *executionContext) _SessionConfig_sessionID(ctx context.Context, field graphql.CollectedField, obj *model.SessionConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SessionConfig_sessionID(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3124,7 +3124,7 @@ func (ec *executionContext) _SessionConfig_id(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
+		return obj.SessionID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3141,7 +3141,7 @@ func (ec *executionContext) _SessionConfig_id(ctx context.Context, field graphql
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SessionConfig_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionConfig_sessionID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SessionConfig",
 		Field:      field,
@@ -6336,9 +6336,9 @@ func (ec *executionContext) _SessionConfig(ctx context.Context, sel ast.Selectio
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("SessionConfig")
-		case "id":
+		case "sessionID":
 
-			out.Values[i] = ec._SessionConfig_id(ctx, field, obj)
+			out.Values[i] = ec._SessionConfig_sessionID(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++

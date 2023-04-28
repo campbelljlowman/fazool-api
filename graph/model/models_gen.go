@@ -47,7 +47,7 @@ type QueuedSong struct {
 }
 
 type SessionConfig struct {
-	ID             int `json:"id"`
+	SessionID      int `json:"sessionID"`
 	AdminAccountID int `json:"adminAccountID"`
 	MaximumVoters  int `json:"maximumVoters"`
 }

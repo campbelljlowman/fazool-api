@@ -28,7 +28,7 @@ type SessionState {
 }
 
 type SessionConfig {
-  id:             Int!
+  sessionID:      Int!
   adminAccountID: Int!
   maximumVoters:  Int!
 }

@@ -88,7 +88,7 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 	}
 
 	sessionConfig := &model.SessionConfig{
-		ID: sessionID,
+		SessionID: sessionID,
 		AdminAccountID: adminAccountID,
 		MaximumVoters: maximumVoters,
 	}
