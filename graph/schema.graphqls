@@ -126,7 +126,7 @@ type Mutation {
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
-  setPlaylist(sessionID: Int!, playlist: String!): SessionState!
+  setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setVoterType(targetAccountID: Int!, voterType: VoterType!): Account!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!

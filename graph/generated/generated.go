@@ -69,7 +69,7 @@ type ComplexityRoot struct {
 		EndSession             func(childComplexity int, sessionID int) int
 		Login                  func(childComplexity int, accountLogin model.AccountLogin) int
 		SetAccountType         func(childComplexity int, targetAccountID int, accountType model.AccountType) int
-		SetPlaylist            func(childComplexity int, sessionID int, playlist string) int
+		SetPlaylist            func(childComplexity int, sessionID int, playlistID string) int
 		SetVoterType           func(childComplexity int, targetAccountID int, voterType model.VoterType) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
@@ -135,7 +135,7 @@ type MutationResolver interface {
 	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionState, error)
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionState, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error)
-	SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionState, error)
+	SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error)
 	SetVoterType(ctx context.Context, targetAccountID int, voterType model.VoterType) (*model.Account, error)
 	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
 	AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error)
@@ -323,7 +323,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetPlaylist(childComplexity, args["sessionID"].(int), args["playlist"].(string)), true
+		return e.complexity.Mutation.SetPlaylist(childComplexity, args["sessionID"].(int), args["playlistID"].(string)), true
 
 	case "Mutation.setVoterType":
 		if e.complexity.Mutation.SetVoterType == nil {
@@ -718,7 +718,7 @@ type SessionState {
 }
 
 type SessionConfig {
-  sessionID:             Int!
+  sessionID:      Int!
   adminAccountID: Int!
   maximumVoters:  Int!
 }
@@ -816,7 +816,7 @@ type Mutation {
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
-  setPlaylist(sessionID: Int!, playlist: String!): SessionState!
+  setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setVoterType(targetAccountID: Int!, voterType: VoterType!): Account!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
@@ -959,14 +959,14 @@ func (ec *executionContext) field_Mutation_setPlaylist_args(ctx context.Context,
 	}
 	args["sessionID"] = arg0
 	var arg1 string
-	if tmp, ok := rawArgs["playlist"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlist"))
+	if tmp, ok := rawArgs["playlistID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlistID"))
 		arg1, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["playlist"] = arg1
+	args["playlistID"] = arg1
 	return args, nil
 }
 
@@ -1921,7 +1921,7 @@ func (ec *executionContext) _Mutation_setPlaylist(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetPlaylist(rctx, fc.Args["sessionID"].(int), fc.Args["playlist"].(string))
+		return ec.resolvers.Mutation().SetPlaylist(rctx, fc.Args["sessionID"].(int), fc.Args["playlistID"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

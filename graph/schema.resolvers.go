@@ -157,7 +157,7 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 }
 
 // SetPlaylist is the resolver for the setPlaylist field.
-func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlist string) (*model.SessionState, error) {
+func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID required for setting playlist", nil)
@@ -172,7 +172,7 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 		return nil, utils.LogAndReturnError("Only session Admin is permitted to set playlists", nil)
 	}
 
-	err := r.sessionService.SetPlaylist(sessionID, playlist)
+	err := r.sessionService.SetPlaylist(sessionID, playlistID)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error setting sesison playlist", err)
 	}
