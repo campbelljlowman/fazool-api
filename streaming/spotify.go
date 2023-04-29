@@ -108,7 +108,7 @@ func (s *SpotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
 		return nil, err
 	}
 
-	for _, playlist := range(userPlaylists.Playlists[:8-len(playlists)]) {
+	for _, playlist := range(userPlaylists.Playlists[:9-len(playlists)]) {
 		p := model.Playlist{
 			ID: string(playlist.ID),
 			Name: playlist.Name,
