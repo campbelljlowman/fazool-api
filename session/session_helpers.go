@@ -129,6 +129,10 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 	
 		session.sessionStateMutex.Lock()
 		if currentlyPlayingFlag == true {
+			if session.sessionState.CurrentlyPlaying.SimpleSong.ID != currentlyPlayingSong.SimpleSong.ID {
+				addNextSongFlag = true
+			}
+
 			session.sessionState.CurrentlyPlaying = currentlyPlayingSong
 			sendUpdateFlag = true
 
