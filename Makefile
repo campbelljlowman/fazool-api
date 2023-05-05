@@ -3,6 +3,13 @@ GO_VERSION=1.19.3
 POSTGRES_USERNAME=clowman
 POSTGRES_PASSWORD=asdf
 POSTGRES_DEV_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
+POSTGRES_DEV_URL_DOCKER=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@host.docker.internal:5432/fazool # This requires databases clowman and fazool to exist already
+
+IMAGE_NAME=fazool-api
+STABLE_TAG=0.1.0
+UNIQUE_TAG=${STABLE_TAG}-${shell date "+%Y.%m.%d"}-${shell git rev-parse --short HEAD}
+
+ENV_FILE=./.env
 
 include .env
 export
@@ -30,6 +37,13 @@ run:
 	POSTGRES_URL=${POSTGRES_DEV_URL} \
 	go run .
 
+run-docker:
+	docker run --rm \
+	-p 8080:8080 \
+	--env-file ${ENV_FILE} \
+	--env POSTGRES_URL=${POSTGRES_DEV_URL_DOCKER} \
+	${IMAGE_NAME}:${UNIQUE_TAG}
+
 pg-up:
 	sudo service postgresql start
 
@@ -37,7 +51,10 @@ pg-down:
 	sudo service postgresql stop
 
 build:
-	docker build .
+	docker build \
+	-t ${IMAGE_NAME}:${STABLE_TAG} \
+	-t ${IMAGE_NAME}:${UNIQUE_TAG} \
+	.
 
 regen-graphql:
 	go get github.com/99designs/gqlgen@v0.17.15 && go run github.com/99designs/gqlgen generate
