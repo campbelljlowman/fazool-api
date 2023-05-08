@@ -5,9 +5,12 @@ POSTGRES_PASSWORD=asdf
 POSTGRES_DEV_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool # This requires databases clowman and fazool to exist already
 POSTGRES_DEV_URL_DOCKER=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@host.docker.internal:5432/fazool # This requires databases clowman and fazool to exist already
 
-IMAGE_NAME=fazool-api
-STABLE_TAG=0.1.0
-UNIQUE_TAG=${STABLE_TAG}-${shell date "+%Y.%m.%d"}-${shell git rev-parse --short HEAD}
+REGISTRY=ghcr.io
+IMAGE_NAME=campbelljlowman/fazool-api
+STABLE_VERSION=0.1.0
+UNIQUE_VERSION=${STABLE_VERSION}-${shell date "+%Y.%m.%d"}-${shell git rev-parse --short HEAD}
+STABLE_IMAGE_TAG=${REGISTRY}/${IMAGE_NAME}:${STABLE_VERSION}
+UNIQUE_IMAGE_TAG=${REGISTRY}/${IMAGE_NAME}:${UNIQUE_VERSION}
 
 ENV_FILE=./.env
 
@@ -42,7 +45,7 @@ run-docker:
 	-p 8080:8080 \
 	--env-file ${ENV_FILE} \
 	--env POSTGRES_URL=${POSTGRES_DEV_URL_DOCKER} \
-	${IMAGE_NAME}:${UNIQUE_TAG}
+	${UNIQUE_IMAGE_TAG}
 
 pg-up:
 	sudo service postgresql start
@@ -52,9 +55,15 @@ pg-down:
 
 build:
 	docker build \
-	-t ${IMAGE_NAME}:${STABLE_TAG} \
-	-t ${IMAGE_NAME}:${UNIQUE_TAG} \
+	-t ${STABLE_IMAGE_TAG} \
+	-t ${UNIQUE_IMAGE_TAG} \
 	.
+
+publish:
+	echo ${GITHUB_ACCESS_TOKEN} | docker login ghcr.io -u campbelljlowman --password-stdin
+	docker push ${STABLE_IMAGE_TAG}
+	docker push ${UNIQUE_IMAGE_TAG}
+	docker logout
 
 regen-graphql:
 	go get github.com/99designs/gqlgen@v0.17.15 && go run github.com/99designs/gqlgen generate

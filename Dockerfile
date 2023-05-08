@@ -1,4 +1,6 @@
 FROM golang:1.19.3
+LABEL org.opencontainers.image.source=https://github.com/campbelljlowman/fazool-api
+
 WORKDIR /usr/src/fazool-api
 
 COPY go.mod go.sum ./
