@@ -60,9 +60,13 @@ build:
 	.
 
 publish:
-	echo ${GITHUB_ACCESS_TOKEN} | docker login ghcr.io -u campbelljlowman --password-stdin
-	docker push ${STABLE_IMAGE_TAG}
+	@echo ${GITHUB_ACCESS_TOKEN} | docker login ghcr.io -u campbelljlowman --password-stdin
 	docker push ${UNIQUE_IMAGE_TAG}
+ifeq ($(shell git rev-parse --abbrev-ref HEAD), master)
+	docker push ${STABLE_IMAGE_TAG}
+else 
+	@echo "Not pushing stable version because not on master branch"
+endif
 	docker logout
 
 regen-graphql:
