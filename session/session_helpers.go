@@ -62,13 +62,13 @@ func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string,
 	return nil
 }
 
-func expireSession(session *Session) {
+func expireSession(session *session) {
 	session.expiryMutex.Lock()
 	session.expiresAt = time.Now()
 	session.expiryMutex.Unlock()
 }
 
-func closeChannels(session *Session) {
+func closeChannels(session *session) {
 	session.channelMutex.Lock()
 	for _, ch := range session.channels {
 		close(ch)

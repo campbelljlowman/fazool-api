@@ -38,7 +38,7 @@ type SessionService interface {
 	EndSession(sessionID int, accountService account.AccountService)
 }
 
-type Session struct {
+type session struct {
 	sessionConfig    		*model.SessionConfig
 	sessionState    		*model.SessionState
 	channels 				[]chan *model.SessionState
@@ -56,7 +56,7 @@ type Session struct {
 }
 
 type SessionServiceInMemory struct {
-	sessions			map[int]*Session
+	sessions			map[int]*session
 	allSessionsMutex 	*sync.Mutex
 }
 
@@ -68,7 +68,7 @@ const voterWatchFrequencySeconds time.Duration = 1
 
 func NewSessionServiceInMemoryImpl(accountService account.AccountService) *SessionServiceInMemory{
 	sessionInMemory := &SessionServiceInMemory{
-		sessions: 			make(map[int]*Session),
+		sessions: 			make(map[int]*session),
 		allSessionsMutex: 	&sync.Mutex{},
 	}
 
@@ -104,7 +104,7 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 		NumberOfVoters: 0,
 	}
 
-	session := Session{
+	session := session{
 		sessionConfig:    			sessionConfig,
 		sessionState: 				sessionState,
 		channels: 					nil,
@@ -184,12 +184,10 @@ func (s *SessionServiceInMemory) IsSessionFull(sessionID int) bool {
 
 	isFull := false
 
-	session.votersMutex.Lock()
 	session.sessionStateMutex.Lock()
 	if session.sessionState.NumberOfVoters >= session.sessionConfig.MaximumVoters  {
 		isFull = true
 	}
-	session.votersMutex.Unlock()
 	session.sessionStateMutex.Unlock()
 
 	return isFull
