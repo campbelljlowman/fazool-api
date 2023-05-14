@@ -127,7 +127,6 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 	go s.watchStreamingServiceCurrentlyPlaying(sessionID, accountService)
 	go s.watchVotersExpirations(sessionID)
 	
-	
 	return sessionID, nil
 }
 

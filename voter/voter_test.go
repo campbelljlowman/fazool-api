@@ -9,7 +9,7 @@ import (
 
 var two = 2
 var ConvertVoterTypeTests = []struct {
-	inputVoter Voter
+	inputVoter 			Voter
 	expectedOutputVoter model.Voter
 }{
 	{Voter{
@@ -78,14 +78,14 @@ func TestConvertVoterType(t *testing.T){
 
 
 var calculateAndAddUpVoteTests = []struct {
-	voterType model.VoterType
-	SongsUpVoted map[string]struct{}
-	SongsDownVoted map[string]struct{}
-	bonusVotes int
-	songVotingFor string
-	expectedVoteAmount int
-	expectedBonusVoteValue bool
-	expectedError bool
+	voterType 				model.VoterType
+	SongsUpVoted 			map[string]struct{}
+	SongsDownVoted 			map[string]struct{}
+	bonusVotes 				int
+	songVotingFor 			string
+	expectedVoteAmount 		int
+	expectedBonusVoteValue 	bool
+	expectedError 			bool
 }{
 	// Test voter types for regular vote
 	{model.VoterTypeFree, map[string]struct{}{}, map[string]struct{}{},  0, "song1", 1, false, false},
@@ -135,12 +135,12 @@ func TestCalculateAndAddUpVote(t *testing.T){
 }
 
 var calculateAndAddDownVoteTests = []struct {
-	voterType model.VoterType
-	SongsUpVoted map[string]struct{}
-	SongsDownVoted map[string]struct{}
-	songVotingFor string
-	expectedVoteAmount int
-	expectedError bool
+	voterType 			model.VoterType
+	SongsUpVoted 		map[string]struct{}
+	SongsDownVoted 		map[string]struct{}
+	songVotingFor 		string
+	expectedVoteAmount 	int
+	expectedError 		bool
 }{
 	// Test voter types for regular vote
 	{model.VoterTypeFree, map[string]struct{}{}, map[string]struct{}{}, "song1", 0, false},
@@ -197,10 +197,10 @@ func TestCalculateAndAddDownVote(t *testing.T){
 
 
 var calculateAndRemoveUpVoteTests = []struct {
-	voterType model.VoterType
-	SongsUpVoted map[string]struct{}
-	songVotingFor string
-	expectedVoteAmount int
+	voterType 			model.VoterType
+	SongsUpVoted 		map[string]struct{}
+	songVotingFor 		string
+	expectedVoteAmount 	int
 }{
 	// Test voter types for regular vote
 	{model.VoterTypeFree, map[string]struct{}{"song1": emptyStructValue}, "song1", -1},
@@ -236,10 +236,10 @@ func TestCalculateAndRemoveUpVote(t *testing.T){
 }
 
 var calculateAndRemoveDownVoteTests = []struct {
-	voterType model.VoterType
-	SongsDownVoted map[string]struct{}
-	songVotingFor string
-	expectedVoteAmount int
+	voterType 			model.VoterType
+	SongsDownVoted 		map[string]struct{}
+	songVotingFor 		string
+	expectedVoteAmount 	int
 }{
 	// Test voter types for regular vote
 	{model.VoterTypeFree, map[string]struct{}{"song1": emptyStructValue}, "song1", 1},
@@ -275,8 +275,8 @@ func TestCalculateAndRemoveDownVote(t *testing.T){
 }
 
 var GetVoteAmountFromTypeTests = []struct {
-	voterType model.VoterType
-	expectedVoteAmount int
+	voterType 			model.VoterType
+	expectedVoteAmount 	int
 }{
 	{model.VoterTypeFree, 1},
 	{model.VoterTypePrivileged, 2},
@@ -294,8 +294,8 @@ func TestGetVoteAmountFromType(t *testing.T){
 }
 
 var GetVoterDurationTests = []struct {
-	voterType model.VoterType
-	expectedVoteDuration time.Duration
+	voterType 				model.VoterType
+	expectedVoteDuration 	time.Duration
 }{
 	{model.VoterTypeFree, regularVoterDurationInMinutes},
 	{model.VoterTypePrivileged, priviledgedVoterDurationInMinutes},
@@ -313,9 +313,9 @@ func TestGetVoterDuration(t *testing.T){
 }
 
 var ContainsTests = []struct {
-	testSlice []model.VoterType
-	searchValue model.VoterType
-	expectedExists bool
+	testSlice 		[]model.VoterType
+	searchValue 	model.VoterType
+	expectedExists 	bool
 }{
 	{[]model.VoterType{model.VoterTypeAdmin}, model.VoterTypeAdmin, true},
 	{[]model.VoterType{model.VoterTypeAdmin}, model.VoterTypeFree, false},

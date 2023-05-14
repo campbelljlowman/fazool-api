@@ -209,3 +209,9 @@ func (a *AccountServiceGorm) DeleteAccount(accountID int) {
 	var fullAccount account
 	a.gorm.Delete(&fullAccount, accountID)
 }
+
+// TODO: Remove this and mock the object used in the unit tests
+func NewAccountServiceMockImpl() *AccountServiceGorm {
+	accountGorm := AccountServiceGorm{gorm: nil}
+	return &accountGorm
+}
