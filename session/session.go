@@ -26,7 +26,7 @@ type SessionService interface {
 	DoesSessionExist(sessionID int) bool
 	SearchForSongs(sessionID int, query string) ([]*model.SimpleSong, error)
 
-	UpsertQueue(sessionID, vote int, song model.SongUpdate)
+	UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate)
 	UpsertVoterInSession(sessionID int, newVoter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error
 	PopQueue(sessionID int, accountService account.AccountService) error
@@ -162,7 +162,7 @@ func (s *SessionServiceInMemory) GetVoterInSession(sessionID int, voterID string
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
-
+ 
 	session.votersMutex.Lock()
 	voter, exists := session.voters[voterID]
 	session.votersMutex.Unlock()
@@ -209,7 +209,7 @@ func (s *SessionServiceInMemory) SearchForSongs(sessionID int, query string) ([]
 	return session.streaming.Search(query)
 }
 
-func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.SongUpdate) {
+func (s *SessionServiceInMemory) UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
@@ -225,12 +225,12 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.Son
 				Artist: *song.Artist,
 				Image:  *song.Image,
 			},
-			Votes: vote,
+			Votes: numberOfVotes,
 		}
 		session.sessionState.Queue = append(session.sessionState.Queue, newSong)
 	} else {
 		queuedSong := session.sessionState.Queue[idx]
-		queuedSong.Votes += vote
+		queuedSong.Votes += numberOfVotes
 	}
 
 	sort.Slice(session.sessionState.Queue, func(i, j int) bool { return session.sessionState.Queue[i].Votes > session.sessionState.Queue[j].Votes })
