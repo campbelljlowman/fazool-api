@@ -215,8 +215,8 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, numberOfVotes int, song 
 	s.allSessionsMutex.Unlock()
 
 	session.sessionStateMutex.Lock()
-	idx := slices.IndexFunc(session.sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
-	if idx == -1 {
+	index := slices.IndexFunc(session.sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
+	if index == -1 {
 		// add new song to queue
 		newSong := &model.QueuedSong{
 			SimpleSong: &model.SimpleSong{
@@ -229,7 +229,7 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, numberOfVotes int, song 
 		}
 		session.sessionState.Queue = append(session.sessionState.Queue, newSong)
 	} else {
-		queuedSong := session.sessionState.Queue[idx]
+		queuedSong := session.sessionState.Queue[index]
 		queuedSong.Votes += numberOfVotes
 	}
 

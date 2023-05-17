@@ -7,8 +7,10 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/streaming"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"golang.org/x/exp/slices"
 	// "github.com/golang/mock/gomock"
 )
+// TODO: see if there's enough common code creating songs to pull into helper function
 
 // func TestNewSessionServiceInMemoryImpl(t *testing.T) {
 // 	ctrl := gomock.NewController(t)
@@ -51,7 +53,6 @@ func TestCreateSession(t *testing.T) {
 
 func TestGetSessionConfig(t *testing.T) {
 	accountService, streamingService, sessionService := newTestingServices()
-
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
@@ -65,7 +66,6 @@ func TestGetSessionConfig(t *testing.T) {
 
 func TestGetSessionState(t *testing.T) {
 	accountService, streamingService, sessionService := newTestingServices()
-
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
@@ -79,7 +79,6 @@ func TestGetSessionState(t *testing.T) {
 
 func TestGetSessionAdminAccountID(t *testing.T) {
 	accountService, streamingService, sessionService := newTestingServices()
-
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
@@ -93,7 +92,6 @@ func TestGetSessionAdminAccountID(t *testing.T) {
 
 func TestGetVoterInSession(t *testing.T) {
 	accountService, streamingService, sessionService := newTestingServices()
-
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
@@ -131,7 +129,6 @@ var IsSessionFullTests = []struct {
 }
 func TestIsSessionFull(t *testing.T) {
 	accountService, streamingService, sessionService := newTestingServices()
-
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
@@ -152,7 +149,6 @@ func TestIsSessionFull(t *testing.T) {
 
 func TestDoesSessionExist(t *testing.T) {
 	accountService, streamingService, sessionService := newTestingServices()
-
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
@@ -173,28 +169,109 @@ func TestDoesSessionExist(t *testing.T) {
 // 	// TODO: Figre out how to mock calls to streaming service
 // }
 
-// func TestUpsertQueue(t testing.T) {
-// 	accountService, streamingService, sessionService := newTestingServices()
+var title = "the boogie"
+var artist = "charles"
+var image = "Image url"
+var UpsertQueueTests = []struct {
+	songToQueue				*model.SongUpdate
+	votesToAdd 				int
+	expectedNumberOfVotes 	int
+}{
+	{
+		&model.SongUpdate{
+			ID: "id",
+			Title: &title,
+			Artist: &artist,
+			Image: &image,
+		}, 1, 1,
+	},
+	{	&model.SongUpdate{
+			ID: "id",
+		}, 2, 3,
+	},
+}
+func TestUpsertQueue(t *testing.T) {
+	accountService, streamingService, sessionService := newTestingServices()
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	if err != nil {
+		t.Errorf("CreateSession() failed! Got an error: %v", err)
+	}
 
-// 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
-// 	if err != nil {
-// 		t.Errorf("CreateSession() failed! Got an error: %v", err)
-// 	}
+	for _, testCase := range(UpsertQueueTests) {
+		sessionService.UpsertQueue(sessionID, testCase.votesToAdd, *testCase.songToQueue)
 
-// 	title := "the boogie"
-// 	artist := "charles"
-// 	image := "Image url"
-// 	newSong := &model.SongUpdate{
-// 		ID: "id",
-// 		Title: &title,
-// 		Artist: &artist,
-// 		Image: &image,
-// 		// Action: model.SongVoteActionAdd,
-// 	}
-// 	sessionService.UpsertQueue(sessionID, 1, *newSong)
-// 	sessionState := sessionService.GetSessionState(sessionID)
-// 	if sessionState.Queue
+		sessionState := sessionService.GetSessionState(sessionID)
+		index := slices.IndexFunc(sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == testCase.songToQueue.ID })
+		songInQueue := sessionState.Queue[index]
+		if songInQueue.Votes != testCase.expectedNumberOfVotes {
+			t.Errorf("UpsertQueue() failed! Wanted votes %v, got: %v", testCase.expectedNumberOfVotes, songInQueue.Votes)	
+		}
+	}
+}
+
+func TestUpsertVoterInSession(t *testing.T) {
+	accountService, streamingService, sessionService := newTestingServices()
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	if err != nil {
+		t.Errorf("CreateSession() failed! Got an error: %v", err)
+	}
+
+	newVoter, err := voter.NewVoter("asdf", model.VoterTypeFree, 123, 0)
+	sessionService.UpsertVoterInSession(sessionID, newVoter)
+
+	voterInSession, exists := sessionService.GetVoterInSession(sessionID, "asdf")
+	if !exists {
+		t.Errorf("UpsertVoterInSesion() failed! Wanted voter to exist")
+	}
+	if voterInSession != newVoter {
+		t.Errorf("UpsertVoterInSesion() failed! Wanted %v, got: %v", newVoter, voterInSession)
+	}
+
+	sessionState := sessionService.GetSessionState(sessionID)
+	if sessionState.NumberOfVoters != 1 {
+		t.Errorf("UpsertVoterInSesion() failed! Wanted number of voters %v, got: %v", 1, sessionState.NumberOfVoters)
+	}
+}
+
+// func TestUpdateCurrentlyPlaying (t *testing.T) {
+// 	// TODO: figure out how to mock the streaming calls
 // }
+
+func TestPopQueue(t *testing.T) {
+	// TODO: assert function calls to streaming service
+	accountService, streamingService, sessionService := newTestingServices()
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	if err != nil {
+		t.Errorf("CreateSession() failed! Got an error: %v", err)
+	}
+
+	var queue []*model.QueuedSong
+	songToQueue := &model.QueuedSong{
+		SimpleSong: &model.SimpleSong{
+			ID: "id",
+			Title: "asdf",
+			Artist: "qwer",
+			Image: "qewr",
+		},
+		Votes: 1,
+	}
+	queue = append(queue, songToQueue)
+	sessionService.setQueue(sessionID, queue)
+
+	sessionService.PopQueue(sessionID, accountService)
+
+	sessionState := sessionService.GetSessionState(sessionID)
+	if len(sessionState.Queue) != 0 {
+		t.Errorf("PopQueue() failed! Wanted length of queue %v, got: %v", 0, len(sessionState.Queue))	
+	}
+
+	sessionService.PopQueue(sessionID, accountService)
+
+	sessionState = sessionService.GetSessionState(sessionID)
+	if len(sessionState.Queue) != 0 {
+		t.Errorf("PopQueue() failed! Wanted length of queue %v, got: %v", 0, len(sessionState.Queue))	
+	}
+}
 
 func newTestingServices() (account.AccountService, streaming.StreamingService, SessionServiceInMemory) {
 	accountService := account.NewAccountServiceMockImpl()
