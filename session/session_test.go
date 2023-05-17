@@ -2,6 +2,7 @@ package session
 
 import (
 	"testing"
+	"time"
 
 	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/graph/model"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/exp/slices"
 	// "github.com/golang/mock/gomock"
 )
+
 // TODO: see if there's enough common code creating songs to pull into helper function
 
 // func TestNewSessionServiceInMemoryImpl(t *testing.T) {
@@ -272,6 +274,64 @@ func TestPopQueue(t *testing.T) {
 		t.Errorf("PopQueue() failed! Wanted length of queue %v, got: %v", 0, len(sessionState.Queue))	
 	}
 }
+
+func TestAddBonusVote(t *testing.T) {
+	accountService, streamingService, sessionService := newTestingServices()
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	if err != nil {
+		t.Errorf("CreateSession() failed! Got an error: %v", err)
+	}
+
+	sessionService.AddBonusVote("asdf", 123, 2, sessionID)
+}
+
+func TestAddChannel(t *testing.T) {
+	accountService, streamingService, sessionService := newTestingServices()
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	if err != nil {
+		t.Errorf("CreateSession() failed! Got an error: %v", err)
+	}
+	
+	newChannel := make(chan *model.SessionState)
+	sessionService.AddChannel(sessionID, newChannel)
+}
+
+// func TestSePlaylist(t *testing.T) {
+// 	// TODO: Need to figure out how to mock return value for playlist session function
+// }
+
+func TestRefreshVoterExpiration(t *testing.T) {
+	accountService, streamingService, sessionService := newTestingServices()
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	if err != nil {
+		t.Errorf("CreateSession() failed! Got an error: %v", err)
+	}
+
+	newVoter, err := voter.NewVoter("voter-id", model.VoterTypeFree, 123, 0)
+	sessionService.UpsertVoterInSession(sessionID, newVoter)
+
+	sessionService.RefreshVoterExpiration(sessionID, "voter-id")
+
+	if time.Now().After(newVoter.ExpiresAt) { 
+		t.Errorf("RefreshVoterExpiration() failed! voter has expired")	
+	}
+}
+
+// func TestEndSession(t *testing.T) {
+// 	// TODO: assert cleanup functions are called and mock db call
+// 	accountService, streamingService, sessionService := newTestingServices()
+// 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+// 	if err != nil {
+// 		t.Errorf("CreateSession() failed! Got an error: %v", err)
+// 	}
+
+// 	sessionService.EndSession(sessionID, accountService)
+
+// 	sessionExists := sessionService.DoesSessionExist(sessionID)
+// 	if sessionExists {
+// 		t.Errorf("EndSession() failed! session still exists")	
+// 	}
+// }
 
 func newTestingServices() (account.AccountService, streaming.StreamingService, SessionServiceInMemory) {
 	accountService := account.NewAccountServiceMockImpl()
