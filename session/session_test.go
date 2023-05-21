@@ -11,8 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-// TODO: see if there's enough common code creating songs to pull into helper function
-
 func TestNewSessionServiceInMemoryImpl(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -262,7 +260,6 @@ func TestUpdateCurrentlyPlaying(t *testing.T) {
 }
 
 func TestPopQueue(t *testing.T) {
-	// TODO: assert function calls to streaming service
 	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
 	if err != nil {
