@@ -26,7 +26,7 @@ type SessionService interface {
 	DoesSessionExist(sessionID int) bool
 	SearchForSongs(sessionID int, query string) ([]*model.SimpleSong, error)
 
-	UpsertQueue(sessionID, vote int, song model.SongUpdate)
+	UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate)
 	UpsertVoterInSession(sessionID int, newVoter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error
 	PopQueue(sessionID int, accountService account.AccountService) error
@@ -38,7 +38,7 @@ type SessionService interface {
 	EndSession(sessionID int, accountService account.AccountService)
 }
 
-type Session struct {
+type session struct {
 	sessionConfig    		*model.SessionConfig
 	sessionState    		*model.SessionState
 	channels 				[]chan *model.SessionState
@@ -56,10 +56,11 @@ type Session struct {
 }
 
 type SessionServiceInMemory struct {
-	sessions			map[int]*Session
+	sessions			map[int]*session
 	allSessionsMutex 	*sync.Mutex
 }
 
+//lint:file-ignore ST1011 Ignore rule for time.Duration unit in variable name
 const sessionWatchFrequencySeconds time.Duration = 10 
 const sessionTimeoutMinutes time.Duration = 30 
 const streamingServiceWatchFrequencySlowMilliseconds time.Duration = 4000
@@ -68,7 +69,7 @@ const voterWatchFrequencySeconds time.Duration = 1
 
 func NewSessionServiceInMemoryImpl(accountService account.AccountService) *SessionServiceInMemory{
 	sessionInMemory := &SessionServiceInMemory{
-		sessions: 			make(map[int]*Session),
+		sessions: 			make(map[int]*session),
 		allSessionsMutex: 	&sync.Mutex{},
 	}
 
@@ -104,7 +105,7 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 		NumberOfVoters: 0,
 	}
 
-	session := Session{
+	session := session{
 		sessionConfig:    			sessionConfig,
 		sessionState: 				sessionState,
 		channels: 					nil,
@@ -126,7 +127,6 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 
 	go s.watchStreamingServiceCurrentlyPlaying(sessionID, accountService)
 	go s.watchVotersExpirations(sessionID)
-	
 	
 	return sessionID, nil
 }
@@ -163,7 +163,7 @@ func (s *SessionServiceInMemory) GetVoterInSession(sessionID int, voterID string
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
-
+ 
 	session.votersMutex.Lock()
 	voter, exists := session.voters[voterID]
 	session.votersMutex.Unlock()
@@ -185,12 +185,10 @@ func (s *SessionServiceInMemory) IsSessionFull(sessionID int) bool {
 
 	isFull := false
 
-	session.votersMutex.Lock()
 	session.sessionStateMutex.Lock()
 	if session.sessionState.NumberOfVoters >= session.sessionConfig.MaximumVoters  {
 		isFull = true
 	}
-	session.votersMutex.Unlock()
 	session.sessionStateMutex.Unlock()
 
 	return isFull
@@ -212,14 +210,14 @@ func (s *SessionServiceInMemory) SearchForSongs(sessionID int, query string) ([]
 	return session.streaming.Search(query)
 }
 
-func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.SongUpdate) {
+func (s *SessionServiceInMemory) UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
 	session.sessionStateMutex.Lock()
-	idx := slices.IndexFunc(session.sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
-	if idx == -1 {
+	index := slices.IndexFunc(session.sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == song.ID })
+	if index == -1 {
 		// add new song to queue
 		newSong := &model.QueuedSong{
 			SimpleSong: &model.SimpleSong{
@@ -228,12 +226,12 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, vote int, song model.Son
 				Artist: *song.Artist,
 				Image:  *song.Image,
 			},
-			Votes: vote,
+			Votes: numberOfVotes,
 		}
 		session.sessionState.Queue = append(session.sessionState.Queue, newSong)
 	} else {
-		queuedSong := session.sessionState.Queue[idx]
-		queuedSong.Votes += vote
+		queuedSong := session.sessionState.Queue[index]
+		queuedSong.Votes += numberOfVotes
 	}
 
 	sort.Slice(session.sessionState.Queue, func(i, j int) bool { return session.sessionState.Queue[i].Votes > session.sessionState.Queue[j].Votes })

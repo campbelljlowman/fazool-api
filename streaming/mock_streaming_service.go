@@ -3,29 +3,29 @@ package streaming
 import "github.com/campbelljlowman/fazool-api/graph/model"
 
 
-type MockStreamingService struct {}
+type mockStreamingService struct {}
 
-func NewMockStreamingServiceClient(accessToken string) *MockStreamingService {	
-	return &MockStreamingService{}
+func NewMockStreamingServiceClient(accessToken string) *mockStreamingService {	
+	return &mockStreamingService{}
 }
 
-func (m *MockStreamingService) Play() error {
+func (m *mockStreamingService) Play() error {
 	return nil
 }
 
-func (m *MockStreamingService) Pause() error {
+func (m *mockStreamingService) Pause() error {
 	return nil
 }
 
-func (m *MockStreamingService) Next() error {
+func (m *mockStreamingService) Next() error {
 	return nil
 }
 
-func (m *MockStreamingService) QueueSong(song string) error {
+func (m *mockStreamingService) QueueSong(song string) error {
 	return nil
 }
 
-func (m *MockStreamingService) CurrentSong() (*model.CurrentlyPlayingSong, bool, error) {
+func (m *mockStreamingService) CurrentSong() (*model.CurrentlyPlayingSong, bool, error) {
 	fakeSong := &model.CurrentlyPlayingSong{
 		SimpleSong: &model.SimpleSong{
 			ID: "1234",
@@ -40,11 +40,11 @@ func (m *MockStreamingService) CurrentSong() (*model.CurrentlyPlayingSong, bool,
 	return fakeSong, false, nil
 }
 
-func TimeRemaining() (int, error) {
+func (m *mockStreamingService) TimeRemaining() (int, error) {
 	return 1234, nil
 }
 
-func (m *MockStreamingService) GetPlaylists() ([]*model.Playlist, error) {
+func (m *mockStreamingService) GetPlaylists() ([]*model.Playlist, error) {
 	var fakePlaylists []*model.Playlist
 	
 	fakePlaylist := &model.Playlist{
@@ -56,7 +56,7 @@ func (m *MockStreamingService) GetPlaylists() ([]*model.Playlist, error) {
 	return fakePlaylists, nil
 }
 
-func (m *MockStreamingService) GetSongsInPlaylist(string) ([]*model.SimpleSong, error) {
+func (m *mockStreamingService) GetSongsInPlaylist(string) ([]*model.SimpleSong, error) {
 	var fakeSongs []*model.SimpleSong
 	fakeSong := &model.SimpleSong{
 		ID: "1234",
@@ -68,7 +68,7 @@ func (m *MockStreamingService) GetSongsInPlaylist(string) ([]*model.SimpleSong, 
 	return fakeSongs, nil
 }
 
-func (m *MockStreamingService) Search(string) ([]*model.SimpleSong, error) {
+func (m *mockStreamingService) Search(string) ([]*model.SimpleSong, error) {
 	var fakeSongs []*model.SimpleSong
 	fakeSong := &model.SimpleSong{
 		ID: "1234",

@@ -62,13 +62,13 @@ func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string,
 	return nil
 }
 
-func expireSession(session *Session) {
+func expireSession(session *session) {
 	session.expiryMutex.Lock()
 	session.expiresAt = time.Now()
 	session.expiryMutex.Unlock()
 }
 
-func closeChannels(session *Session) {
+func closeChannels(session *session) {
 	session.channelMutex.Lock()
 	for _, ch := range session.channels {
 		close(ch)
@@ -96,11 +96,12 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 	sendUpdateFlag := false
 	addNextSongFlag := true
 	popQueueFlag := false
+	//lint:file-ignore ST1011 Ignore rule for time.Duration unit in variable name
 	streamingServiceWatchFrequencyMilliseconds := streamingServiceWatchFrequencySlowMilliseconds
 
 	for {
 		// Refresh value is dynamic to increase the sensitivity when the song is about to change
-		if addNextSongFlag == false {
+		if !addNextSongFlag {
 			streamingServiceWatchFrequencyMilliseconds = streamingServiceWatchFrequencyFastMilliseconds
 		} else {
 			streamingServiceWatchFrequencyMilliseconds = streamingServiceWatchFrequencySlowMilliseconds
@@ -128,7 +129,7 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 		}
 	
 		session.sessionStateMutex.Lock()
-		if currentlyPlayingFlag == true {
+		if currentlyPlayingFlag {
 			if session.sessionState.CurrentlyPlaying.SimpleSong.ID != currentlyPlayingSong.SimpleSong.ID {
 				addNextSongFlag = true
 			}

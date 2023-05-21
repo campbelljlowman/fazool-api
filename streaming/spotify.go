@@ -11,11 +11,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type SpotifyWrapper struct {
+type spotifyWrapper struct {
 	client *spotify.Client
 }
 
-func NewSpotifyClient(refreshToken string) *SpotifyWrapper {	
+func NewSpotifyClient(refreshToken string) *spotifyWrapper {	
 	token := &oauth2.Token{
 		RefreshToken: refreshToken,
 	}
@@ -24,26 +24,26 @@ func NewSpotifyClient(refreshToken string) *SpotifyWrapper {
 	// can't be read and passed manually so the names must not change
 	httpClient := spotifyauth.New().Client(context.Background(), token)
 	client := spotify.New(httpClient)
-	return &SpotifyWrapper{client: client}
+	return &spotifyWrapper{client: client}
 }
 
-func (s *SpotifyWrapper) Play() error {
+func (s *spotifyWrapper) Play() error {
   	return s.client.Play(context.Background())
 }
 
-func (s *SpotifyWrapper) Pause() error {
+func (s *spotifyWrapper) Pause() error {
   	return s.client.Pause(context.Background())
 }
 
-func (s *SpotifyWrapper) Next() error {
+func (s *spotifyWrapper) Next() error {
   	return s.client.Next(context.Background())
 }
 
-func (s *SpotifyWrapper) QueueSong(song string) error {
+func (s *spotifyWrapper) QueueSong(song string) error {
 	return s.client.QueueSong(context.Background(), spotify.ID(song))
 }
 
-func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error) {
+func (s *spotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error) {
 	status, err := s.client.PlayerCurrentlyPlaying(context.Background())
 	if err != nil {
 		return nil, false, err
@@ -69,7 +69,7 @@ func (s *SpotifyWrapper) CurrentSong() (*model.CurrentlyPlayingSong, bool, error
 	return song, true, nil
 }
 
-func (s *SpotifyWrapper) TimeRemaining() (int, error) {
+func (s *spotifyWrapper) TimeRemaining() (int, error) {
 	status, err := s.client.PlayerCurrentlyPlaying(context.Background())
 	if err != nil {
 		return 0, err
@@ -79,7 +79,7 @@ func (s *SpotifyWrapper) TimeRemaining() (int, error) {
 	return timeLeft, nil
 }
 
-func (s *SpotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
+func (s *spotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
 	var playlists []*model.Playlist
 	currentlyPlaying, err := s.client.PlayerCurrentlyPlaying(context.Background())
 	if err != nil {
@@ -120,7 +120,7 @@ func (s *SpotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
 	return playlists, nil
 }
 
-func (s *SpotifyWrapper) GetSongsInPlaylist(playlist string) ([]*model.SimpleSong, error) {
+func (s *spotifyWrapper) GetSongsInPlaylist(playlist string) ([]*model.SimpleSong, error) {
 	playlistItems, err := s.client.GetPlaylist(context.Background(), spotify.ID(playlist))
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func (s *SpotifyWrapper) GetSongsInPlaylist(playlist string) ([]*model.SimpleSon
 	return songs, nil
 }
 
-func (s *SpotifyWrapper) Search(query string) ([]*model.SimpleSong, error){
+func (s *spotifyWrapper) Search(query string) ([]*model.SimpleSong, error){
 	searchResult, err := s.client.Search(context.Background(), query, spotify.SearchTypeTrack)
 	if err != nil {
 		return nil, err
