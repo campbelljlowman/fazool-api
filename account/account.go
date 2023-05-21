@@ -1,3 +1,5 @@
+//go:generate mockgen -destination=../mocks/mock_account.go -package=mocks . AccountService
+
 package account
 
 import (
@@ -208,10 +210,4 @@ func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 func (a *AccountServiceGorm) DeleteAccount(accountID int) {
 	var fullAccount account
 	a.gorm.Delete(&fullAccount, accountID)
-}
-
-// TODO: Remove this and mock the object used in the unit tests
-func NewAccountServiceMockImpl() *AccountServiceGorm {
-	accountGorm := AccountServiceGorm{gorm: nil}
-	return &accountGorm
 }

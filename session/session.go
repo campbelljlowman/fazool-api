@@ -60,6 +60,7 @@ type SessionServiceInMemory struct {
 	allSessionsMutex 	*sync.Mutex
 }
 
+//lint:file-ignore ST1011 Ignore rule for time.Duration unit in variable name
 const sessionWatchFrequencySeconds time.Duration = 10 
 const sessionTimeoutMinutes time.Duration = 30 
 const streamingServiceWatchFrequencySlowMilliseconds time.Duration = 4000

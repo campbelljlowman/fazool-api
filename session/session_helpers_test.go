@@ -2,13 +2,15 @@ package session
 
 import (
 	"testing"
+	// "time"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
+	// "github.com/golang/mock/gomock"
 )
 
 func TestSendUpdatedState(t *testing.T) {
-	accountService, streamingService, sessionService := newTestingServices()
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -23,35 +25,39 @@ func TestSendUpdatedState(t *testing.T) {
 	// TODO: Assert session expiry was refreshed
 }
 
-// func TestProcessBonusVotes(t *testing.T) {
-// 	// TODO: Mock account service call, and assert is called
-// 	accountService, streamingService, sessionService := newTestingServices()
-// 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
-// 	if err != nil {
-// 		t.Errorf("CreateSession() failed! Got an error: %v", err)
-// 	}
-	
-// 	sessionService.AddBonusVote("song1", 123, 1, sessionID)
-	
-// 	sessionService.processBonusVotes(sessionID, "song1", accountService)
-// 	sessionService.processBonusVotes(sessionID, "song2", accountService)
+func TestProcessBonusVotes(t *testing.T) {
+	accountID := 123
+	numberOfBonusVotes := 1
 
-// 	session := sessionService.sessions[sessionID]
-// 	_, bonusVoteExists := session.bonusVotes["song1"]
+	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(accountID, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	if err != nil {
+		t.Errorf("CreateSession() failed! Got an error: %v", err)
+	}
+	
+	sessionService.AddBonusVote("song1", accountID, numberOfBonusVotes, sessionID)
+	mockAccountService.EXPECT().SubtractBonusVotes(accountID, numberOfBonusVotes)
 
-// 	if bonusVoteExists {
-// 		t.Errorf("processBonusVotes() failed! Song is still present in bonus votes map")	
-// 	}
-// }
+	sessionService.processBonusVotes(sessionID, "song1", mockAccountService)
+	sessionService.processBonusVotes(sessionID, "song2", mockAccountService)
+
+	session := sessionService.sessions[sessionID]
+	_, bonusVoteExists := session.bonusVotes["song1"]
+
+	if bonusVoteExists {
+		t.Errorf("processBonusVotes() failed! Song is still present in bonus votes map")	
+	}
+}
 
 // func TestExpireSession(t *testing.T) {
 // 	// TODO: Try to mock account service function call for SetAccountActiveSession.
 // 	// Session watcher can try to end session after the expire session function is called
-// 	accountService, streamingService, sessionService := newTestingServices()
-// 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+// 	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+// 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
 // 	if err != nil {
 // 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 // 	}
+// 	// mockAccountService.EXPECT().SetAccountActiveSession(gomock.Any(), gomock.Any())
 // 	session := sessionService.sessions[sessionID]
 
 // 	expireSession(session)
@@ -63,8 +69,8 @@ func TestSendUpdatedState(t *testing.T) {
 // }
 
 func TestCloseChannels(t *testing.T) {
-	accountService, streamingService, sessionService := newTestingServices()
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -82,8 +88,8 @@ func TestCloseChannels(t *testing.T) {
 }
 
 func TestSetQueue(t *testing.T){
-	accountService, streamingService, sessionService := newTestingServices()
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, streamingService, accountService)
+	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}

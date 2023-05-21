@@ -1,3 +1,5 @@
+//go:generate mockgen -destination=../mocks/mock_streaming.go -package=mocks . StreamingService
+
 package streaming
 
 import (
