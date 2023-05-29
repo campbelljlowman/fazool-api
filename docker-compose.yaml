@@ -5,8 +5,8 @@ services:
     image: postgres
     environment:
       POSTGRES_PASSWORD: asdf
-      POSTGRES_DB: fazool-integration-test
+      POSTGRES_DB: fazool
       POSTGRES_HOST: postgres
-      POSTGRES_USER: postgres
+      POSTGRES_USER: clowman
     ports:
       - 5432:5432
