@@ -6,9 +6,9 @@ on:
 
 env:
   GITHUB_ACCESS_TOKEN: ${{ github.token }}
-  
+
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,15 +16,6 @@ jobs:
 
     - name: build
       run: make build
-      
 
-      
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    
     - name: publish
       run: make publish
