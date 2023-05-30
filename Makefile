@@ -4,6 +4,7 @@ POSTGRES_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432
 POSTGRES_DEV_URL_DOCKER=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@host.docker.internal:5432/fazool # This requires databases clowman and fazool to exist already
 
 REGISTRY=ghcr.io
+ASDF=asdf
 IMAGE_NAME=campbelljlowman/fazool-api
 STABLE_VERSION=0.1.0
 UNIQUE_VERSION=${STABLE_VERSION}-${shell date "+%Y.%m.%d"}-${shell git rev-parse --short HEAD}
