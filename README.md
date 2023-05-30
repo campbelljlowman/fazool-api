@@ -6,7 +6,8 @@ API for Fazool music service
 1. Install go 
 2. Setup postgres server (see make target)
 3. cd to project root
-4. run `make run`
+4. Add values to env file and run `git update-index --assume-unchanged .env`
+5. run `make run`
 
 # Integration tests
 
