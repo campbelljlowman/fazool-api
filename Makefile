@@ -1,5 +1,3 @@
-GO_VERSION=1.19.3
-# To make it easy to connect from your dev machine, make your postgres username the same as your linux username
 POSTGRES_USERNAME=clowman
 POSTGRES_PASSWORD=asdf
 POSTGRES_URL=postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@localhost:5432/fazool
