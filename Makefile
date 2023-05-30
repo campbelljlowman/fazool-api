@@ -41,7 +41,7 @@ build:
 	.
 
 publish:
-	@echo ${GITHUB_ACCESS_TOKEN} | docker login ghcr.io -u campbelljlowman --password-stdin
+	docker login ghcr.io -u campbelljlowman -p ${GITHUB_ACCESS_TOKEN}
 	docker push ${UNIQUE_IMAGE_TAG}
 ifeq ($(shell git rev-parse --abbrev-ref HEAD), master)
 	docker push ${STABLE_IMAGE_TAG}
