@@ -15,7 +15,7 @@
 # vendor/
 
 # Env file
-.env
+# .env
 
 /integration_tests/node_modules/*
 *.js
