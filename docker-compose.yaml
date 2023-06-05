@@ -10,3 +10,5 @@ services:
       POSTGRES_USER: clowman
     ports:
       - 5432:5432
+    volumes:
+          - /Users/campbelljlowman/fazool_postgres_data:/var/lib/postgresql/data
