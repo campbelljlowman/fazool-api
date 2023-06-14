@@ -47,11 +47,12 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Account struct {
-		ActiveSession func(childComplexity int) int
-		Email         func(childComplexity int) int
-		FirstName     func(childComplexity int) int
-		ID            func(childComplexity int) int
-		LastName      func(childComplexity int) int
+		ActiveSession    func(childComplexity int) int
+		Email            func(childComplexity int) int
+		FirstName        func(childComplexity int) int
+		ID               func(childComplexity int) int
+		LastName         func(childComplexity int) int
+		StreamingService func(childComplexity int) int
 	}
 
 	CurrentlyPlayingSong struct {
@@ -205,6 +206,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Account.LastName(childComplexity), true
+
+	case "Account.streamingService":
+		if e.complexity.Account.StreamingService == nil {
+			break
+		}
+
+		return e.complexity.Account.StreamingService(childComplexity), true
 
 	case "CurrentlyPlayingSong.isPlaying":
 		if e.complexity.CurrentlyPlayingSong.IsPlaying == nil {
@@ -724,11 +732,12 @@ type SessionConfig {
 }
 
 type Account {
-  id:             Int!
-  firstName:      String
-  lastName:       String
-  email:          String
-  activeSession:  Int
+  id:               Int!
+  firstName:        String
+  lastName:         String
+  email:            String
+  activeSession:    Int
+  streamingService: StreamingService
 }
 
 type Voter {
@@ -743,6 +752,11 @@ type Playlist {
   id:     String!
   name:   String!
   image:  String!
+}
+
+enum StreamingService {
+  NONE
+  SPOTIFY
 }
 
 enum QueueAction {
@@ -1417,6 +1431,47 @@ func (ec *executionContext) fieldContext_Account_activeSession(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Account_streamingService(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Account_streamingService(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StreamingService, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.StreamingService)
+	fc.Result = res
+	return ec.marshalOStreamingService2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐStreamingService(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Account_streamingService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Account",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type StreamingService does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CurrentlyPlayingSong_simpleSong(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_CurrentlyPlayingSong_simpleSong(ctx, field)
 	if err != nil {
@@ -1652,6 +1707,8 @@ func (ec *executionContext) fieldContext_Mutation_createSession(ctx context.Cont
 				return ec.fieldContext_Account_email(ctx, field)
 			case "activeSession":
 				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -1889,6 +1946,8 @@ func (ec *executionContext) fieldContext_Mutation_upsertSpotifyToken(ctx context
 				return ec.fieldContext_Account_email(ctx, field)
 			case "activeSession":
 				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2019,6 +2078,8 @@ func (ec *executionContext) fieldContext_Mutation_setVoterType(ctx context.Conte
 				return ec.fieldContext_Account_email(ctx, field)
 			case "activeSession":
 				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2086,6 +2147,8 @@ func (ec *executionContext) fieldContext_Mutation_setAccountType(ctx context.Con
 				return ec.fieldContext_Account_email(ctx, field)
 			case "activeSession":
 				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2153,6 +2216,8 @@ func (ec *executionContext) fieldContext_Mutation_addBonusVotes(ctx context.Cont
 				return ec.fieldContext_Account_email(ctx, field)
 			case "activeSession":
 				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2754,6 +2819,8 @@ func (ec *executionContext) fieldContext_Query_account(ctx context.Context, fiel
 				return ec.fieldContext_Account_email(ctx, field)
 			case "activeSession":
 				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -5854,6 +5921,10 @@ func (ec *executionContext) _Account(ctx context.Context, sel ast.SelectionSet, 
 
 			out.Values[i] = ec._Account_activeSession(ctx, field, obj)
 
+		case "streamingService":
+
+			out.Values[i] = ec._Account_streamingService(ctx, field, obj)
+
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7480,6 +7551,22 @@ func (ec *executionContext) marshalOSimpleSong2ᚕᚖgithubᚗcomᚋcampbelljlow
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalOStreamingService2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐStreamingService(ctx context.Context, v interface{}) (*model.StreamingService, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.StreamingService)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOStreamingService2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐStreamingService(ctx context.Context, sel ast.SelectionSet, v *model.StreamingService) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {

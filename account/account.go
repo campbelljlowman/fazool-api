@@ -44,8 +44,8 @@ type account struct {
 	VoterType 				model.VoterType
 	BonusVotes 				int
 	ActiveSession			int
-	SpotifyAccessToken 		string
 	SpotifyRefreshToken		string
+	StreamingService		model.StreamingService
 }
 
 type AccountServiceGorm struct {
@@ -107,6 +107,7 @@ func transformAccountType(fullAccount account) *model.Account {
 		LastName: &fullAccount.LastName,
 		Email: &fullAccount.Email,
 		ActiveSession: &fullAccount.ActiveSession,
+		StreamingService: &fullAccount.StreamingService,
 	}
 	return accountToReturn
 }
@@ -159,6 +160,7 @@ func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID int, refreshToken 
 	a.gorm.First(&fullAccount, accountID)
 
 	fullAccount.SpotifyRefreshToken = refreshToken
+	fullAccount.StreamingService = model.StreamingServiceSpotify
 	a.gorm.Save(&fullAccount)
 }
 

@@ -9,11 +9,12 @@ import (
 )
 
 type Account struct {
-	ID            int     `json:"id"`
-	FirstName     *string `json:"firstName"`
-	LastName      *string `json:"lastName"`
-	Email         *string `json:"email"`
-	ActiveSession *int    `json:"activeSession"`
+	ID               int               `json:"id"`
+	FirstName        *string           `json:"firstName"`
+	LastName         *string           `json:"lastName"`
+	Email            *string           `json:"email"`
+	ActiveSession    *int              `json:"activeSession"`
+	StreamingService *StreamingService `json:"streamingService"`
 }
 
 type AccountLogin struct {
@@ -252,6 +253,47 @@ func (e *SongVoteDirection) UnmarshalGQL(v interface{}) error {
 }
 
 func (e SongVoteDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type StreamingService string
+
+const (
+	StreamingServiceNone    StreamingService = "NONE"
+	StreamingServiceSpotify StreamingService = "SPOTIFY"
+)
+
+var AllStreamingService = []StreamingService{
+	StreamingServiceNone,
+	StreamingServiceSpotify,
+}
+
+func (e StreamingService) IsValid() bool {
+	switch e {
+	case StreamingServiceNone, StreamingServiceSpotify:
+		return true
+	}
+	return false
+}
+
+func (e StreamingService) String() string {
+	return string(e)
+}
+
+func (e *StreamingService) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = StreamingService(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid StreamingService", str)
+	}
+	return nil
+}
+
+func (e StreamingService) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

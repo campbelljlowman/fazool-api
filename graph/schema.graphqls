@@ -34,11 +34,12 @@ type SessionConfig {
 }
 
 type Account {
-  id:             Int!
-  firstName:      String
-  lastName:       String
-  email:          String
-  activeSession:  Int
+  id:               Int!
+  firstName:        String
+  lastName:         String
+  email:            String
+  activeSession:    Int
+  streamingService: StreamingService
 }
 
 type Voter {
@@ -53,6 +54,11 @@ type Playlist {
   id:     String!
   name:   String!
   image:  String!
+}
+
+enum StreamingService {
+  NONE
+  SPOTIFY
 }
 
 enum QueueAction {
