@@ -64,6 +64,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 	// Get this from new account request!
 	accountType := model.AccountTypeFree
 	voterType := model.VoterTypeFree
+	streamingService := model.StreamingServiceNone
 
 	isVaildEmail := utils.ValidateEmail(newAccount.Email)
 	if !isVaildEmail {
@@ -76,7 +77,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 		return "", utils.LogAndReturnError("Account with this email already exists!", nil)
 	}
 
-	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, passwordHash, accountType, voterType, 0)
+	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, passwordHash, accountType, voterType, 0, streamingService)
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
 	if err != nil {

@@ -13,7 +13,7 @@ import (
 )
 
 type AccountService interface {
-	CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int 
+	CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int, streamingService model.StreamingService) int 
 
 	GetAccountFromEmail(accountEmail string) *model.Account
 	GetAccountFromID(accountID int) *model.Account
@@ -70,15 +70,16 @@ func NewAccountServiceGormImpl() *AccountServiceGorm {
 	return &accountGorm
 }
 
-func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int) int {
+func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int, streamingService model.StreamingService) int {
 	accountToAdd := &account{
-		FirstName: 		firstName,
-		LastName: 		lastName,
-		Email: 			email,
-		PasswordHash: 	passwordHash,
-		AccountType: 	accountType,
-		VoterType: 		voterType,
-		BonusVotes: 	bonusVotes,
+		FirstName: 			firstName,
+		LastName: 			lastName,
+		Email: 				email,
+		PasswordHash: 		passwordHash,
+		AccountType: 		accountType,
+		VoterType: 			voterType,
+		BonusVotes: 		bonusVotes,
+		StreamingService: 	streamingService,
 	}
 	
 	a.gorm.Create(accountToAdd)
