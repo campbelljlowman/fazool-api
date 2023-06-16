@@ -103,12 +103,13 @@ func (s *spotifyWrapper) GetPlaylists() ([]*model.Playlist, error) {
 		}
 	}
 
+	// This request only gets 20 playlists
 	userPlaylists, err := s.client.CurrentUsersPlaylists(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	for _, playlist := range(userPlaylists.Playlists[:9-len(playlists)]) {
+	for _, playlist := range(userPlaylists.Playlists) {
 		p := model.Playlist{
 			ID: string(playlist.ID),
 			Name: playlist.Name,
