@@ -4,6 +4,7 @@ package account
 
 import (
 	"os"
+	"strings"
 
 	"golang.org/x/exp/slog"
 	"gorm.io/driver/postgres"
@@ -74,7 +75,7 @@ func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordH
 	accountToAdd := &account{
 		FirstName: 			firstName,
 		LastName: 			lastName,
-		Email: 				email,
+		Email: 				strings.ToLower(email),
 		PasswordHash: 		passwordHash,
 		AccountType: 		accountType,
 		VoterType: 			voterType,
@@ -89,7 +90,7 @@ func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordH
 
 func (a *AccountServiceGorm) GetAccountFromEmail(accountEmail string) *model.Account {
 	var fullAccount account
-	a.gorm.Where("email = ?", accountEmail).First(&fullAccount)
+	a.gorm.Where("email = ?", strings.ToLower(accountEmail)).First(&fullAccount)
 
 	return transformAccountType(fullAccount)
 }
@@ -115,7 +116,7 @@ func transformAccountType(fullAccount account) *model.Account {
 
 func (a *AccountServiceGorm) GetAccountIDAndPassHash(accountEmail string) (int, string) {
 	var fullAccount account
-	a.gorm.Where("email = ?", accountEmail).First(&fullAccount)
+	a.gorm.Where("email = ?", strings.ToLower(accountEmail)).First(&fullAccount)
 
 	return int(fullAccount.ID), fullAccount.PasswordHash
 }
@@ -198,11 +199,11 @@ func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {
 
 func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
 	var fullAccount account
-	err := a.gorm.Where("email = ?", email).First(&fullAccount).Error
+	err := a.gorm.Where("email = ?", strings.ToLower(email)).First(&fullAccount).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			slog.Info("No account found with email", "email", email)
+			slog.Info("No account found with email", "email", strings.ToLower(email))
 			return false
 		}
 		slog.Warn("Error checking if email has an account", "error", err)
