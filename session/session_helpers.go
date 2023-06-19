@@ -177,6 +177,8 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 
 
 	for {
+		time.Sleep(voterWatchFrequencySeconds * time.Second)
+
 		session.expiryMutex.Lock()
 		sessionExpired := time.Now().After(session.expiresAt)
 		session.expiryMutex.Unlock()
@@ -184,6 +186,12 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 		if sessionExpired {
 			slog.Info("Session has expired, ending session voter watcher", "session_id", sessionID)
 			return
+		}
+
+		sessionIsFull := s.IsSessionFull(sessionID)
+		if !sessionIsFull {
+			slog.Debug("Session isn't full, skipping voter check", "sessionID", sessionID)
+			continue
 		}
 
 		session.votersMutex.Lock()
@@ -204,8 +212,6 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 
 		}
 		session.votersMutex.Unlock()
-
-		time.Sleep(voterWatchFrequencySeconds * time.Second)
 	}
 }
 
