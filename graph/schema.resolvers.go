@@ -154,7 +154,6 @@ func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds 
 
 	r.accountService.SetSpotifyRefreshToken(accountID, spotifyCreds.RefreshToken)
 
-
 	return &model.Account{ID: accountID}, nil
 }
 

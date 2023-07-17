@@ -720,7 +720,7 @@ type CurrentlyPlayingSong {
 }
 
 type SessionState {
-  currentlyPlaying: CurrentlyPlayingSong
+  currentlyPlaying: CurrentlyPlayingSong!
   queue:            [QueuedSong!]
   numberOfVoters:   Int!
 }
@@ -3330,11 +3330,14 @@ func (ec *executionContext) _SessionState_currentlyPlaying(ctx context.Context, 
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.CurrentlyPlayingSong)
 	fc.Result = res
-	return ec.marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx, field.Selections, res)
+	return ec.marshalNCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_SessionState_currentlyPlaying(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6453,6 +6456,9 @@ func (ec *executionContext) _SessionState(ctx context.Context, sel ast.Selection
 
 			out.Values[i] = ec._SessionState_currentlyPlaying(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "queue":
 
 			out.Values[i] = ec._SessionState_queue(ctx, field, obj)
@@ -6953,6 +6959,16 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx context.Context, sel ast.SelectionSet, v *model.CurrentlyPlayingSong) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CurrentlyPlayingSong(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
 	res, err := graphql.UnmarshalInt(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -7387,13 +7403,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐCurrentlyPlayingSong(ctx context.Context, sel ast.SelectionSet, v *model.CurrentlyPlayingSong) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._CurrentlyPlayingSong(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {

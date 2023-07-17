@@ -122,14 +122,14 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 		}
 
 		sendUpdateFlag = false
-		currentlyPlayingSong, currentlyPlayingFlag, err := session.streaming.CurrentSong()
+		currentlyPlayingSong, isCurrentlyPlaying, err := session.streaming.CurrentSong()
 		if err != nil {
 			slog.Warn("Error getting music player state", "error", err)
 			continue
 		}
 	
 		session.sessionStateMutex.Lock()
-		if currentlyPlayingFlag {
+		if isCurrentlyPlaying {
 			if session.sessionState.CurrentlyPlaying.SimpleSong.ID != currentlyPlayingSong.SimpleSong.ID {
 				addNextSongFlag = true
 			}
@@ -153,8 +153,8 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 			}
 		} else {
 			// Change currently playing to false if music gets paused
-			if session.sessionState.CurrentlyPlaying.IsPlaying != currentlyPlayingFlag {
-				session.sessionState.CurrentlyPlaying.IsPlaying = currentlyPlayingFlag
+			if session.sessionState.CurrentlyPlaying.IsPlaying != isCurrentlyPlaying {
+				session.sessionState.CurrentlyPlaying.IsPlaying = isCurrentlyPlaying
 				sendUpdateFlag = true
 			}
 		}
