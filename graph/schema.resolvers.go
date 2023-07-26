@@ -341,7 +341,12 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 }
 
 // VoterToken is the resolver for the voterToken field.
-func (r *queryResolver) VoterToken(ctx context.Context) (string, error) {
+func (r *queryResolver) VoterToken(ctx context.Context, sessionID int) (string, error) {
+	sessionExists := r.sessionService.DoesSessionExist(sessionID)
+	if !sessionExists {
+		return "", utils.LogAndReturnError("Voter token requested for session that doesn't exist", nil)
+	}
+	
 	slog.Debug("Giving new voter token")
 	voterToken := uuid.New()
 	return voterToken.String(), nil

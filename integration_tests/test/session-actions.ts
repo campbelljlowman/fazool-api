@@ -23,10 +23,10 @@ describe("Session Actions", () => {
             "email": "mikey@gmail.com",
             "password": "gobraves"
         }
-        let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams)
+        let gqlPrivelegedVoterClient = await GetGqlClientForUser(privilegedVoterLoginParams, sessionID)
         await RunSessionActions(gqlPrivelegedVoterClient, sessionID, "PRIVILEGED")
         
-        let gqlFreeVoterClient = await GetGqlClientForUser()
+        let gqlFreeVoterClient = await GetGqlClientForUser(undefined, sessionID)
         await RunSessionActions(gqlFreeVoterClient, sessionID, "FREE")
 
         await EndSession(gqlAdminClient, sessionID)
@@ -34,9 +34,11 @@ describe("Session Actions", () => {
 
 })
 
-async function GetGqlClientForUser(loginParams?: LoginParams) {
+// TODO: May need to change this function for the optional parameters and test it
+async function GetGqlClientForUser(loginParams?: LoginParams, sessionID?: number) {
     let gqlClient = newGqlClient({})
     let accountToken
+    let getVoterTokenResult
 
     if (loginParams) {
         let loginResult = await Login(gqlClient, loginParams)
@@ -46,7 +48,9 @@ async function GetGqlClientForUser(loginParams?: LoginParams) {
         accountToken = ''
     }
 
-    let getVoterTokenResult = await GetVoterToken(gqlClient)
+    if (sessionID) {
+        getVoterTokenResult = await GetVoterToken(gqlClient, sessionID)
+    }
 
     gqlClient = newGqlClient({accountToken: accountToken, voterToken: getVoterTokenResult.voterToken})
 
@@ -172,14 +176,14 @@ async function MusicSearch(gqlclient: Client, sessionID: number, query: String) 
     return result.data
 }
 
-async function GetVoterToken(gqlclient: Client) {
+async function GetVoterToken(gqlclient: Client, sessionID: number) {
     const GET_VOTER_TOKEN = gql`
-        mutation getVoterToken {
-            voterToken
+        query getVoterToken ($sessionID: Int!) {
+            voterToken(sessionID:$sessionID)
         }
-    `
+    `;
 
-    let result = await gqlclient.mutation(GET_VOTER_TOKEN, {})
+    let result = await gqlclient.mutation(GET_VOTER_TOKEN, { sessionID: sessionID })
     assert.isUndefined(result.error)
     return result.data
 }

@@ -90,7 +90,7 @@ type ComplexityRoot struct {
 		SessionConfig func(childComplexity int, sessionID int) int
 		SessionState  func(childComplexity int, sessionID int) int
 		Voter         func(childComplexity int, sessionID int) int
-		VoterToken    func(childComplexity int) int
+		VoterToken    func(childComplexity int, sessionID int) int
 	}
 
 	QueuedSong struct {
@@ -148,7 +148,7 @@ type QueryResolver interface {
 	SessionConfig(ctx context.Context, sessionID int) (*model.SessionConfig, error)
 	SessionState(ctx context.Context, sessionID int) (*model.SessionState, error)
 	Voter(ctx context.Context, sessionID int) (*model.Voter, error)
-	VoterToken(ctx context.Context) (string, error)
+	VoterToken(ctx context.Context, sessionID int) (string, error)
 	Account(ctx context.Context) (*model.Account, error)
 	Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error)
 	MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error)
@@ -474,7 +474,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.VoterToken(childComplexity), true
+		args, err := ec.field_Query_voterToken_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.VoterToken(childComplexity, args["sessionID"].(int)), true
 
 	case "QueuedSong.simpleSong":
 		if e.complexity.QueuedSong.SimpleSong == nil {
@@ -817,7 +822,7 @@ type Query {
   sessionConfig(sessionID: Int!): SessionConfig!
   sessionState(sessionID: Int!): SessionState!
   voter(sessionID: Int!): Voter!
-  voterToken: String!
+  voterToken(sessionID: Int!): String!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
@@ -1141,6 +1146,21 @@ func (ec *executionContext) field_Query_sessionConfig_args(ctx context.Context, 
 }
 
 func (ec *executionContext) field_Query_sessionState_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_voterToken_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -2740,7 +2760,7 @@ func (ec *executionContext) _Query_voterToken(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().VoterToken(rctx)
+		return ec.resolvers.Query().VoterToken(rctx, fc.Args["sessionID"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2766,6 +2786,17 @@ func (ec *executionContext) fieldContext_Query_voterToken(ctx context.Context, f
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_voterToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }

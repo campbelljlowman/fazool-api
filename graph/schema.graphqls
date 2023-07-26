@@ -119,7 +119,7 @@ type Query {
   sessionConfig(sessionID: Int!): SessionConfig!
   sessionState(sessionID: Int!): SessionState!
   voter(sessionID: Int!): Voter!
-  voterToken: String!
+  voterToken(sessionID: Int!): String!
   account: Account!
   playlists(sessionID: Int!): [Playlist!]
   musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
