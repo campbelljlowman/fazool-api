@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	model "github.com/campbelljlowman/fazool-api/graph/model"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockStreamingService is a mock of StreamingService interface.

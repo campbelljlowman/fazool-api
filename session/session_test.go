@@ -8,7 +8,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/campbelljlowman/fazool-api/mocks"
 	"golang.org/x/exp/slices"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 func TestNewSessionServiceInMemoryImpl(t *testing.T) {
