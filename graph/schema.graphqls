@@ -135,7 +135,7 @@ type Mutation {
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
-  addSuperVoter(targetAccountID: Int!, sessionID: Int!): Account!
+  setSuperVoterSession(targetAccountID: Int!, sessionID: Int!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
   addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 

@@ -191,13 +191,13 @@ func (r *mutationResolver) SetAccountType(ctx context.Context, targetAccountID i
 }
 
 // AddSuperVoter is the resolver for the addSuperVoter field.
-func (r *mutationResolver) AddSuperVoter(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error) {
+func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("You can only set your own voter super voten type!", nil)
 	}
 
-	return r.accountService.AddSuperVoter(targetAccountID, sessionID, 0), nil
+	return r.accountService.SetSuperVoterSession(targetAccountID, sessionID, 0), nil
 }
 
 // AddBonusVotes is the resolver for the addBonusVotes field.
@@ -212,7 +212,12 @@ func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID in
 
 // AddFazoolTokens is the resolver for the addFazoolTokens field.
 func (r *mutationResolver) AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error) {
-	panic(fmt.Errorf("not implemented: AddFazoolTokens - addFazoolTokens"))
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID != targetAccountID {
+		return nil, utils.LogAndReturnError("You can only set your own bonus votes!", nil)
+	}
+
+	return r.accountService.AddFazoolTokens(targetAccountID, numberOfFazoolTokens), nil
 }
 
 // Login is the resolver for the login field.
@@ -322,11 +327,10 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 	bonusVotes := 0
 
 	if accountID != 0 {
-		superVoterSessions, bonusVotesValue := r.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
+		superVoterSession, bonusVotesValue := r.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
 		bonusVotes = bonusVotesValue
 
-		_, exists := superVoterSessions[sessionID]
-		if exists {
+		if superVoterSession == sessionID {
 			voterType = model.VoterTypeSuper
 		}
 		if r.sessionService.GetSessionAdminAccountID(sessionID) == accountID {

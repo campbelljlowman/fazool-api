@@ -4,6 +4,7 @@ import (
 	"time"
 	
 	"github.com/campbelljlowman/fazool-api/account"
+	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"golang.org/x/exp/slog"
 
@@ -60,6 +61,10 @@ func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string,
 	}
 
 	return nil
+}
+
+func cleanupSuperVoters(sessionID int, voter *voter.Voter) {
+	
 }
 
 func expireSession(session *session) {

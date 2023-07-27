@@ -62,20 +62,6 @@ func (mr *MockAccountServiceMockRecorder) AddFazoolTokens(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFazoolTokens", reflect.TypeOf((*MockAccountService)(nil).AddFazoolTokens), arg0, arg1)
 }
 
-// AddSuperVoter mocks base method.
-func (m *MockAccountService) AddSuperVoter(arg0, arg1, arg2 int) *model.Account {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddSuperVoter", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*model.Account)
-	return ret0
-}
-
-// AddSuperVoter indicates an expected call of AddSuperVoter.
-func (mr *MockAccountServiceMockRecorder) AddSuperVoter(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSuperVoter", reflect.TypeOf((*MockAccountService)(nil).AddSuperVoter), arg0, arg1, arg2)
-}
-
 // CheckIfEmailHasAccount mocks base method.
 func (m *MockAccountService) CheckIfEmailHasAccount(arg0 string) bool {
 	m.ctrl.T.Helper()
@@ -216,10 +202,10 @@ func (mr *MockAccountServiceMockRecorder) GetSpotifyRefreshToken(arg0 interface{
 }
 
 // GetSuperVoterSessionsAndBonusVotes mocks base method.
-func (m *MockAccountService) GetSuperVoterSessionsAndBonusVotes(arg0 int) (map[int]struct{}, int) {
+func (m *MockAccountService) GetSuperVoterSessionsAndBonusVotes(arg0 int) (int, int) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSuperVoterSessionsAndBonusVotes", arg0)
-	ret0, _ := ret[0].(map[int]struct{})
+	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(int)
 	return ret0, ret1
 }
@@ -278,6 +264,20 @@ func (m *MockAccountService) SetSpotifyRefreshToken(arg0 int, arg1 string) {
 func (mr *MockAccountServiceMockRecorder) SetSpotifyRefreshToken(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSpotifyRefreshToken", reflect.TypeOf((*MockAccountService)(nil).SetSpotifyRefreshToken), arg0, arg1)
+}
+
+// SetSuperVoterSession mocks base method.
+func (m *MockAccountService) SetSuperVoterSession(arg0, arg1, arg2 int) *model.Account {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetSuperVoterSession", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*model.Account)
+	return ret0
+}
+
+// SetSuperVoterSession indicates an expected call of SetSuperVoterSession.
+func (mr *MockAccountServiceMockRecorder) SetSuperVoterSession(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSuperVoterSession", reflect.TypeOf((*MockAccountService)(nil).SetSuperVoterSession), arg0, arg1, arg2)
 }
 
 // SubtractBonusVotes mocks base method.

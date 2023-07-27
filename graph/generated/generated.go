@@ -66,7 +66,6 @@ type ComplexityRoot struct {
 	Mutation struct {
 		AddBonusVotes          func(childComplexity int, targetAccountID int, bonusVotes int) int
 		AddFazoolTokens        func(childComplexity int, targetAccountID int, numberOfFazoolTokens int) int
-		AddSuperVoter          func(childComplexity int, targetAccountID int, sessionID int) int
 		CreateAccount          func(childComplexity int, newAccount model.NewAccount) int
 		CreateSession          func(childComplexity int) int
 		DeleteAccount          func(childComplexity int, targetAccountID int) int
@@ -74,6 +73,7 @@ type ComplexityRoot struct {
 		Login                  func(childComplexity int, accountLogin model.AccountLogin) int
 		SetAccountType         func(childComplexity int, targetAccountID int, accountType model.AccountType) int
 		SetPlaylist            func(childComplexity int, sessionID int, playlistID string) int
+		SetSuperVoterSession   func(childComplexity int, targetAccountID int, sessionID int) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
 		UpsertSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
@@ -140,7 +140,7 @@ type MutationResolver interface {
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error)
 	SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error)
 	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
-	AddSuperVoter(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error)
+	SetSuperVoterSession(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error)
 	AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error)
 	AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
@@ -276,18 +276,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AddFazoolTokens(childComplexity, args["targetAccountID"].(int), args["numberOfFazoolTokens"].(int)), true
 
-	case "Mutation.addSuperVoter":
-		if e.complexity.Mutation.AddSuperVoter == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_addSuperVoter_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.AddSuperVoter(childComplexity, args["targetAccountID"].(int), args["sessionID"].(int)), true
-
 	case "Mutation.createAccount":
 		if e.complexity.Mutation.CreateAccount == nil {
 			break
@@ -366,6 +354,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SetPlaylist(childComplexity, args["sessionID"].(int), args["playlistID"].(string)), true
+
+	case "Mutation.setSuperVoterSession":
+		if e.complexity.Mutation.SetSuperVoterSession == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setSuperVoterSession_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetSuperVoterSession(childComplexity, args["targetAccountID"].(int), args["sessionID"].(int)), true
 
 	case "Mutation.updateCurrentlyPlaying":
 		if e.complexity.Mutation.UpdateCurrentlyPlaying == nil {
@@ -860,7 +860,7 @@ type Mutation {
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
-  addSuperVoter(targetAccountID: Int!, sessionID: Int!): Account!
+  setSuperVoterSession(targetAccountID: Int!, sessionID: Int!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
   addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 
@@ -925,30 +925,6 @@ func (ec *executionContext) field_Mutation_addFazoolTokens_args(ctx context.Cont
 		}
 	}
 	args["numberOfFazoolTokens"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_addSuperVoter_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["targetAccountID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["targetAccountID"] = arg0
-	var arg1 int
-	if tmp, ok := rawArgs["sessionID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
-		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sessionID"] = arg1
 	return args, nil
 }
 
@@ -1057,6 +1033,30 @@ func (ec *executionContext) field_Mutation_setPlaylist_args(ctx context.Context,
 		}
 	}
 	args["playlistID"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setSuperVoterSession_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["targetAccountID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["targetAccountID"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg1
 	return args, nil
 }
 
@@ -2212,8 +2212,8 @@ func (ec *executionContext) fieldContext_Mutation_setAccountType(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_addSuperVoter(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_addSuperVoter(ctx, field)
+func (ec *executionContext) _Mutation_setSuperVoterSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setSuperVoterSession(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2226,7 +2226,7 @@ func (ec *executionContext) _Mutation_addSuperVoter(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddSuperVoter(rctx, fc.Args["targetAccountID"].(int), fc.Args["sessionID"].(int))
+		return ec.resolvers.Mutation().SetSuperVoterSession(rctx, fc.Args["targetAccountID"].(int), fc.Args["sessionID"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2243,7 +2243,7 @@ func (ec *executionContext) _Mutation_addSuperVoter(ctx context.Context, field g
 	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_addSuperVoter(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_setSuperVoterSession(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -2276,7 +2276,7 @@ func (ec *executionContext) fieldContext_Mutation_addSuperVoter(ctx context.Cont
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_addSuperVoter_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_setSuperVoterSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -6276,10 +6276,10 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "addSuperVoter":
+		case "setSuperVoterSession":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_addSuperVoter(ctx, field)
+				return ec._Mutation_setSuperVoterSession(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
