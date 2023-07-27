@@ -15,6 +15,7 @@ type Account struct {
 	Email            *string           `json:"email"`
 	ActiveSession    *int              `json:"activeSession"`
 	StreamingService *StreamingService `json:"streamingService"`
+	FazoolTokens     *int              `json:"fazoolTokens"`
 }
 
 type AccountLogin struct {
@@ -300,20 +301,20 @@ func (e StreamingService) MarshalGQL(w io.Writer) {
 type VoterType string
 
 const (
-	VoterTypeFree       VoterType = "FREE"
-	VoterTypePrivileged VoterType = "PRIVILEGED"
-	VoterTypeAdmin      VoterType = "ADMIN"
+	VoterTypeFree  VoterType = "FREE"
+	VoterTypeSuper VoterType = "SUPER"
+	VoterTypeAdmin VoterType = "ADMIN"
 )
 
 var AllVoterType = []VoterType{
 	VoterTypeFree,
-	VoterTypePrivileged,
+	VoterTypeSuper,
 	VoterTypeAdmin,
 }
 
 func (e VoterType) IsValid() bool {
 	switch e {
-	case VoterTypeFree, VoterTypePrivileged, VoterTypeAdmin:
+	case VoterTypeFree, VoterTypeSuper, VoterTypeAdmin:
 		return true
 	}
 	return false

@@ -49,6 +49,7 @@ type ComplexityRoot struct {
 	Account struct {
 		ActiveSession    func(childComplexity int) int
 		Email            func(childComplexity int) int
+		FazoolTokens     func(childComplexity int) int
 		FirstName        func(childComplexity int) int
 		ID               func(childComplexity int) int
 		LastName         func(childComplexity int) int
@@ -64,6 +65,8 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddBonusVotes          func(childComplexity int, targetAccountID int, bonusVotes int) int
+		AddFazoolTokens        func(childComplexity int, targetAccountID int, numberOfFazoolTokens int) int
+		AddSuperVoter          func(childComplexity int, targetAccountID int, sessionID int) int
 		CreateAccount          func(childComplexity int, newAccount model.NewAccount) int
 		CreateSession          func(childComplexity int) int
 		DeleteAccount          func(childComplexity int, targetAccountID int) int
@@ -71,7 +74,6 @@ type ComplexityRoot struct {
 		Login                  func(childComplexity int, accountLogin model.AccountLogin) int
 		SetAccountType         func(childComplexity int, targetAccountID int, accountType model.AccountType) int
 		SetPlaylist            func(childComplexity int, sessionID int, playlistID string) int
-		SetVoterType           func(childComplexity int, targetAccountID int, voterType model.VoterType) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
 		UpsertSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
@@ -137,9 +139,10 @@ type MutationResolver interface {
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionState, error)
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error)
 	SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error)
-	SetVoterType(ctx context.Context, targetAccountID int, voterType model.VoterType) (*model.Account, error)
 	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
+	AddSuperVoter(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error)
 	AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error)
+	AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
 	DeleteAccount(ctx context.Context, targetAccountID int) (string, error)
@@ -185,6 +188,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Account.Email(childComplexity), true
+
+	case "Account.fazoolTokens":
+		if e.complexity.Account.FazoolTokens == nil {
+			break
+		}
+
+		return e.complexity.Account.FazoolTokens(childComplexity), true
 
 	case "Account.firstName":
 		if e.complexity.Account.FirstName == nil {
@@ -253,6 +263,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.AddBonusVotes(childComplexity, args["targetAccountID"].(int), args["bonusVotes"].(int)), true
+
+	case "Mutation.addFazoolTokens":
+		if e.complexity.Mutation.AddFazoolTokens == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addFazoolTokens_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddFazoolTokens(childComplexity, args["targetAccountID"].(int), args["numberOfFazoolTokens"].(int)), true
+
+	case "Mutation.addSuperVoter":
+		if e.complexity.Mutation.AddSuperVoter == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addSuperVoter_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddSuperVoter(childComplexity, args["targetAccountID"].(int), args["sessionID"].(int)), true
 
 	case "Mutation.createAccount":
 		if e.complexity.Mutation.CreateAccount == nil {
@@ -332,18 +366,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SetPlaylist(childComplexity, args["sessionID"].(int), args["playlistID"].(string)), true
-
-	case "Mutation.setVoterType":
-		if e.complexity.Mutation.SetVoterType == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_setVoterType_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.SetVoterType(childComplexity, args["targetAccountID"].(int), args["voterType"].(model.VoterType)), true
 
 	case "Mutation.updateCurrentlyPlaying":
 		if e.complexity.Mutation.UpdateCurrentlyPlaying == nil {
@@ -743,6 +765,7 @@ type Account {
   email:            String
   activeSession:    Int
   streamingService: StreamingService
+  fazoolTokens:     Int
 }
 
 type Voter {
@@ -782,7 +805,7 @@ enum SongVoteAction {
 
 enum VoterType {
   FREE
-  PRIVILEGED
+  SUPER
   ADMIN
 }
 
@@ -836,10 +859,10 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
-  setVoterType(targetAccountID: Int!, voterType: VoterType!): Account!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
+  addSuperVoter(targetAccountID: Int!, sessionID: Int!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
-
+  addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 
   login(accountLogin: AccountLogin!): String!
 
@@ -878,6 +901,54 @@ func (ec *executionContext) field_Mutation_addBonusVotes_args(ctx context.Contex
 		}
 	}
 	args["bonusVotes"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addFazoolTokens_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["targetAccountID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["targetAccountID"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["numberOfFazoolTokens"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("numberOfFazoolTokens"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["numberOfFazoolTokens"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addSuperVoter_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["targetAccountID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["targetAccountID"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg1
 	return args, nil
 }
 
@@ -986,30 +1057,6 @@ func (ec *executionContext) field_Mutation_setPlaylist_args(ctx context.Context,
 		}
 	}
 	args["playlistID"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_setVoterType_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["targetAccountID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["targetAccountID"] = arg0
-	var arg1 model.VoterType
-	if tmp, ok := rawArgs["voterType"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("voterType"))
-		arg1, err = ec.unmarshalNVoterType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐVoterType(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["voterType"] = arg1
 	return args, nil
 }
 
@@ -1492,6 +1539,47 @@ func (ec *executionContext) fieldContext_Account_streamingService(ctx context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _Account_fazoolTokens(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Account_fazoolTokens(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FazoolTokens, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Account_fazoolTokens(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Account",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CurrentlyPlayingSong_simpleSong(ctx context.Context, field graphql.CollectedField, obj *model.CurrentlyPlayingSong) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_CurrentlyPlayingSong_simpleSong(ctx, field)
 	if err != nil {
@@ -1729,6 +1817,8 @@ func (ec *executionContext) fieldContext_Mutation_createSession(ctx context.Cont
 				return ec.fieldContext_Account_activeSession(ctx, field)
 			case "streamingService":
 				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -1968,6 +2058,8 @@ func (ec *executionContext) fieldContext_Mutation_upsertSpotifyToken(ctx context
 				return ec.fieldContext_Account_activeSession(ctx, field)
 			case "streamingService":
 				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2049,75 +2141,6 @@ func (ec *executionContext) fieldContext_Mutation_setPlaylist(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_setVoterType(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_setVoterType(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetVoterType(rctx, fc.Args["targetAccountID"].(int), fc.Args["voterType"].(model.VoterType))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Account)
-	fc.Result = res
-	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_setVoterType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Account_id(ctx, field)
-			case "firstName":
-				return ec.fieldContext_Account_firstName(ctx, field)
-			case "lastName":
-				return ec.fieldContext_Account_lastName(ctx, field)
-			case "email":
-				return ec.fieldContext_Account_email(ctx, field)
-			case "activeSession":
-				return ec.fieldContext_Account_activeSession(ctx, field)
-			case "streamingService":
-				return ec.fieldContext_Account_streamingService(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setVoterType_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_setAccountType(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_setAccountType(ctx, field)
 	if err != nil {
@@ -2169,6 +2192,8 @@ func (ec *executionContext) fieldContext_Mutation_setAccountType(ctx context.Con
 				return ec.fieldContext_Account_activeSession(ctx, field)
 			case "streamingService":
 				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2181,6 +2206,77 @@ func (ec *executionContext) fieldContext_Mutation_setAccountType(ctx context.Con
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setAccountType_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addSuperVoter(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addSuperVoter(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddSuperVoter(rctx, fc.Args["targetAccountID"].(int), fc.Args["sessionID"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Account)
+	fc.Result = res
+	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addSuperVoter(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Account_id(ctx, field)
+			case "firstName":
+				return ec.fieldContext_Account_firstName(ctx, field)
+			case "lastName":
+				return ec.fieldContext_Account_lastName(ctx, field)
+			case "email":
+				return ec.fieldContext_Account_email(ctx, field)
+			case "activeSession":
+				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addSuperVoter_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -2238,6 +2334,8 @@ func (ec *executionContext) fieldContext_Mutation_addBonusVotes(ctx context.Cont
 				return ec.fieldContext_Account_activeSession(ctx, field)
 			case "streamingService":
 				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -2250,6 +2348,77 @@ func (ec *executionContext) fieldContext_Mutation_addBonusVotes(ctx context.Cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_addBonusVotes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addFazoolTokens(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addFazoolTokens(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddFazoolTokens(rctx, fc.Args["targetAccountID"].(int), fc.Args["numberOfFazoolTokens"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Account)
+	fc.Result = res
+	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addFazoolTokens(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Account_id(ctx, field)
+			case "firstName":
+				return ec.fieldContext_Account_firstName(ctx, field)
+			case "lastName":
+				return ec.fieldContext_Account_lastName(ctx, field)
+			case "email":
+				return ec.fieldContext_Account_email(ctx, field)
+			case "activeSession":
+				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addFazoolTokens_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -2852,6 +3021,8 @@ func (ec *executionContext) fieldContext_Query_account(ctx context.Context, fiel
 				return ec.fieldContext_Account_activeSession(ctx, field)
 			case "streamingService":
 				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
 		},
@@ -5959,6 +6130,10 @@ func (ec *executionContext) _Account(ctx context.Context, sel ast.SelectionSet, 
 
 			out.Values[i] = ec._Account_streamingService(ctx, field, obj)
 
+		case "fazoolTokens":
+
+			out.Values[i] = ec._Account_fazoolTokens(ctx, field, obj)
+
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6092,15 +6267,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "setVoterType":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setVoterType(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		case "setAccountType":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -6110,10 +6276,28 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "addSuperVoter":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addSuperVoter(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "addBonusVotes":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_addBonusVotes(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "addFazoolTokens":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addFazoolTokens(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {

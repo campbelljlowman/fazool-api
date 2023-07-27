@@ -40,6 +40,7 @@ type Account {
   email:            String
   activeSession:    Int
   streamingService: StreamingService
+  fazoolTokens:     Int
 }
 
 type Voter {
@@ -79,7 +80,7 @@ enum SongVoteAction {
 
 enum VoterType {
   FREE
-  PRIVILEGED
+  SUPER
   ADMIN
 }
 
@@ -133,10 +134,10 @@ type Mutation {
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
-  setVoterType(targetAccountID: Int!, voterType: VoterType!): Account!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
+  addSuperVoter(targetAccountID: Int!, sessionID: Int!): Account!
   addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
-
+  addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 
   login(accountLogin: AccountLogin!): String!
 

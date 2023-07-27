@@ -63,7 +63,6 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 	}
 	// Get this from new account request!
 	accountType := model.AccountTypeFree
-	voterType := model.VoterTypeFree
 	streamingService := model.StreamingServiceNone
 
 	isVaildEmail := utils.ValidateEmail(newAccount.Email)
@@ -77,7 +76,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 		return "", utils.LogAndReturnError("Account with this email already exists!", nil)
 	}
 
-	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, passwordHash, accountType, voterType, 0, streamingService)
+	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, passwordHash, accountType, 0, streamingService)
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
 	if err != nil {
@@ -181,16 +180,6 @@ func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playl
 	return r.sessionService.GetSessionState(sessionID), nil
 }
 
-// SetVoterType is the resolver for the setVoterType field.
-func (r *mutationResolver) SetVoterType(ctx context.Context, targetAccountID int, voterType model.VoterType) (*model.Account, error) {
-	accountID, _ := ctx.Value("accountID").(int)
-	if accountID != targetAccountID {
-		return nil, utils.LogAndReturnError("You can only set your own voter level!", nil)
-	}
-
-	return r.accountService.SetVoterType(targetAccountID, voterType), nil
-}
-
 // SetAccountType is the resolver for the setAccountType field.
 func (r *mutationResolver) SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
@@ -201,6 +190,16 @@ func (r *mutationResolver) SetAccountType(ctx context.Context, targetAccountID i
 	return r.accountService.SetAccountType(targetAccountID, accountType), nil
 }
 
+// AddSuperVoter is the resolver for the addSuperVoter field.
+func (r *mutationResolver) AddSuperVoter(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID != targetAccountID {
+		return nil, utils.LogAndReturnError("You can only set your own voter super voten type!", nil)
+	}
+
+	return r.accountService.AddSuperVoter(targetAccountID, sessionID, 0), nil
+}
+
 // AddBonusVotes is the resolver for the addBonusVotes field.
 func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
@@ -208,7 +207,12 @@ func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID in
 		return nil, utils.LogAndReturnError("You can only set your own bonus votes!", nil)
 	}
 
-	return r.accountService.AddBonusVotes(targetAccountID, bonusVotes), nil
+	return r.accountService.AddBonusVotes(targetAccountID, bonusVotes, 0), nil
+}
+
+// AddFazoolTokens is the resolver for the addFazoolTokens field.
+func (r *mutationResolver) AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error) {
+	panic(fmt.Errorf("not implemented: AddFazoolTokens - addFazoolTokens"))
 }
 
 // Login is the resolver for the login field.
@@ -318,11 +322,12 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 	bonusVotes := 0
 
 	if accountID != 0 {
-		voterTypeLocal, bonusVotesValue := r.accountService.GetVoterTypeAndBonusVotes(accountID)
+		superVoterSessions, bonusVotesValue := r.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
 		bonusVotes = bonusVotesValue
 
-		if voterTypeLocal == model.VoterTypePrivileged {
-			voterType = model.VoterTypePrivileged
+		_, exists := superVoterSessions[sessionID]
+		if exists {
+			voterType = model.VoterTypeSuper
 		}
 		if r.sessionService.GetSessionAdminAccountID(sessionID) == accountID {
 			voterType = model.VoterTypeAdmin
@@ -346,7 +351,7 @@ func (r *queryResolver) VoterToken(ctx context.Context, sessionID int) (string, 
 	if !sessionExists {
 		return "", utils.LogAndReturnError("Voter token requested for session that doesn't exist", nil)
 	}
-	
+
 	slog.Debug("Giving new voter token")
 	voterToken := uuid.New()
 	return voterToken.String(), nil

@@ -14,26 +14,32 @@ import (
 )
 
 type AccountService interface {
-	CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int, streamingService model.StreamingService) int 
+	CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, bonusVotes int, streamingService model.StreamingService) int
 
 	GetAccountFromEmail(accountEmail string) *model.Account
 	GetAccountFromID(accountID int) *model.Account
 	GetAccountIDAndPassHash(accountEmail string) (int, string)
 	GetSpotifyRefreshToken(accountID int) string
 	GetAccountType(accountID int) model.AccountType
-	GetVoterTypeAndBonusVotes(accountID int) (model.VoterType, int)
+	GetSuperVoterSessionsAndBonusVotes(accountID int) (map[int]struct{}, int)
 	GetAccountActiveSession(accountID int) int
+	GetFazoolTokens(accountID int) int
 	CheckIfEmailHasAccount(email string) bool
 
 	SetAccountActiveSession(accountID int, sessionID int)
 	SetSpotifyRefreshToken(accountID int, refreshToken string)
 	SetAccountType(accountID int, accountType model.AccountType) *model.Account
-	SetVoterType(accountID int, voterType model.VoterType) *model.Account
-	AddBonusVotes(accountID, bonusVotes int) *model.Account
-	SubtractBonusVotes(accountID, bonusVotes int) 
+	AddSuperVoter(accountID, sessionID, fazoolTokens int) *model.Account
+	AddBonusVotes(accountID, bonusVotes, fazoolTokens int) *model.Account
+	AddFazoolTokens(accountID, fazoolTokens int) *model.Account
+
+	RemoveSuperVoter(accountID int, sessionID int)
+	SubtractBonusVotes(accountID, bonusVotes int)
 
 	DeleteAccount(accountID int)
 }
+
+var emptyStructValue struct{}
 
 type account struct {
 	gorm.Model
@@ -42,8 +48,9 @@ type account struct {
 	Email 					string
 	PasswordHash 			string
 	AccountType				model.AccountType
-	VoterType 				model.VoterType
+	SuperVoterSessions		map[int]struct{}
 	BonusVotes 				int
+	FazoolTokens			int
 	ActiveSession			int
 	SpotifyRefreshToken		string
 	StreamingService		model.StreamingService
@@ -71,14 +78,14 @@ func NewAccountServiceGormImpl() *AccountServiceGorm {
 	return &accountGorm
 }
 
-func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, voterType model.VoterType, bonusVotes int, streamingService model.StreamingService) int {
+func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, bonusVotes int, streamingService model.StreamingService) int {
 	accountToAdd := &account{
 		FirstName: 			firstName,
 		LastName: 			lastName,
 		Email: 				strings.ToLower(email),
 		PasswordHash: 		passwordHash,
 		AccountType: 		accountType,
-		VoterType: 			voterType,
+		SuperVoterSessions: nil,
 		BonusVotes: 		bonusVotes,
 		StreamingService: 	streamingService,
 	}
@@ -135,11 +142,11 @@ func (a *AccountServiceGorm) GetAccountType(accountID int) model.AccountType {
 	return fullAccount.AccountType
 }
 
-func (a *AccountServiceGorm) GetVoterTypeAndBonusVotes(accountID int) (model.VoterType, int) {
+func (a *AccountServiceGorm) GetSuperVoterSessionsAndBonusVotes(accountID int) (map[int]struct{}, int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
-	return fullAccount.VoterType, fullAccount.BonusVotes
+	return fullAccount.SuperVoterSessions, fullAccount.BonusVotes
 }
 
 func (a *AccountServiceGorm) GetAccountActiveSession(accountID int) int {
@@ -147,6 +154,13 @@ func (a *AccountServiceGorm) GetAccountActiveSession(accountID int) int {
 	a.gorm.First(&fullAccount, accountID)
 
 	return fullAccount.ActiveSession
+}
+
+func (a *AccountServiceGorm) GetFazoolTokens(accountID int) int {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	return fullAccount.FazoolTokens
 }
 
 func (a *AccountServiceGorm) SetAccountActiveSession(accountID int, sessionID int) {
@@ -171,21 +185,40 @@ func (a *AccountServiceGorm) SetAccountType(accountID int, accountType model.Acc
 	a.gorm.First(&fullAccount, accountID)
 
 	fullAccount.AccountType = accountType
+	a.gorm.Save(&fullAccount)
+
 	return transformAccountType(fullAccount)
 }
-func (a *AccountServiceGorm) SetVoterType(accountID int, voterType model.VoterType) *model.Account {
+
+func (a *AccountServiceGorm) AddSuperVoter(accountID, sessionID, fazoolTokens int) *model.Account {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
-	fullAccount.VoterType = voterType
+	fullAccount.SuperVoterSessions[sessionID] = emptyStructValue
+	fullAccount.FazoolTokens -= fazoolTokens
+	a.gorm.Save(&fullAccount)
+
 	return transformAccountType(fullAccount)
 }
 
-func (a *AccountServiceGorm) AddBonusVotes(accountID, bonusVotes int) *model.Account {
+func (a *AccountServiceGorm) AddBonusVotes(accountID, bonusVotes, fazoolTokens int) *model.Account {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
 	fullAccount.BonusVotes += bonusVotes
+	fullAccount.FazoolTokens -= fazoolTokens
+	a.gorm.Save(&fullAccount)
+
+	return transformAccountType(fullAccount)
+}
+
+func (a *AccountServiceGorm) AddFazoolTokens(accountID, fazoolTokens int) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.FazoolTokens += fazoolTokens
+	a.gorm.Save(&fullAccount)
+
 	return transformAccountType(fullAccount)
 }
 
@@ -194,6 +227,14 @@ func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {
 	a.gorm.First(&fullAccount, accountID)
 
 	fullAccount.BonusVotes -= bonusVotes
+	a.gorm.Save(&fullAccount)
+}
+
+func (a *AccountServiceGorm) RemoveSuperVoter(accountID int, sessionID int) {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	delete(fullAccount.SuperVoterSessions, sessionID)
 	a.gorm.Save(&fullAccount)
 }
 

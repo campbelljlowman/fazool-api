@@ -9,34 +9,34 @@ import (
 )
 
 type Voter struct {
-	VoterID string
-	AccountID int
-	VoterType model.VoterType
-	ExpiresAt time.Time
-	SongsUpVoted map[string]struct{}
+	VoterID        string
+	AccountID      int
+	VoterType      model.VoterType
+	ExpiresAt      time.Time
+	SongsUpVoted   map[string]struct{}
 	SongsDownVoted map[string]struct{}
-	BonusVotes int
+	BonusVotes     int
 }
 
 var emptyStructValue struct{}
 const regularVoterDurationInMinutes time.Duration = 15
 const priviledgedVoterDurationInMinutes time.Duration = 15
-var validVoterTypes = []model.VoterType{model.VoterTypeFree, model.VoterTypePrivileged, model.VoterTypeAdmin}
 
+var validVoterTypes = []model.VoterType{model.VoterTypeFree, model.VoterTypeSuper, model.VoterTypeAdmin}
 
 func NewVoter(voterID string, voterType model.VoterType, accountID, BonusVotes int) (*Voter, error) {
 	if !contains(validVoterTypes, voterType) {
-		return nil, fmt.Errorf("Invalid voter type passed!")
+		return nil, fmt.Errorf("invalid voter type passed")
 	}
 
 	v := Voter{
-		VoterID: voterID,
-		AccountID: accountID,
-		VoterType: voterType,
-		ExpiresAt: time.Now().Add(GetVoterDuration(voterType) * time.Minute),
-		SongsUpVoted: make(map[string]struct{}),
+		VoterID:        voterID,
+		AccountID:      accountID,
+		VoterType:      voterType,
+		ExpiresAt:      time.Now().Add(GetVoterDuration(voterType) * time.Minute),
+		SongsUpVoted:   make(map[string]struct{}),
 		SongsDownVoted: make(map[string]struct{}),
-		BonusVotes: BonusVotes,
+		BonusVotes:     BonusVotes,
 	}
 	return &v, nil
 }
@@ -58,11 +58,11 @@ func (v *Voter) ConvertVoterType() *model.Voter {
 	}
 
 	voter := model.Voter{
-		ID: 			v.VoterID,
-		Type: 			v.VoterType,
-		SongsUpVoted: 	SongsUpVotedList,
-		SongsDownVoted:	SongsDownVotedList,
-		BonusVotes: 	&v.BonusVotes,
+		ID:             v.VoterID,
+		Type:           v.VoterType,
+		SongsUpVoted:   SongsUpVotedList,
+		SongsDownVoted: SongsDownVotedList,
+		BonusVotes:     &v.BonusVotes,
 	}
 
 	return &voter
@@ -80,15 +80,15 @@ func (v *Voter) CalculateAndProcessVote(song string, direction *model.SongVoteDi
 		return v.calculateAndRemoveDownVote(song)
 	}
 
-	return 0, false, fmt.Errorf("Song vote inputs aren't valid!")
+	return 0, false, fmt.Errorf("song vote inputs aren't valid")
 }
 
-func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error){
+func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error) {
 	voteAdjustment := 0
 	if v.VoterType != model.VoterTypeAdmin {
 		if _, exists := v.SongsUpVoted[song]; exists {
 			if v.BonusVotes <= 0 {
-				return 0, false, errors.New("You've already voted for this song!")
+				return 0, false, errors.New("you've already voted for this song")
 			} else {
 				// Handle bonus votes
 				v.BonusVotes -= 1
@@ -101,21 +101,21 @@ func (v *Voter) calculateAndAddUpVote(song string) (int, bool, error){
 			voteAdjustment = 1
 		}
 	}
-	
+
 	delete(v.SongsDownVoted, song)
 	v.SongsUpVoted[song] = emptyStructValue
 	return voteAdjustment + getNumberOfVotesFromType(v.VoterType), false, nil
 }
 
-func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
+func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error) {
 	if v.VoterType == model.VoterTypeFree {
 		return 0, false, nil
 	}
 
 	voteAdjustment := 0
-	if v.VoterType == model.VoterTypePrivileged {
+	if v.VoterType == model.VoterTypeSuper {
 		if _, exists := v.SongsDownVoted[song]; exists {
-			return 0, false, errors.New("You've already voted for this song!")
+			return 0, false, errors.New("you've already voted for this song")
 		}
 
 		if _, exists := v.SongsUpVoted[song]; exists {
@@ -123,7 +123,7 @@ func (v *Voter) calculateAndAddDownVote(song string) (int, bool, error){
 			voteAdjustment = getNumberOfVotesFromType(v.VoterType)
 		}
 	}
-	
+
 	delete(v.SongsUpVoted, song)
 	v.SongsDownVoted[song] = emptyStructValue
 	return -(voteAdjustment + 1), false, nil
@@ -140,24 +140,24 @@ func (v *Voter) calculateAndRemoveDownVote(song string) (int, bool, error) {
 }
 
 func getNumberOfVotesFromType(voterType model.VoterType) int {
-	if voterType == model.VoterTypePrivileged {
+	if voterType == model.VoterTypeSuper {
 		return 2
 	}
 	return 1
 }
 
 func GetVoterDuration(voterType model.VoterType) time.Duration {
-	if voterType == model.VoterTypePrivileged {
+	if voterType == model.VoterTypeSuper {
 		return priviledgedVoterDurationInMinutes
 	}
 	return regularVoterDurationInMinutes
 }
 
 func contains(elems []model.VoterType, v model.VoterType) bool {
-    for _, s := range elems {
-        if v == s {
-            return true
-        }
-    }
-    return false
+	for _, s := range elems {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
