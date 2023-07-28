@@ -23,7 +23,7 @@ type AccountService interface {
 	GetAccountType(accountID int) model.AccountType
 	GetSuperVoterSessionsAndBonusVotes(accountID int) (int, int)
 	GetAccountActiveSession(accountID int) int
-	GetFazoolTokens(accountID int) int
+	GetAccountFazoolTokens(accountID int) int
 	CheckIfEmailHasAccount(email string) bool
 
 	SetAccountActiveSession(accountID int, sessionID int)
@@ -142,7 +142,7 @@ func (a *AccountServiceGorm) GetAccountActiveSession(accountID int) int {
 	return fullAccount.ActiveSession
 }
 
-func (a *AccountServiceGorm) GetFazoolTokens(accountID int) int {
+func (a *AccountServiceGorm) GetAccountFazoolTokens(accountID int) int {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 

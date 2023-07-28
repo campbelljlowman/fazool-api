@@ -64,7 +64,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddBonusVotes          func(childComplexity int, targetAccountID int, bonusVotes int) int
+		AddBonusVotes          func(childComplexity int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) int
 		AddFazoolTokens        func(childComplexity int, targetAccountID int, numberOfFazoolTokens int) int
 		CreateAccount          func(childComplexity int, newAccount model.NewAccount) int
 		CreateSession          func(childComplexity int) int
@@ -141,7 +141,7 @@ type MutationResolver interface {
 	SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error)
 	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
 	SetSuperVoterSession(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error)
-	AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error)
+	AddBonusVotes(ctx context.Context, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error)
 	AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
@@ -262,7 +262,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddBonusVotes(childComplexity, args["targetAccountID"].(int), args["bonusVotes"].(int)), true
+		return e.complexity.Mutation.AddBonusVotes(childComplexity, args["targetAccountID"].(int), args["bonusVoteAmount"].(model.BonusVoteAmount)), true
 
 	case "Mutation.addFazoolTokens":
 		if e.complexity.Mutation.AddFazoolTokens == nil {
@@ -815,6 +815,12 @@ enum AccountType {
   LARGE_VENUE
 }
 
+enum BonusVoteAmount {
+  TEN
+  TWENTY_FIVE
+  FIFTY
+}
+
 input SongUpdate {
   id:     String!
   title:  String
@@ -861,7 +867,7 @@ type Mutation {
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   setSuperVoterSession(targetAccountID: Int!, sessionID: Int!): Account!
-  addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
+  addBonusVotes(targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
   addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 
   login(accountLogin: AccountLogin!): String!
@@ -892,15 +898,15 @@ func (ec *executionContext) field_Mutation_addBonusVotes_args(ctx context.Contex
 		}
 	}
 	args["targetAccountID"] = arg0
-	var arg1 int
-	if tmp, ok := rawArgs["bonusVotes"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bonusVotes"))
-		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+	var arg1 model.BonusVoteAmount
+	if tmp, ok := rawArgs["bonusVoteAmount"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bonusVoteAmount"))
+		arg1, err = ec.unmarshalNBonusVoteAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐBonusVoteAmount(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["bonusVotes"] = arg1
+	args["bonusVoteAmount"] = arg1
 	return args, nil
 }
 
@@ -2297,7 +2303,7 @@ func (ec *executionContext) _Mutation_addBonusVotes(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddBonusVotes(rctx, fc.Args["targetAccountID"].(int), fc.Args["bonusVotes"].(int))
+		return ec.resolvers.Mutation().AddBonusVotes(rctx, fc.Args["targetAccountID"].(int), fc.Args["bonusVoteAmount"].(model.BonusVoteAmount))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7156,6 +7162,16 @@ func (ec *executionContext) unmarshalNAccountType2githubᚗcomᚋcampbelljlowman
 }
 
 func (ec *executionContext) marshalNAccountType2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccountType(ctx context.Context, sel ast.SelectionSet, v model.AccountType) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNBonusVoteAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐBonusVoteAmount(ctx context.Context, v interface{}) (model.BonusVoteAmount, error) {
+	var res model.BonusVoteAmount
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNBonusVoteAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐBonusVoteAmount(ctx context.Context, sel ast.SelectionSet, v model.BonusVoteAmount) graphql.Marshaler {
 	return v
 }
 

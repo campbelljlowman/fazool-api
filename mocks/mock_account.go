@@ -116,6 +116,20 @@ func (mr *MockAccountServiceMockRecorder) GetAccountActiveSession(arg0 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountActiveSession", reflect.TypeOf((*MockAccountService)(nil).GetAccountActiveSession), arg0)
 }
 
+// GetAccountFazoolTokens mocks base method.
+func (m *MockAccountService) GetAccountFazoolTokens(arg0 int) int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountFazoolTokens", arg0)
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetAccountFazoolTokens indicates an expected call of GetAccountFazoolTokens.
+func (mr *MockAccountServiceMockRecorder) GetAccountFazoolTokens(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountFazoolTokens", reflect.TypeOf((*MockAccountService)(nil).GetAccountFazoolTokens), arg0)
+}
+
 // GetAccountFromEmail mocks base method.
 func (m *MockAccountService) GetAccountFromEmail(arg0 string) *model.Account {
 	m.ctrl.T.Helper()
@@ -171,20 +185,6 @@ func (m *MockAccountService) GetAccountType(arg0 int) model.AccountType {
 func (mr *MockAccountServiceMockRecorder) GetAccountType(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountType", reflect.TypeOf((*MockAccountService)(nil).GetAccountType), arg0)
-}
-
-// GetFazoolTokens mocks base method.
-func (m *MockAccountService) GetFazoolTokens(arg0 int) int {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFazoolTokens", arg0)
-	ret0, _ := ret[0].(int)
-	return ret0
-}
-
-// GetFazoolTokens indicates an expected call of GetFazoolTokens.
-func (mr *MockAccountServiceMockRecorder) GetFazoolTokens(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFazoolTokens", reflect.TypeOf((*MockAccountService)(nil).GetFazoolTokens), arg0)
 }
 
 // GetSpotifyRefreshToken mocks base method.

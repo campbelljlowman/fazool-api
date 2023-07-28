@@ -132,6 +132,49 @@ func (e AccountType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+type BonusVoteAmount string
+
+const (
+	BonusVoteAmountTen        BonusVoteAmount = "TEN"
+	BonusVoteAmountTwentyFive BonusVoteAmount = "TWENTY_FIVE"
+	BonusVoteAmountFifty      BonusVoteAmount = "FIFTY"
+)
+
+var AllBonusVoteAmount = []BonusVoteAmount{
+	BonusVoteAmountTen,
+	BonusVoteAmountTwentyFive,
+	BonusVoteAmountFifty,
+}
+
+func (e BonusVoteAmount) IsValid() bool {
+	switch e {
+	case BonusVoteAmountTen, BonusVoteAmountTwentyFive, BonusVoteAmountFifty:
+		return true
+	}
+	return false
+}
+
+func (e BonusVoteAmount) String() string {
+	return string(e)
+}
+
+func (e *BonusVoteAmount) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = BonusVoteAmount(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid BonusVoteAmount", str)
+	}
+	return nil
+}
+
+func (e BonusVoteAmount) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 type QueueAction string
 
 const (

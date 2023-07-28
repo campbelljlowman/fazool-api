@@ -90,6 +90,12 @@ enum AccountType {
   LARGE_VENUE
 }
 
+enum BonusVoteAmount {
+  TEN
+  TWENTY_FIVE
+  FIFTY
+}
+
 input SongUpdate {
   id:     String!
   title:  String
@@ -136,7 +142,7 @@ type Mutation {
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   setSuperVoterSession(targetAccountID: Int!, sessionID: Int!): Account!
-  addBonusVotes(targetAccountID: Int!, bonusVotes: Int!): Account!
+  addBonusVotes(targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
   addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 
   login(accountLogin: AccountLogin!): String!

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/campbelljlowman/fazool-api/auth"
+	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/streaming"
@@ -197,17 +198,24 @@ func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, targetAccou
 		return nil, utils.LogAndReturnError("You can only set your own voter super voten type!", nil)
 	}
 
-	return r.accountService.SetSuperVoterSession(targetAccountID, sessionID, 0), nil
+	accountFazoolTokens := r.accountService.GetAccountFazoolTokens(accountID)
+	if accountFazoolTokens < constants.SuperVoterCost {
+		return nil, utils.LogAndReturnError("You don't have enough Fazool tokens", nil)
+	}
+
+	return r.accountService.SetSuperVoterSession(targetAccountID, sessionID, constants.SuperVoterCost), nil
 }
 
 // AddBonusVotes is the resolver for the addBonusVotes field.
-func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID int, bonusVotes int) (*model.Account, error) {
+func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("You can only set your own bonus votes!", nil)
 	}
 
-	return r.accountService.AddBonusVotes(targetAccountID, bonusVotes, 0), nil
+	bonusVoteCostMapping := constants.BonusVoteCostMapping[bonusVoteAmount]
+
+	return r.accountService.AddBonusVotes(targetAccountID, bonusVoteCostMapping.NumberOfBonusVotes, bonusVoteCostMapping.CostInFazoolTokens), nil
 }
 
 // AddFazoolTokens is the resolver for the addFazoolTokens field.
@@ -328,6 +336,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 
 	if accountID != 0 {
 		superVoterSession, bonusVotesValue := r.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
+		slog.Info("super voter session: " , superVoterSession)
 		bonusVotes = bonusVotesValue
 
 		if superVoterSession == sessionID {

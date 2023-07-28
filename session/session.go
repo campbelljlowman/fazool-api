@@ -65,7 +65,7 @@ const sessionWatchFrequencySeconds time.Duration = 10
 const sessionTimeoutMinutes time.Duration = 30 
 const streamingServiceWatchFrequencySlowMilliseconds time.Duration = 4000
 const streamingServiceWatchFrequencyFastMilliseconds time.Duration = 250
-const voterWatchFrequencySeconds time.Duration = 1
+const voterWatchFrequencySeconds time.Duration = 5
 
 func NewSessionServiceInMemoryImpl(accountService account.AccountService) *SessionServiceInMemory{
 	sessionInMemory := &SessionServiceInMemory{
