@@ -30,6 +30,7 @@ type SessionService interface {
 	UpsertVoterInSession(sessionID int, newVoter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error
 	PopQueue(sessionID int, accountService account.AccountService) error
+	AddVoterToSession(sessionID, accountID int, voterID string) (*model.Voter, error)
 	AddBonusVote(songID string, accountID, numberOfVotes, sessionID int)
 	AddChannel(sessionID int, channel chan *model.SessionState)
 	SetPlaylist(sessionID int, playlist string) error
@@ -58,6 +59,7 @@ type session struct {
 type SessionServiceInMemory struct {
 	sessions			map[int]*session
 	allSessionsMutex 	*sync.Mutex
+	accountService 		account.AccountService
 }
 
 //lint:file-ignore ST1011 Ignore rule for time.Duration unit in variable name
@@ -71,6 +73,7 @@ func NewSessionServiceInMemoryImpl(accountService account.AccountService) *Sessi
 	sessionInMemory := &SessionServiceInMemory{
 		sessions: 			make(map[int]*session),
 		allSessionsMutex: 	&sync.Mutex{},
+		accountService: 	accountService,
 	}
 
 	go sessionInMemory.watchSessions(accountService)
@@ -239,13 +242,13 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, numberOfVotes int, song 
 	s.sendUpdatedState(sessionID)
 }
 
-func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, newVoter *voter.Voter){
+func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, voter *voter.Voter){
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
 	session.votersMutex.Lock()
-	session.voters[newVoter.VoterID] = newVoter
+	session.voters[voter.VoterID] = voter
 	numberOfVoters := len(session.voters)
 	session.votersMutex.Unlock()
 
@@ -318,6 +321,33 @@ func (s *SessionServiceInMemory) PopQueue(sessionID int, accountService account.
 	}
 
 	return nil
+}
+
+func (s *SessionServiceInMemory) AddVoterToSession(sessionID, accountID int, voterID string) (*model.Voter, error) {
+	voterType := model.VoterTypeFree
+	bonusVotes := 0
+
+	if accountID != 0 {
+		superVoterSession, bonusVotesValue := s.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
+		bonusVotes = bonusVotesValue
+
+		if superVoterSession == sessionID {
+			voterType = model.VoterTypeSuper
+		}
+		if s.GetSessionAdminAccountID(sessionID) == accountID {
+			voterType = model.VoterTypeAdmin
+		}
+	}
+
+	newVoter, err := voter.NewVoter(voterID, voterType, accountID, bonusVotes)
+	if err != nil {
+		return nil, utils.LogAndReturnError("Error generating new voter", nil)
+	}
+
+	slog.Debug("New voter created:", "voter", newVoter)
+	s.UpsertVoterInSession(sessionID, newVoter)
+
+	return newVoter.ConvertVoterType(), nil
 }
 
 func (s *SessionServiceInMemory) AddBonusVote(songID string, accountID, numberOfVotes, sessionID int) {

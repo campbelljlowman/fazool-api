@@ -13,7 +13,6 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"github.com/campbelljlowman/fazool-api/streaming"
 	"github.com/campbelljlowman/fazool-api/utils"
-	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slog"
 )
@@ -193,15 +192,26 @@ func (r *mutationResolver) SetAccountType(ctx context.Context, targetAccountID i
 
 // AddSuperVoter is the resolver for the addSuperVoter field.
 func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error) {
+	voterID, _ := ctx.Value("voterID").(string)
 	accountID, _ := ctx.Value("accountID").(int)
+	if voterID == "" {
+		return nil, utils.LogAndReturnError("Voter ID required for setting super voter status", nil)
+	}
 	if accountID != targetAccountID {
-		return nil, utils.LogAndReturnError("You can only set your own voter super voten type!", nil)
+		return nil, utils.LogAndReturnError("You can only set your own voter super voten type", nil)
 	}
 
 	accountFazoolTokens := r.accountService.GetAccountFazoolTokens(accountID)
 	if accountFazoolTokens < constants.SuperVoterCost {
 		return nil, utils.LogAndReturnError("You don't have enough Fazool tokens", nil)
 	}
+
+	voter, _ := r.sessionService.GetVoterInSession(sessionID, voterID)
+	if voter.VoterType == model.VoterTypeSuper {
+		return nil, utils.LogAndReturnError("You're already a super voter", nil)
+	}
+	voter.VoterType = model.VoterTypeSuper
+	r.sessionService.UpsertVoterInSession(sessionID, voter)
 
 	return r.accountService.SetSuperVoterSession(targetAccountID, sessionID, constants.SuperVoterCost), nil
 }
@@ -215,6 +225,7 @@ func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID in
 
 	bonusVoteCostMapping := constants.BonusVoteCostMapping[bonusVoteAmount]
 
+	// TODO: Check that there's enough fazool tokens
 	return r.accountService.AddBonusVotes(targetAccountID, bonusVoteCostMapping.NumberOfBonusVotes, bonusVoteCostMapping.CostInFazoolTokens), nil
 }
 
@@ -331,31 +342,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}
 
-	voterType := model.VoterTypeFree
-	bonusVotes := 0
-
-	if accountID != 0 {
-		superVoterSession, bonusVotesValue := r.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
-		slog.Info("super voter session: " , superVoterSession)
-		bonusVotes = bonusVotesValue
-
-		if superVoterSession == sessionID {
-			voterType = model.VoterTypeSuper
-		}
-		if r.sessionService.GetSessionAdminAccountID(sessionID) == accountID {
-			voterType = model.VoterTypeAdmin
-		}
-	}
-
-	newVoter, err := voter.NewVoter(voterID, voterType, accountID, bonusVotes)
-	if err != nil {
-		return nil, utils.LogAndReturnError("Error generating new voter", nil)
-	}
-
-	slog.Debug("New voter created:", "voter", newVoter)
-	r.sessionService.UpsertVoterInSession(sessionID, newVoter)
-
-	return newVoter.ConvertVoterType(), nil
+	return r.sessionService.AddVoterToSession(sessionID, accountID, voterID)
 }
 
 // VoterToken is the resolver for the voterToken field.
