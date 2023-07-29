@@ -15,7 +15,7 @@ import (
 )
 
 type SessionService interface {
-	CreateSession(adminAccountID int, accountType model.AccountType, streaming streaming.StreamingService, accountService account.AccountService) (int, error)
+	CreateSession(adminAccountID int, accountType model.AccountType, streaming streaming.StreamingService) (int, error)
 
 	GetSessionConfig(sessionID int) *model.SessionConfig
 	GetSessionState(sessionID int) *model.SessionState
@@ -28,15 +28,15 @@ type SessionService interface {
 
 	UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate)
 	UpsertVoterInSession(sessionID int, newVoter *voter.Voter)
-	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error
-	PopQueue(sessionID int, accountService account.AccountService) error
+	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction) error
+	PopQueue(sessionID int) error
 	AddVoterToSession(sessionID, accountID int, voterID string) (*model.Voter, error)
 	AddBonusVote(songID string, accountID, numberOfVotes, sessionID int)
 	AddChannel(sessionID int, channel chan *model.SessionState)
 	SetPlaylist(sessionID int, playlist string) error
 	RefreshVoterExpiration(sessionID int, voterID string)
 
-	EndSession(sessionID int, accountService account.AccountService)
+	EndSession(sessionID int)
 }
 
 type session struct {
@@ -76,11 +76,11 @@ func NewSessionServiceInMemoryImpl(accountService account.AccountService) *Sessi
 		accountService: 	accountService,
 	}
 
-	go sessionInMemory.watchSessions(accountService)
+	go sessionInMemory.watchSessions()
 	return sessionInMemory
 }
 
-func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType model.AccountType, streaming streaming.StreamingService, accountService account.AccountService) (int, error) {
+func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType model.AccountType, streaming streaming.StreamingService) (int, error) {
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
 		return 0, err
@@ -128,7 +128,7 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 	s.sessions[sessionID] = &session
 	s.allSessionsMutex.Unlock()
 
-	go s.watchStreamingServiceCurrentlyPlaying(sessionID, accountService)
+	go s.watchStreamingServiceCurrentlyPlaying(sessionID)
 	go s.watchVotersExpirations(sessionID)
 	
 	return sessionID, nil
@@ -258,7 +258,7 @@ func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, voter *vote
 	s.sendUpdatedState(sessionID)
 }
 
-func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action model.QueueAction, accountService account.AccountService) error {
+func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action model.QueueAction) error {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
@@ -275,7 +275,7 @@ func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action mo
 			return err
 		}
 	case "ADVANCE":
-		err := s.PopQueue(sessionID, accountService)
+		err := s.PopQueue(sessionID)
 		if err != nil {
 			return err
 		}
@@ -292,7 +292,7 @@ func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action mo
 	return nil
 }
 
-func (s *SessionServiceInMemory) PopQueue(sessionID int, accountService account.AccountService) error { 
+func (s *SessionServiceInMemory) PopQueue(sessionID int) error { 
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
@@ -315,7 +315,7 @@ func (s *SessionServiceInMemory) PopQueue(sessionID int, accountService account.
 		return err
 	}
 
-	err = s.processBonusVotes(sessionID, song.ID, accountService)
+	err = s.processBonusVotes(sessionID, song.ID)
 	if err != nil {
 		return err
 	}
@@ -409,14 +409,14 @@ func (s *SessionServiceInMemory) RefreshVoterExpiration(sessionID int, voterID s
 
 }
 
-func (s *SessionServiceInMemory) EndSession(sessionID int, accountService account.AccountService) {
+func (s *SessionServiceInMemory) EndSession(sessionID int) {
 	slog.Info("Ending session!", "sessionID", sessionID)
 	
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	delete(s.sessions, sessionID)
 
-	accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
+	s.accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
 
 	expireSession(session)
 	closeChannels(session)

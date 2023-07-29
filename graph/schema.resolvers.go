@@ -38,7 +38,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 
 	accountType := r.accountService.GetAccountType(accountID)
 
-	sessionID, err := r.sessionService.CreateSession(accountID, accountType, client, r.accountService)
+	sessionID, err := r.sessionService.CreateSession(accountID, accountType, client)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error creating new session", err)
 	}
@@ -136,7 +136,7 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
-	err := r.sessionService.UpdateCurrentlyPlaying(sessionID, action, r.accountService)
+	err := r.sessionService.UpdateCurrentlyPlaying(sessionID, action)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error updating currently playing", err)
 	}
@@ -271,7 +271,7 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 		return "", utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
-	r.sessionService.EndSession(sessionID, r.accountService)
+	r.sessionService.EndSession(sessionID)
 
 	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
 }

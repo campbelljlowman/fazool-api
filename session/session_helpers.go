@@ -3,7 +3,6 @@ package session
 import (
 	"time"
 	
-	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/voter"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 	"golang.org/x/exp/slog"
@@ -41,7 +40,7 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 }
 
 // TODO: This code hasn't been tested
-func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string, accountService account.AccountService) error {
+func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string) error {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
@@ -57,14 +56,14 @@ func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string,
 	}
 
 	for accountID, votes := range songBonusVotes {
-		accountService.SubtractBonusVotes(accountID, votes)
+		s.accountService.SubtractBonusVotes(accountID, votes)
 	}
 
 	return nil
 }
 
 func cleanupSuperVoters(sessionID int, voter *voter.Voter) {
-	
+
 }
 
 func expireSession(session *session) {
@@ -93,7 +92,7 @@ func (s *SessionServiceInMemory) setQueue(sessionID int, newQueue [] *model.Queu
 	s.sendUpdatedState(sessionID)
 }
 
-func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID int, accountService account.AccountService) {
+func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID int) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
@@ -166,7 +165,7 @@ func (s *SessionServiceInMemory) watchStreamingServiceCurrentlyPlaying(sessionID
 		session.sessionStateMutex.Unlock()
 	
 		if popQueueFlag {
-			s.PopQueue(sessionID, accountService)
+			s.PopQueue(sessionID)
 			popQueueFlag = false
 		}
 		if sendUpdateFlag {
@@ -220,7 +219,7 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 	}
 }
 
-func (s *SessionServiceInMemory) watchSessions(accountService account.AccountService) {
+func (s *SessionServiceInMemory) watchSessions() {
 	var sessionsToEnd []int
 
 	for {
@@ -240,7 +239,7 @@ func (s *SessionServiceInMemory) watchSessions(accountService account.AccountSer
 
 
 		for _, sessionID := range sessionsToEnd {
-			s.EndSession(sessionID, accountService)
+			s.EndSession(sessionID)
 		}
 		sessionsToEnd = nil
 

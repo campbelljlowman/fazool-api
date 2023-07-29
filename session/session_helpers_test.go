@@ -5,12 +5,11 @@ import (
 	// "time"
 
 	"github.com/campbelljlowman/fazool-api/graph/model"
-	// "github.com/golang/mock/gomock"
 )
 
 func TestSendUpdatedState(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -30,7 +29,7 @@ func TestProcessBonusVotes(t *testing.T) {
 	numberOfBonusVotes := 1
 
 	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(accountID, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	sessionID, err := sessionService.CreateSession(accountID, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -38,8 +37,8 @@ func TestProcessBonusVotes(t *testing.T) {
 	sessionService.AddBonusVote("song1", accountID, numberOfBonusVotes, sessionID)
 	mockAccountService.EXPECT().SubtractBonusVotes(accountID, numberOfBonusVotes)
 
-	sessionService.processBonusVotes(sessionID, "song1", mockAccountService)
-	sessionService.processBonusVotes(sessionID, "song2", mockAccountService)
+	sessionService.processBonusVotes(sessionID, "song1")
+	sessionService.processBonusVotes(sessionID, "song2")
 
 	session := sessionService.sessions[sessionID]
 	_, bonusVoteExists := session.bonusVotes["song1"]
@@ -52,7 +51,7 @@ func TestProcessBonusVotes(t *testing.T) {
 // func TestExpireSession(t *testing.T) {
 // 	// TODO: Try to mock account service function call for SetAccountActiveSession.
 // 	// Session watcher can try to end session after the expire session function is called
-// 	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+// 	mockAccountService, _, mockStreamingService, sessionService := newTestingServices(t)
 // 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
 // 	if err != nil {
 // 		t.Errorf("CreateSession() failed! Got an error: %v", err)
@@ -69,8 +68,8 @@ func TestProcessBonusVotes(t *testing.T) {
 // }
 
 func TestCloseChannels(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -88,8 +87,8 @@ func TestCloseChannels(t *testing.T) {
 }
 
 func TestSetQueue(t *testing.T){
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}

@@ -29,10 +29,10 @@ var CreateSessionTests = []struct {
 	{789, model.AccountTypeLargeVenue, 0},
 }
 func TestCreateSession(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+	_, mockStreamingService, sessionService := newTestingServices(t)
 
 	for _, testCase := range(CreateSessionTests) {
-		sessionID, err := sessionService.CreateSession(testCase.adminAccountID, testCase.accountType, mockStreamingService, mockAccountService)
+		sessionID, err := sessionService.CreateSession(testCase.adminAccountID, testCase.accountType, mockStreamingService)
 		if err != nil {
 			t.Errorf("CreateSession() failed! Got an error: %v", err)
 		}
@@ -46,8 +46,8 @@ func TestCreateSession(t *testing.T) {
 }
 
 func TestGetSessionConfig(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -59,8 +59,8 @@ func TestGetSessionConfig(t *testing.T) {
 }
 
 func TestGetSessionState(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -72,8 +72,8 @@ func TestGetSessionState(t *testing.T) {
 }
 
 func TestGetSessionAdminAccountID(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -85,8 +85,8 @@ func TestGetSessionAdminAccountID(t *testing.T) {
 }
 
 func TestGetVoterInSession(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -109,8 +109,8 @@ func TestGetVoterInSession(t *testing.T) {
 }
 
 func TestGetPlaylists(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -129,8 +129,8 @@ var IsSessionFullTests = []struct {
 	{20, 20, true},
 }
 func TestIsSessionFull(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -149,8 +149,8 @@ func TestIsSessionFull(t *testing.T) {
 }
 
 func TestDoesSessionExist(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -167,8 +167,8 @@ func TestDoesSessionExist(t *testing.T) {
 }
 
 func TestSearchForSongs(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -199,8 +199,8 @@ var UpsertQueueTests = []struct {
 	},
 }
 func TestUpsertQueue(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -218,8 +218,8 @@ func TestUpsertQueue(t *testing.T) {
 }
 
 func TestUpsertVoterInSession(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -242,26 +242,26 @@ func TestUpsertVoterInSession(t *testing.T) {
 }
 
 func TestUpdateCurrentlyPlaying(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
 	mockStreamingService.EXPECT().CurrentSong().AnyTimes()
 
 	mockStreamingService.EXPECT().Play()
-	sessionService.UpdateCurrentlyPlaying(sessionID, model.QueueActionPlay, mockAccountService)
+	sessionService.UpdateCurrentlyPlaying(sessionID, model.QueueActionPlay)
 
 	mockStreamingService.EXPECT().Pause()
-	sessionService.UpdateCurrentlyPlaying(sessionID, model.QueueActionPause, mockAccountService)
+	sessionService.UpdateCurrentlyPlaying(sessionID, model.QueueActionPause)
 
 	mockStreamingService.EXPECT().Next()
-	sessionService.UpdateCurrentlyPlaying(sessionID, model.QueueActionAdvance, mockAccountService)
+	sessionService.UpdateCurrentlyPlaying(sessionID, model.QueueActionAdvance)
 }
 
 func TestPopQueue(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -280,14 +280,14 @@ func TestPopQueue(t *testing.T) {
 	sessionService.setQueue(sessionID, queue)
 	mockStreamingService.EXPECT().QueueSong("id")
 
-	sessionService.PopQueue(sessionID, mockAccountService)
+	sessionService.PopQueue(sessionID)
 
 	sessionState := sessionService.GetSessionState(sessionID)
 	if len(sessionState.Queue) != 0 {
 		t.Errorf("PopQueue() failed! Wanted length of queue %v, got: %v", 0, len(sessionState.Queue))	
 	}
 
-	sessionService.PopQueue(sessionID, mockAccountService)
+	sessionService.PopQueue(sessionID)
 
 	sessionState = sessionService.GetSessionState(sessionID)
 	if len(sessionState.Queue) != 0 {
@@ -296,8 +296,8 @@ func TestPopQueue(t *testing.T) {
 }
 
 func TestAddBonusVote(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -306,8 +306,8 @@ func TestAddBonusVote(t *testing.T) {
 }
 
 func TestAddChannel(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -317,8 +317,8 @@ func TestAddChannel(t *testing.T) {
 }
 
 func TestSetPlaylist(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -328,8 +328,8 @@ func TestSetPlaylist(t *testing.T) {
 }
 
 func TestRefreshVoterExpiration(t *testing.T) {
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService, mockAccountService)
+	_, mockStreamingService, sessionService := newTestingServices(t)
+	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
@@ -348,13 +348,15 @@ func TestEndSession(t *testing.T) {
 	accountID := 123
 	// TODO: assert cleanup functions are called
 	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(accountID, model.AccountTypeFree, mockStreamingService, mockAccountService)
+
+	// mockAccountService.EXPECT().SetAccountActiveSession(accountID, sessionID)
+	sessionID, err := sessionService.CreateSession(accountID, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
 	mockAccountService.EXPECT().SetAccountActiveSession(accountID, 0)
 
-	sessionService.EndSession(sessionID, mockAccountService)
+	sessionService.EndSession(sessionID)
 
 	sessionExists := sessionService.DoesSessionExist(sessionID)
 	if sessionExists {
