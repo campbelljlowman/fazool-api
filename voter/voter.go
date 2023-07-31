@@ -59,6 +59,7 @@ func (v *Voter) ConvertVoterType() *model.Voter {
 
 	voter := model.Voter{
 		ID:             v.VoterID,
+		AccountID: 		v.AccountID,
 		Type:           v.VoterType,
 		SongsUpVoted:   SongsUpVotedList,
 		SongsDownVoted: SongsDownVotedList,

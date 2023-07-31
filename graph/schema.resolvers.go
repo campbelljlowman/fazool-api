@@ -191,7 +191,7 @@ func (r *mutationResolver) SetAccountType(ctx context.Context, targetAccountID i
 }
 
 // AddSuperVoter is the resolver for the addSuperVoter field.
-func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error) {
+func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, sessionID int, targetAccountID int) (*model.Account, error) {
 	voterID, _ := ctx.Value("voterID").(string)
 	accountID, _ := ctx.Value("accountID").(int)
 	if voterID == "" {
@@ -217,15 +217,27 @@ func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, targetAccou
 }
 
 // AddBonusVotes is the resolver for the addBonusVotes field.
-func (r *mutationResolver) AddBonusVotes(ctx context.Context, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error) {
+func (r *mutationResolver) AddBonusVotes(ctx context.Context, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error) {
+	voterID, _ := ctx.Value("voterID").(string)
 	accountID, _ := ctx.Value("accountID").(int)
+	if voterID == "" {
+		return nil, utils.LogAndReturnError("Voter ID required for setting super voter status", nil)
+	}
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("You can only set your own bonus votes!", nil)
 	}
 
 	bonusVoteCostMapping := constants.BonusVoteCostMapping[bonusVoteAmount]
 
-	// TODO: Check that there's enough fazool tokens
+	accountFazoolTokens := r.accountService.GetAccountFazoolTokens(accountID)
+	if accountFazoolTokens < bonusVoteCostMapping.CostInFazoolTokens {
+		return nil, utils.LogAndReturnError("You don't have enough Fazool tokens", nil)
+	}
+
+	voter, _ := r.sessionService.GetVoterInSession(sessionID, voterID)
+	voter.BonusVotes += bonusVoteCostMapping.NumberOfBonusVotes
+	r.sessionService.UpsertVoterInSession(sessionID, voter)
+
 	return r.accountService.AddBonusVotes(targetAccountID, bonusVoteCostMapping.NumberOfBonusVotes, bonusVoteCostMapping.CostInFazoolTokens), nil
 }
 
@@ -333,7 +345,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 
 	existingVoter, exists := r.sessionService.GetVoterInSession(sessionID, voterID)
 
-	if exists {
+	if exists && existingVoter.AccountID == accountID {
 		slog.Debug("Return existing voter", "voter", existingVoter.VoterID)
 		return existingVoter.ConvertVoterType(), nil
 	}

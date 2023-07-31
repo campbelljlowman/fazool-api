@@ -27,7 +27,7 @@ type SessionService interface {
 	SearchForSongs(sessionID int, query string) ([]*model.SimpleSong, error)
 
 	UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate)
-	UpsertVoterInSession(sessionID int, newVoter *voter.Voter)
+	UpsertVoterInSession(sessionID int, voter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction) error
 	PopQueue(sessionID int) error
 	AddVoterToSession(sessionID, accountID int, voterID string) (*model.Voter, error)

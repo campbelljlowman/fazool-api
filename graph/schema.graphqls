@@ -45,6 +45,7 @@ type Account {
 
 type Voter {
   id:             String!
+  accountID:      Int!
   type:           VoterType!
   songsUpVoted:   [String!]
   songsDownVoted: [String!]
@@ -141,8 +142,8 @@ type Mutation {
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
-  setSuperVoterSession(targetAccountID: Int!, sessionID: Int!): Account!
-  addBonusVotes(targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
+  setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
+  addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
   addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 
   login(accountLogin: AccountLogin!): String!

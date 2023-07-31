@@ -194,7 +194,6 @@ func (s *SessionServiceInMemory) watchVotersExpirations(sessionID int) {
 
 		sessionIsFull := s.IsSessionFull(sessionID)
 		if !sessionIsFull {
-			slog.Debug("Session isn't full, skipping voter check", "sessionID", sessionID)
 			continue
 		}
 

@@ -64,7 +64,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddBonusVotes          func(childComplexity int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) int
+		AddBonusVotes          func(childComplexity int, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) int
 		AddFazoolTokens        func(childComplexity int, targetAccountID int, numberOfFazoolTokens int) int
 		CreateAccount          func(childComplexity int, newAccount model.NewAccount) int
 		CreateSession          func(childComplexity int) int
@@ -73,7 +73,7 @@ type ComplexityRoot struct {
 		Login                  func(childComplexity int, accountLogin model.AccountLogin) int
 		SetAccountType         func(childComplexity int, targetAccountID int, accountType model.AccountType) int
 		SetPlaylist            func(childComplexity int, sessionID int, playlistID string) int
-		SetSuperVoterSession   func(childComplexity int, targetAccountID int, sessionID int) int
+		SetSuperVoterSession   func(childComplexity int, sessionID int, targetAccountID int) int
 		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
 		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
 		UpsertSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
@@ -124,6 +124,7 @@ type ComplexityRoot struct {
 	}
 
 	Voter struct {
+		AccountID      func(childComplexity int) int
 		BonusVotes     func(childComplexity int) int
 		ID             func(childComplexity int) int
 		SongsDownVoted func(childComplexity int) int
@@ -140,8 +141,8 @@ type MutationResolver interface {
 	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error)
 	SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error)
 	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
-	SetSuperVoterSession(ctx context.Context, targetAccountID int, sessionID int) (*model.Account, error)
-	AddBonusVotes(ctx context.Context, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error)
+	SetSuperVoterSession(ctx context.Context, sessionID int, targetAccountID int) (*model.Account, error)
+	AddBonusVotes(ctx context.Context, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error)
 	AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
@@ -262,7 +263,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddBonusVotes(childComplexity, args["targetAccountID"].(int), args["bonusVoteAmount"].(model.BonusVoteAmount)), true
+		return e.complexity.Mutation.AddBonusVotes(childComplexity, args["sessionID"].(int), args["targetAccountID"].(int), args["bonusVoteAmount"].(model.BonusVoteAmount)), true
 
 	case "Mutation.addFazoolTokens":
 		if e.complexity.Mutation.AddFazoolTokens == nil {
@@ -365,7 +366,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetSuperVoterSession(childComplexity, args["targetAccountID"].(int), args["sessionID"].(int)), true
+		return e.complexity.Mutation.SetSuperVoterSession(childComplexity, args["sessionID"].(int), args["targetAccountID"].(int)), true
 
 	case "Mutation.updateCurrentlyPlaying":
 		if e.complexity.Mutation.UpdateCurrentlyPlaying == nil {
@@ -599,6 +600,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Subscription.SubscribeSessionState(childComplexity, args["sessionID"].(int)), true
 
+	case "Voter.accountID":
+		if e.complexity.Voter.AccountID == nil {
+			break
+		}
+
+		return e.complexity.Voter.AccountID(childComplexity), true
+
 	case "Voter.bonusVotes":
 		if e.complexity.Voter.BonusVotes == nil {
 			break
@@ -770,6 +778,7 @@ type Account {
 
 type Voter {
   id:             String!
+  accountID:      Int!
   type:           VoterType!
   songsUpVoted:   [String!]
   songsDownVoted: [String!]
@@ -866,8 +875,8 @@ type Mutation {
   upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
-  setSuperVoterSession(targetAccountID: Int!, sessionID: Int!): Account!
-  addBonusVotes(targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
+  setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
+  addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
   addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
 
   login(accountLogin: AccountLogin!): String!
@@ -890,23 +899,32 @@ func (ec *executionContext) field_Mutation_addBonusVotes_args(ctx context.Contex
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
-	if tmp, ok := rawArgs["targetAccountID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
 		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["targetAccountID"] = arg0
-	var arg1 model.BonusVoteAmount
-	if tmp, ok := rawArgs["bonusVoteAmount"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bonusVoteAmount"))
-		arg1, err = ec.unmarshalNBonusVoteAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐBonusVoteAmount(ctx, tmp)
+	args["sessionID"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["targetAccountID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["bonusVoteAmount"] = arg1
+	args["targetAccountID"] = arg1
+	var arg2 model.BonusVoteAmount
+	if tmp, ok := rawArgs["bonusVoteAmount"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bonusVoteAmount"))
+		arg2, err = ec.unmarshalNBonusVoteAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐBonusVoteAmount(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["bonusVoteAmount"] = arg2
 	return args, nil
 }
 
@@ -1046,23 +1064,23 @@ func (ec *executionContext) field_Mutation_setSuperVoterSession_args(ctx context
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
-	if tmp, ok := rawArgs["targetAccountID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
 		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["targetAccountID"] = arg0
+	args["sessionID"] = arg0
 	var arg1 int
-	if tmp, ok := rawArgs["sessionID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+	if tmp, ok := rawArgs["targetAccountID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
 		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["sessionID"] = arg1
+	args["targetAccountID"] = arg1
 	return args, nil
 }
 
@@ -2232,7 +2250,7 @@ func (ec *executionContext) _Mutation_setSuperVoterSession(ctx context.Context, 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetSuperVoterSession(rctx, fc.Args["targetAccountID"].(int), fc.Args["sessionID"].(int))
+		return ec.resolvers.Mutation().SetSuperVoterSession(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2303,7 +2321,7 @@ func (ec *executionContext) _Mutation_addBonusVotes(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddBonusVotes(rctx, fc.Args["targetAccountID"].(int), fc.Args["bonusVoteAmount"].(model.BonusVoteAmount))
+		return ec.resolvers.Mutation().AddBonusVotes(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int), fc.Args["bonusVoteAmount"].(model.BonusVoteAmount))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2895,6 +2913,8 @@ func (ec *executionContext) fieldContext_Query_voter(ctx context.Context, field 
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Voter_id(ctx, field)
+			case "accountID":
+				return ec.fieldContext_Voter_accountID(ctx, field)
 			case "type":
 				return ec.fieldContext_Voter_type(ctx, field)
 			case "songsUpVoted":
@@ -3954,6 +3974,50 @@ func (ec *executionContext) fieldContext_Voter_id(ctx context.Context, field gra
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voter_accountID(ctx context.Context, field graphql.CollectedField, obj *model.Voter) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voter_accountID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AccountID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voter_accountID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6784,6 +6848,13 @@ func (ec *executionContext) _Voter(ctx context.Context, sel ast.SelectionSet, ob
 		case "id":
 
 			out.Values[i] = ec._Voter_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "accountID":
+
+			out.Values[i] = ec._Voter_accountID(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
