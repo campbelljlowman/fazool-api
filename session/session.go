@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -29,6 +30,7 @@ type SessionService interface {
 	UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate)
 	UpsertVoterInSession(sessionID int, voter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction) error
+	UpdateVoterAccount(sessionID, accountID int, voter *voter.Voter) *voter.Voter
 	PopQueue(sessionID int) error
 	CreateVoterInSession(sessionID, accountID int, voterID string) (*model.Voter, error)
 	AddUnusedBonusVote(songID string, accountID, numberOfVotes, sessionID int)
@@ -292,6 +294,17 @@ func (s *SessionServiceInMemory) UpdateCurrentlyPlaying(sessionID int, action mo
 	return nil
 }
 
+func (s *SessionServiceInMemory) UpdateVoterAccount(sessionID, accountID int, voter *voter.Voter) *voter.Voter {
+	superVoterSession, bonusVotes := s.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
+
+	isAdmin := s.GetSessionAdminAccountID(sessionID) == accountID
+
+	voter.AddAccountToVoter(sessionID, accountID, superVoterSession, bonusVotes, isAdmin)
+	s.UpsertVoterInSession(sessionID, voter)
+
+	return voter
+}
+
 func (s *SessionServiceInMemory) PopQueue(sessionID int) error { 
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
@@ -316,29 +329,21 @@ func (s *SessionServiceInMemory) PopQueue(sessionID int) error {
 	}
 
 	delete(session.unusedBonusVotes, song.ID)
+	slog.Info("deleting bonus votes, map:")
+	slog.Info(fmt.Sprintf("%v", session.unusedBonusVotes))
 
 	return nil
 }
 
 func (s *SessionServiceInMemory) CreateVoterInSession(sessionID, accountID int, voterID string) (*model.Voter, error) {
-	voterType := model.VoterTypeFree
-	bonusVotes := 0
+	// Change this to first create a simple voter, the if account ID isn't 0, add account to votor. Then use these same 
+	// functions if account IDs don't match. And adjust function names as necessary
+	newVoter := voter.NewFreeVoter(voterID)
 
 	if accountID != 0 {
-		superVoterSession, bonusVotesValue := s.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
-		bonusVotes = bonusVotesValue
-
-		if superVoterSession == sessionID {
-			voterType = model.VoterTypeSuper
-		}
-		if s.GetSessionAdminAccountID(sessionID) == accountID {
-			voterType = model.VoterTypeAdmin
-		}
-	}
-
-	newVoter, err := voter.NewVoter(voterID, voterType, accountID, bonusVotes)
-	if err != nil {
-		return nil, utils.LogAndReturnError("Error generating new voter", nil)
+		superVoterSession, bonusVotes := s.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
+		isAdmin := s.GetSessionAdminAccountID(sessionID) == accountID
+		newVoter.AddAccountToVoter(sessionID, accountID, superVoterSession, bonusVotes, isAdmin)
 	}
 
 	slog.Debug("New voter created:", "voter", newVoter)
@@ -346,6 +351,21 @@ func (s *SessionServiceInMemory) CreateVoterInSession(sessionID, accountID int, 
 
 	return newVoter.ConvertVoterType(), nil
 }
+
+// func (s *SessionServiceInMemory) AddAccountToVoter(sessionID, accountID int, voter *voter.Voter) *voter.Voter {
+// 	superVoterSession, bonusVotes := s.accountService.GetSuperVoterSessionsAndBonusVotes(accountID)
+
+// 	if superVoterSession == sessionID {
+// 		voter.VoterType = model.VoterTypeSuper
+// 	}
+// 	if s.GetSessionAdminAccountID(sessionID) == accountID {
+// 		voter.VoterType = model.VoterTypeAdmin
+// 	}
+
+// 	voter.BonusVotes = bonusVotes
+// 	voter.AccountID = accountID
+// 	return voter
+// }
 
 func (s *SessionServiceInMemory) AddUnusedBonusVote(songID string, accountID, numberOfVotes, sessionID int) {
 	s.allSessionsMutex.Lock()

@@ -103,7 +103,9 @@ var calculateAndAddUpVoteTests = []struct {
 
 func TestCalculateAndAddUpVote(t *testing.T) {
 	for _, testCase := range calculateAndAddUpVoteTests {
-		voter, _ := NewVoter("voterID", testCase.voterType, 1234, testCase.bonusVotes)
+		// voter, _ := NewFreeVoter("voterID", testCase.voterType, 1234, testCase.bonusVotes)
+		voter := NewFreeVoter("voterID", testCase.voterType, 1234, testCase.bonusVotes)
+		voter.AddAccountToVoter(1234, )
 		voter.SongsUpVoted = testCase.SongsUpVoted
 		voter.SongsDownVoted = testCase.SongsDownVoted
 
@@ -301,7 +303,7 @@ var GetVoterDurationTests = []struct {
 	expectedVoteDuration time.Duration
 }{
 	{model.VoterTypeFree, regularVoterDurationInMinutes},
-	{model.VoterTypeSuper, priviledgedVoterDurationInMinutes},
+	{model.VoterTypeSuper, superVoterDurationInMinutes},
 	{model.VoterTypeAdmin, regularVoterDurationInMinutes},
 	{"not a voter type", regularVoterDurationInMinutes},
 }

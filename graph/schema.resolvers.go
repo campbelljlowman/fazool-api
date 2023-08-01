@@ -351,6 +351,12 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 		return existingVoter.ConvertVoterType(), nil
 	}
 
+	if exists && existingVoter.AccountID != accountID {
+		slog.Debug("Adding account to existing voter", "voter", existingVoter.VoterID)
+		existingVoter = r.sessionService.UpdateVoterAccount(sessionID, accountID, existingVoter)
+		return existingVoter.ConvertVoterType(), nil
+	}
+
 	if r.sessionService.IsSessionFull(sessionID) {
 		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}

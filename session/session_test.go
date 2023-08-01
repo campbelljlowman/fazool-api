@@ -91,7 +91,7 @@ func TestGetVoterInSession(t *testing.T) {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
 
-	newVoter, _ := voter.NewVoter("asdf", model.VoterTypeFree, 123, 0)
+	newVoter := voter.NewFreeVoter("voter-id")
 	sessionService.UpsertVoterInSession(sessionID, newVoter)
 
 	voterInSession, exists := sessionService.GetVoterInSession(sessionID, "asdf")
@@ -224,7 +224,7 @@ func TestUpsertVoterInSession(t *testing.T) {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
 
-	newVoter, _ := voter.NewVoter("asdf", model.VoterTypeFree, 123, 0)
+	newVoter := voter.NewFreeVoter("voter-id")
 	sessionService.UpsertVoterInSession(sessionID, newVoter)
 
 	voterInSession, exists := sessionService.GetVoterInSession(sessionID, "asdf")
@@ -334,7 +334,7 @@ func TestRefreshVoterExpiration(t *testing.T) {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
 
-	newVoter, _ := voter.NewVoter("voter-id", model.VoterTypeFree, 123, 0)
+	newVoter := voter.NewFreeVoter("voter-id")
 	sessionService.UpsertVoterInSession(sessionID, newVoter)
 
 	sessionService.RefreshVoterExpiration(sessionID, "voter-id")

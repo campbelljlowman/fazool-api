@@ -43,6 +43,7 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 func (s *SessionServiceInMemory) addBackBonusVotes(unusedBonusVotesMap map[string]map[int]int) {
 	for _, accountVotesMap := range(unusedBonusVotesMap){
 		for accountID, votes := range accountVotesMap {
+			slog.Info("Adding back bonus votes")
 			s.accountService.AddBonusVotes(accountID, votes, 0)
 		}
 	}

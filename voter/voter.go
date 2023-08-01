@@ -20,25 +20,19 @@ type Voter struct {
 
 var emptyStructValue struct{}
 const regularVoterDurationInMinutes time.Duration = 15
-const priviledgedVoterDurationInMinutes time.Duration = 15
+const superVoterDurationInMinutes time.Duration = 15
 
-var validVoterTypes = []model.VoterType{model.VoterTypeFree, model.VoterTypeSuper, model.VoterTypeAdmin}
-
-func NewVoter(voterID string, voterType model.VoterType, accountID, BonusVotes int) (*Voter, error) {
-	if !contains(validVoterTypes, voterType) {
-		return nil, fmt.Errorf("invalid voter type passed")
-	}
-
+func NewFreeVoter(voterID string) *Voter {
 	v := Voter{
 		VoterID:        voterID,
-		AccountID:      accountID,
-		VoterType:      voterType,
-		ExpiresAt:      time.Now().Add(GetVoterDuration(voterType) * time.Minute),
+		AccountID:      0,
+		VoterType:      model.VoterTypeFree,
+		ExpiresAt:      time.Now().Add(GetVoterDuration(model.VoterTypeFree) * time.Minute),
 		SongsUpVoted:   make(map[string]struct{}),
 		SongsDownVoted: make(map[string]struct{}),
-		BonusVotes:     BonusVotes,
+		BonusVotes:     0,
 	}
-	return &v, nil
+	return &v
 }
 
 func (v *Voter) ConvertVoterType() *model.Voter {
@@ -67,6 +61,19 @@ func (v *Voter) ConvertVoterType() *model.Voter {
 	}
 
 	return &voter
+}
+
+func (v *Voter) AddAccountToVoter(sessionID, accountID, superVoterSession, bonusVotes int, isAdmin bool) {
+	if superVoterSession == sessionID {
+		v.VoterType = model.VoterTypeSuper
+	}
+
+	if isAdmin {
+		v.VoterType = model.VoterTypeAdmin
+	}
+
+	v.BonusVotes = bonusVotes
+	v.AccountID = accountID
 }
 
 func (v *Voter) CalculateAndProcessVote(song string, direction *model.SongVoteDirection, action *model.SongVoteAction) (int, bool, error) {
@@ -149,16 +156,7 @@ func getNumberOfVotesFromType(voterType model.VoterType) int {
 
 func GetVoterDuration(voterType model.VoterType) time.Duration {
 	if voterType == model.VoterTypeSuper {
-		return priviledgedVoterDurationInMinutes
+		return superVoterDurationInMinutes
 	}
 	return regularVoterDurationInMinutes
-}
-
-func contains(elems []model.VoterType, v model.VoterType) bool {
-	for _, s := range elems {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
