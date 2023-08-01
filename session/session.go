@@ -30,8 +30,8 @@ type SessionService interface {
 	UpsertVoterInSession(sessionID int, voter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction) error
 	PopQueue(sessionID int) error
-	AddVoterToSession(sessionID, accountID int, voterID string) (*model.Voter, error)
-	AddBonusVote(songID string, accountID, numberOfVotes, sessionID int)
+	CreateVoterInSession(sessionID, accountID int, voterID string) (*model.Voter, error)
+	AddUnusedBonusVote(songID string, accountID, numberOfVotes, sessionID int)
 	AddChannel(sessionID int, channel chan *model.SessionState)
 	SetPlaylist(sessionID int, playlist string) error
 	RefreshVoterExpiration(sessionID int, voterID string)
@@ -47,7 +47,7 @@ type session struct {
 	streaming    			streaming.StreamingService
 	expiresAt      			time.Time
 	// Map of [song][account][votes]
-	bonusVotes     			map[string]map[int]int
+	unusedBonusVotes     	map[string]map[int]int
 	streamingServiceUpdater	chan string
 	sessionStateMutex		*sync.Mutex
 	channelMutex 			*sync.Mutex
@@ -115,7 +115,7 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 		voters:         			make(map[string]*voter.Voter),
 		streaming:   				streaming,
 		expiresAt:      			time.Now().Add(sessionTimeoutMinutes * time.Minute),
-		bonusVotes:     			make(map[string]map[int]int),
+		unusedBonusVotes:     			make(map[string]map[int]int),
 		streamingServiceUpdater:	make(chan string),
 		sessionStateMutex:			&sync.Mutex{},
 		channelMutex: 				&sync.Mutex{},
@@ -315,15 +315,12 @@ func (s *SessionServiceInMemory) PopQueue(sessionID int) error {
 		return err
 	}
 
-	err = s.processBonusVotes(sessionID, song.ID)
-	if err != nil {
-		return err
-	}
+	delete(session.unusedBonusVotes, song.ID)
 
 	return nil
 }
 
-func (s *SessionServiceInMemory) AddVoterToSession(sessionID, accountID int, voterID string) (*model.Voter, error) {
+func (s *SessionServiceInMemory) CreateVoterInSession(sessionID, accountID int, voterID string) (*model.Voter, error) {
 	voterType := model.VoterTypeFree
 	bonusVotes := 0
 
@@ -350,16 +347,16 @@ func (s *SessionServiceInMemory) AddVoterToSession(sessionID, accountID int, vot
 	return newVoter.ConvertVoterType(), nil
 }
 
-func (s *SessionServiceInMemory) AddBonusVote(songID string, accountID, numberOfVotes, sessionID int) {
+func (s *SessionServiceInMemory) AddUnusedBonusVote(songID string, accountID, numberOfVotes, sessionID int) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()
 
 	session.bonusVoteMutex.Lock()
-	if _, exists := session.bonusVotes[songID][accountID]; !exists {
-		session.bonusVotes[songID] = make(map[int]int)
+	if _, exists := session.unusedBonusVotes[songID][accountID]; !exists {
+		session.unusedBonusVotes[songID] = make(map[int]int)
 	}
-	session.bonusVotes[songID][accountID] += numberOfVotes
+	session.unusedBonusVotes[songID][accountID] += numberOfVotes
 	session.bonusVoteMutex.Unlock()
 }
 
@@ -417,6 +414,8 @@ func (s *SessionServiceInMemory) EndSession(sessionID int) {
 	delete(s.sessions, sessionID)
 
 	s.accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
+	s.addBackBonusVotes(session.unusedBonusVotes)
+	s.cleanupSuperVoters(sessionID, session.voters)
 
 	expireSession(session)
 	closeChannels(session)

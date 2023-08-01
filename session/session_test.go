@@ -302,7 +302,7 @@ func TestAddBonusVote(t *testing.T) {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
 
-	sessionService.AddBonusVote("asdf", 123, 2, sessionID)
+	sessionService.AddUnusedBonusVote("asdf", 123, 2, sessionID)
 }
 
 func TestAddChannel(t *testing.T) {

@@ -24,29 +24,29 @@ func TestSendUpdatedState(t *testing.T) {
 	// TODO: Assert session expiry was refreshed
 }
 
-func TestProcessBonusVotes(t *testing.T) {
-	accountID := 123
-	numberOfBonusVotes := 1
+// func TestProcessBonusVotes(t *testing.T) {
+// 	accountID := 123
+// 	numberOfBonusVotes := 1
 
-	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
-	sessionID, err := sessionService.CreateSession(accountID, model.AccountTypeFree, mockStreamingService)
-	if err != nil {
-		t.Errorf("CreateSession() failed! Got an error: %v", err)
-	}
+// 	mockAccountService, mockStreamingService, sessionService := newTestingServices(t)
+// 	sessionID, err := sessionService.CreateSession(accountID, model.AccountTypeFree, mockStreamingService)
+// 	if err != nil {
+// 		t.Errorf("CreateSession() failed! Got an error: %v", err)
+// 	}
 	
-	sessionService.AddBonusVote("song1", accountID, numberOfBonusVotes, sessionID)
-	mockAccountService.EXPECT().SubtractBonusVotes(accountID, numberOfBonusVotes)
+// 	sessionService.AddBonusVote("song1", accountID, numberOfBonusVotes, sessionID)
+// 	mockAccountService.EXPECT().SubtractBonusVotes(accountID, numberOfBonusVotes)
 
-	sessionService.processBonusVotes(sessionID, "song1")
-	sessionService.processBonusVotes(sessionID, "song2")
+// 	sessionService.processBonusVotes(sessionID, "song1")
+// 	sessionService.processBonusVotes(sessionID, "song2")
 
-	session := sessionService.sessions[sessionID]
-	_, bonusVoteExists := session.bonusVotes["song1"]
+// 	session := sessionService.sessions[sessionID]
+// 	_, bonusVoteExists := session.bonusVotes["song1"]
 
-	if bonusVoteExists {
-		t.Errorf("processBonusVotes() failed! Song is still present in bonus votes map")	
-	}
-}
+// 	if bonusVoteExists {
+// 		t.Errorf("processBonusVotes() failed! Song is still present in bonus votes map")	
+// 	}
+// }
 
 // func TestExpireSession(t *testing.T) {
 // 	// TODO: Try to mock account service function call for SetAccountActiveSession.

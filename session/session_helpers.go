@@ -40,30 +40,20 @@ func (s *SessionServiceInMemory) sendUpdatedState(sessionID int) {
 }
 
 // TODO: This code hasn't been tested
-func (s *SessionServiceInMemory) processBonusVotes(sessionID int, songID string) error {
-	s.allSessionsMutex.Lock()
-	session := s.sessions[sessionID]
-	s.allSessionsMutex.Unlock()
-
-
-	session.bonusVoteMutex.Lock()
-	songBonusVotes, exists := session.bonusVotes[songID]
-	delete(session.bonusVotes, songID)
-	session.bonusVoteMutex.Unlock()
-
-	if !exists {
-		return nil
+func (s *SessionServiceInMemory) addBackBonusVotes(unusedBonusVotesMap map[string]map[int]int) {
+	for _, accountVotesMap := range(unusedBonusVotesMap){
+		for accountID, votes := range accountVotesMap {
+			s.accountService.AddBonusVotes(accountID, votes, 0)
+		}
 	}
-
-	for accountID, votes := range songBonusVotes {
-		s.accountService.SubtractBonusVotes(accountID, votes)
-	}
-
-	return nil
 }
 
-func cleanupSuperVoters(sessionID int, voter *voter.Voter) {
-
+func (s *SessionServiceInMemory) cleanupSuperVoters(sessionID int, voters map[string]*voter.Voter) {
+	for _, voter := range(voters) {
+		if voter.VoterType == model.VoterTypeSuper {
+			s.accountService.RemoveSuperVoter(voter.AccountID, sessionID)
+		}
+	}
 }
 
 func expireSession(session *session) {

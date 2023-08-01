@@ -110,7 +110,8 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 	}
 
 	if isBonusVote {
-		r.sessionService.AddBonusVote(song.ID, existingVoter.AccountID, numberOfVotes, sessionID)
+		r.sessionService.AddUnusedBonusVote(song.ID, existingVoter.AccountID, numberOfVotes, sessionID)
+		r.accountService.SubtractBonusVotes(existingVoter.AccountID, numberOfVotes)
 	}
 
 	r.sessionService.RefreshVoterExpiration(sessionID, voterID)
@@ -354,7 +355,7 @@ func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter,
 		return nil, utils.LogAndReturnError("Session is full of voters!", nil)
 	}
 
-	return r.sessionService.AddVoterToSession(sessionID, accountID, voterID)
+	return r.sessionService.CreateVoterInSession(sessionID, accountID, voterID)
 }
 
 // VoterToken is the resolver for the voterToken field.
