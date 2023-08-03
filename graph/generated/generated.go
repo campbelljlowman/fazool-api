@@ -768,8 +768,8 @@ type SessionConfig {
 
 type Account {
   id:               Int!
-  firstName:        String
-  lastName:         String
+  firstName:        String!
+  lastName:         String!
   email:            String
   activeSession:    Int
   streamingService: StreamingService
@@ -840,10 +840,11 @@ input SongUpdate {
 }
 
 input NewAccount {
-  firstName:  String!
-  lastName:   String!
-  email:      String!
-  password:   String!
+  firstName:    String!
+  lastName:     String!
+  phoneNumber:  String!
+  email:        String!
+  password:     String!
 }
 
 input AccountLogin {
@@ -1379,11 +1380,14 @@ func (ec *executionContext) _Account_firstName(ctx context.Context, field graphq
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Account_firstName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1420,11 +1424,14 @@ func (ec *executionContext) _Account_lastName(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Account_lastName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6006,7 +6013,7 @@ func (ec *executionContext) unmarshalInputNewAccount(ctx context.Context, obj in
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"firstName", "lastName", "email", "password"}
+	fieldsInOrder := [...]string{"firstName", "lastName", "phoneNumber", "email", "password"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -6026,6 +6033,14 @@ func (ec *executionContext) unmarshalInputNewAccount(ctx context.Context, obj in
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastName"))
 			it.LastName, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "phoneNumber":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("phoneNumber"))
+			it.PhoneNumber, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -6184,10 +6199,16 @@ func (ec *executionContext) _Account(ctx context.Context, sel ast.SelectionSet, 
 
 			out.Values[i] = ec._Account_firstName(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "lastName":
 
 			out.Values[i] = ec._Account_lastName(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "email":
 
 			out.Values[i] = ec._Account_email(ctx, field, obj)

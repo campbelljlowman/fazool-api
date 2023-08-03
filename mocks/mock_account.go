@@ -77,17 +77,17 @@ func (mr *MockAccountServiceMockRecorder) CheckIfEmailHasAccount(arg0 interface{
 }
 
 // CreateAccount mocks base method.
-func (m *MockAccountService) CreateAccount(arg0, arg1, arg2, arg3 string, arg4 model.AccountType, arg5 int, arg6 model.StreamingService) int {
+func (m *MockAccountService) CreateAccount(arg0, arg1, arg2, arg3, arg4 string, arg5 model.AccountType, arg6 int, arg7 model.StreamingService) int {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAccount", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret := m.ctrl.Call(m, "CreateAccount", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	ret0, _ := ret[0].(int)
 	return ret0
 }
 
 // CreateAccount indicates an expected call of CreateAccount.
-func (mr *MockAccountServiceMockRecorder) CreateAccount(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+func (mr *MockAccountServiceMockRecorder) CreateAccount(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockAccountService)(nil).CreateAccount), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockAccountService)(nil).CreateAccount), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 }
 
 // DeleteAccount mocks base method.

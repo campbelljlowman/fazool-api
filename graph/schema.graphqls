@@ -35,8 +35,8 @@ type SessionConfig {
 
 type Account {
   id:               Int!
-  firstName:        String
-  lastName:         String
+  firstName:        String!
+  lastName:         String!
   email:            String
   activeSession:    Int
   streamingService: StreamingService
@@ -107,10 +107,11 @@ input SongUpdate {
 }
 
 input NewAccount {
-  firstName:  String!
-  lastName:   String!
-  email:      String!
-  password:   String!
+  firstName:    String!
+  lastName:     String!
+  phoneNumber:  String!
+  email:        String!
+  password:     String!
 }
 
 input AccountLogin {

@@ -76,7 +76,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 		return "", utils.LogAndReturnError("Account with this email already exists!", nil)
 	}
 
-	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, passwordHash, accountType, 0, streamingService)
+	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, newAccount.PhoneNumber, passwordHash, accountType, 0, streamingService)
 
 	jwtToken, err := auth.GenerateJWTForAccount(accountID)
 	if err != nil {

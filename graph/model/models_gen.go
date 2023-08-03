@@ -10,8 +10,8 @@ import (
 
 type Account struct {
 	ID               int               `json:"id"`
-	FirstName        *string           `json:"firstName"`
-	LastName         *string           `json:"lastName"`
+	FirstName        string            `json:"firstName"`
+	LastName         string            `json:"lastName"`
 	Email            *string           `json:"email"`
 	ActiveSession    *int              `json:"activeSession"`
 	StreamingService *StreamingService `json:"streamingService"`
@@ -31,10 +31,11 @@ type CurrentlyPlayingSong struct {
 }
 
 type NewAccount struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Email     string `json:"email"`
-	Password  string `json:"password"`
+	FirstName   string `json:"firstName"`
+	LastName    string `json:"lastName"`
+	PhoneNumber string `json:"phoneNumber"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
 }
 
 type Playlist struct {

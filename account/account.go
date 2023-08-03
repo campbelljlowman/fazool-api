@@ -14,7 +14,7 @@ import (
 )
 
 type AccountService interface {
-	CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, bonusVotes int, streamingService model.StreamingService) int
+	CreateAccount(firstName, lastName, email, phoneNumber, passwordHash string, accountType model.AccountType, bonusVotes int, streamingService model.StreamingService) int
 
 	GetAccountFromEmail(accountEmail string) *model.Account
 	GetAccountFromID(accountID int) *model.Account
@@ -44,6 +44,7 @@ type account struct {
 	FirstName 				string
 	LastName 				string
 	Email 					string
+	PhoneNumber 			string
 	PasswordHash 			string
 	AccountType				model.AccountType
 	SuperVoterSession		int
@@ -76,11 +77,12 @@ func NewAccountServiceGormImpl() *AccountServiceGorm {
 	return &accountGorm
 }
 
-func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, passwordHash string, accountType model.AccountType, bonusVotes int, streamingService model.StreamingService) int {
+func (a *AccountServiceGorm) CreateAccount(firstName, lastName, email, phoneNumber, passwordHash string, accountType model.AccountType, bonusVotes int, streamingService model.StreamingService) int {
 	accountToAdd := &account{
 		FirstName: 			firstName,
 		LastName: 			lastName,
 		Email: 				strings.ToLower(email),
+		PhoneNumber: 		phoneNumber,
 		PasswordHash: 		passwordHash,
 		AccountType: 		accountType,
 		SuperVoterSession: 	0,
@@ -246,8 +248,8 @@ func (a *AccountServiceGorm) DeleteAccount(accountID int) {
 func transformAccountType(fullAccount account) *model.Account {
 	accountToReturn := &model.Account{
 		ID: int(fullAccount.ID),
-		FirstName: &fullAccount.FirstName,
-		LastName: &fullAccount.LastName,
+		FirstName: fullAccount.FirstName,
+		LastName: fullAccount.LastName,
 		Email: &fullAccount.Email,
 		ActiveSession: &fullAccount.ActiveSession,
 		StreamingService: &fullAccount.StreamingService,
