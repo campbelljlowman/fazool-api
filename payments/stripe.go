@@ -6,23 +6,31 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/campbelljlowman/fazool-api/account"
+	"github.com/campbelljlowman/fazool-api/constants"
+
 	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/webhook"
 	"golang.org/x/exp/slog"
 )
 
-// The library needs to be configured with your account's secret key.
-// Ensure the key is kept out of any version control system you might be using.
+type StripeService struct {
+    accountService account.AccountService
+    endpointSecret string
+}
 
-// func main() {
-//     http.HandleFunc("/webhook", handleWebhook)
-//     addr := "localhost:4242"
-//     log.Printf("Listening on %s", addr)
-//     log.Fatal(http.ListenAndServe(addr, nil))
-// }
-
-func HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
+func NewStripeService(accountService account.AccountService) *StripeService {
     stripe.Key = os.Getenv("STRIPE_KEY")
+    endpointSecret := os.Getenv("STRIPE_WEBHOOK_ENDPOINT_SECRET")
+    
+    stripeService := &StripeService{
+        accountService: accountService,
+        endpointSecret: endpointSecret,
+    }
+    return stripeService
+}
+
+func (s *StripeService) HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
 
     const MaxBodyBytes = int64(65536)
     req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
@@ -33,9 +41,8 @@ func HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
     return
     }
 
-    endpointSecret := os.Getenv("STRIPE_WEBHOOK_ENDPOINT_SECRET")
     event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"),
-    endpointSecret)
+    s.endpointSecret)
 
     if err != nil {
         slog.Warn("Error verifying stripe webhook signature", "error", err)
@@ -47,7 +54,11 @@ func HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
     case "checkout.session.completed":
         var checkoutSessionData stripe.CheckoutSession
         json.Unmarshal(event.Data.Raw, &checkoutSessionData)
-        slog.Info("Payment link: ", "data", checkoutSessionData.PaymentLink)
+        if checkoutSessionData.PaymentLink != nil {
+            slog.Info("Fazool tokens to add ", "data", constants.FazoolTokenPLinkMapping[checkoutSessionData.PaymentLink.ID])
+            // s.accountService.AddFazoolTokens()
+        }
+        slog.Info("client reference ID: ", "data", checkoutSessionData.ClientReferenceID)
     default:
         slog.Warn("Unhandled stripe event type", "event-type", event.Type)
     }

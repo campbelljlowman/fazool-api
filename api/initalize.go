@@ -40,8 +40,9 @@ func InitializeRoutes() *gin.Engine {
 		srv.ServeHTTP(c.Writer, c.Request)
 	})
 
+	stripeService := payments.NewStripeService(accountService)
 	router.POST("/stripe-webhook", func(c *gin.Context) {
-		payments.HandleStripeWebhook(c.Writer, c.Request)
+		stripeService.HandleStripeWebhook(c.Writer, c.Request)
 	})
 
 	return router
