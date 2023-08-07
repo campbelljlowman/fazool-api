@@ -7,6 +7,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/account"
 	"github.com/campbelljlowman/fazool-api/graph"
 	"github.com/campbelljlowman/fazool-api/session"
+	"github.com/campbelljlowman/fazool-api/payments"
 
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-contrib/cors"
@@ -37,6 +38,10 @@ func InitializeRoutes() *gin.Engine {
 
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
+	})
+
+	router.POST("/stripe-webhook", func(c *gin.Context) {
+		payments.HandleStripeWebhook(c.Writer, c.Request)
 	})
 
 	return router

@@ -9,6 +9,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/stripe/stripe-go/v74 v74.29.0
 	github.com/vektah/gqlparser/v2 v2.4.8
 	github.com/zmb3/spotify/v2 v2.3.1
 	go.uber.org/mock v0.2.0
