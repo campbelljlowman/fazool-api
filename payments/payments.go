@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -21,7 +22,6 @@ import (
 // }
 
 func HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
-    slog.Info("Stripe webhook called")
     stripe.Key = os.Getenv("STRIPE_KEY")
 
     const MaxBodyBytes = int64(65536)
@@ -33,12 +33,7 @@ func HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
     return
     }
 
-    // This is your Stripe CLI webhook secret for testing your endpoint locally.
     endpointSecret := os.Getenv("STRIPE_WEBHOOK_ENDPOINT_SECRET")
-    // test
-    // endpointSecret := "whsec_2WIqSly5FZWIBsz45Dxyr9ukDctoMKUj"
-    // Pass the request body and Stripe-Signature header to ConstructEvent, along
-    // with the webhook signing key.
     event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"),
     endpointSecret)
 
@@ -48,12 +43,11 @@ func HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
         return
     }
 
-    // Unmarshal the event data into an appropriate struct depending on its Type
     switch event.Type {
-    case "payment_intent.succeeded":
-        // Then define and call a function to handle the event payment_intent.succeeded
-        // ... handle other event types
-        slog.Info("Received stripe webhook call", "data", event.Data.Object)
+    case "checkout.session.completed":
+        var checkoutSessionData stripe.CheckoutSession
+        json.Unmarshal(event.Data.Raw, &checkoutSessionData)
+        slog.Info("Payment link: ", "data", checkoutSessionData.PaymentLink)
     default:
         slog.Warn("Unhandled stripe event type", "event-type", event.Type)
     }
