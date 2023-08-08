@@ -97,6 +97,10 @@ enum BonusVoteAmount {
   FIFTY
 }
 
+enum FazoolTokenAmount {
+  FIVE
+}
+
 input SongUpdate {
   id:     String!
   title:  String
@@ -145,7 +149,7 @@ type Mutation {
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
   addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
-  addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
+  addFazoolTokens(sessionID: Int!, targetAccountID: Int!, fazoolTokenAmount: FazoolTokenAmount!): String!
 
   login(accountLogin: AccountLogin!): String!
 

@@ -65,7 +65,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddBonusVotes          func(childComplexity int, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) int
-		AddFazoolTokens        func(childComplexity int, targetAccountID int, numberOfFazoolTokens int) int
+		AddFazoolTokens        func(childComplexity int, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) int
 		CreateAccount          func(childComplexity int, newAccount model.NewAccount) int
 		CreateSession          func(childComplexity int) int
 		DeleteAccount          func(childComplexity int, targetAccountID int) int
@@ -143,7 +143,7 @@ type MutationResolver interface {
 	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
 	SetSuperVoterSession(ctx context.Context, sessionID int, targetAccountID int) (*model.Account, error)
 	AddBonusVotes(ctx context.Context, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error)
-	AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error)
+	AddFazoolTokens(ctx context.Context, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) (string, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
 	DeleteAccount(ctx context.Context, targetAccountID int) (string, error)
@@ -275,7 +275,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddFazoolTokens(childComplexity, args["targetAccountID"].(int), args["numberOfFazoolTokens"].(int)), true
+		return e.complexity.Mutation.AddFazoolTokens(childComplexity, args["sessionID"].(int), args["targetAccountID"].(int), args["fazoolTokenAmount"].(model.FazoolTokenAmount)), true
 
 	case "Mutation.createAccount":
 		if e.complexity.Mutation.CreateAccount == nil {
@@ -830,6 +830,10 @@ enum BonusVoteAmount {
   FIFTY
 }
 
+enum FazoolTokenAmount {
+  FIVE
+}
+
 input SongUpdate {
   id:     String!
   title:  String
@@ -878,7 +882,7 @@ type Mutation {
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
   addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
-  addFazoolTokens(targetAccountID: Int!, numberOfFazoolTokens: Int!): Account!
+  addFazoolTokens(sessionID: Int!, targetAccountID: Int!, fazoolTokenAmount: FazoolTokenAmount!): String!
 
   login(accountLogin: AccountLogin!): String!
 
@@ -933,23 +937,32 @@ func (ec *executionContext) field_Mutation_addFazoolTokens_args(ctx context.Cont
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
-	if tmp, ok := rawArgs["targetAccountID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
 		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["targetAccountID"] = arg0
+	args["sessionID"] = arg0
 	var arg1 int
-	if tmp, ok := rawArgs["numberOfFazoolTokens"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("numberOfFazoolTokens"))
+	if tmp, ok := rawArgs["targetAccountID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
 		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["numberOfFazoolTokens"] = arg1
+	args["targetAccountID"] = arg1
+	var arg2 model.FazoolTokenAmount
+	if tmp, ok := rawArgs["fazoolTokenAmount"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fazoolTokenAmount"))
+		arg2, err = ec.unmarshalNFazoolTokenAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐFazoolTokenAmount(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fazoolTokenAmount"] = arg2
 	return args, nil
 }
 
@@ -2399,7 +2412,7 @@ func (ec *executionContext) _Mutation_addFazoolTokens(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddFazoolTokens(rctx, fc.Args["targetAccountID"].(int), fc.Args["numberOfFazoolTokens"].(int))
+		return ec.resolvers.Mutation().AddFazoolTokens(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int), fc.Args["fazoolTokenAmount"].(model.FazoolTokenAmount))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2411,9 +2424,9 @@ func (ec *executionContext) _Mutation_addFazoolTokens(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Account)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_addFazoolTokens(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2423,23 +2436,7 @@ func (ec *executionContext) fieldContext_Mutation_addFazoolTokens(ctx context.Co
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Account_id(ctx, field)
-			case "firstName":
-				return ec.fieldContext_Account_firstName(ctx, field)
-			case "lastName":
-				return ec.fieldContext_Account_lastName(ctx, field)
-			case "email":
-				return ec.fieldContext_Account_email(ctx, field)
-			case "activeSession":
-				return ec.fieldContext_Account_activeSession(ctx, field)
-			case "streamingService":
-				return ec.fieldContext_Account_streamingService(ctx, field)
-			case "fazoolTokens":
-				return ec.fieldContext_Account_fazoolTokens(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	defer func() {
@@ -7290,6 +7287,16 @@ func (ec *executionContext) marshalNCurrentlyPlayingSong2ᚖgithubᚗcomᚋcampb
 		return graphql.Null
 	}
 	return ec._CurrentlyPlayingSong(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNFazoolTokenAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐFazoolTokenAmount(ctx context.Context, v interface{}) (model.FazoolTokenAmount, error) {
+	var res model.FazoolTokenAmount
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNFazoolTokenAmount2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐFazoolTokenAmount(ctx context.Context, sel ast.SelectionSet, v model.FazoolTokenAmount) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {

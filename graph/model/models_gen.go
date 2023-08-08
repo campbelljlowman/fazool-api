@@ -177,6 +177,45 @@ func (e BonusVoteAmount) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+type FazoolTokenAmount string
+
+const (
+	FazoolTokenAmountFive FazoolTokenAmount = "FIVE"
+)
+
+var AllFazoolTokenAmount = []FazoolTokenAmount{
+	FazoolTokenAmountFive,
+}
+
+func (e FazoolTokenAmount) IsValid() bool {
+	switch e {
+	case FazoolTokenAmountFive:
+		return true
+	}
+	return false
+}
+
+func (e FazoolTokenAmount) String() string {
+	return string(e)
+}
+
+func (e *FazoolTokenAmount) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = FazoolTokenAmount(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid FazoolTokenAmount", str)
+	}
+	return nil
+}
+
+func (e FazoolTokenAmount) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 type QueueAction string
 
 const (

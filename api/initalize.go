@@ -33,14 +33,15 @@ func InitializeRoutes() *gin.Engine {
 
 	accountService := account.NewAccountServiceGormImpl()
 	sessionService := session.NewSessionServiceInMemoryImpl(accountService)
-	r := graph.NewResolver(sessionService, accountService)
+	stripeService := payments.NewStripeService(accountService)
+
+	r := graph.NewResolver(sessionService, accountService, stripeService)
 	srv := graph.NewGraphQLServer(r)
 
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
 	})
 
-	stripeService := payments.NewStripeService(accountService)
 	router.POST("/stripe-webhook", func(c *gin.Context) {
 		stripeService.HandleStripeWebhook(c.Writer, c.Request)
 	})

@@ -2,6 +2,7 @@ package graph
 
 import (
 	"github.com/campbelljlowman/fazool-api/account"
+	"github.com/campbelljlowman/fazool-api/payments"
 	"github.com/campbelljlowman/fazool-api/session"
 )
 
@@ -12,11 +13,13 @@ import (
 type Resolver struct {
 	sessionService		    session.SessionService
 	accountService  		account.AccountService
+	stripeService			*payments.StripeService
 }
 
-func NewResolver(sessionService session.SessionService, accountService account.AccountService) *Resolver {
+func NewResolver(sessionService session.SessionService, accountService account.AccountService, stripeService *payments.StripeService) *Resolver {
 	return &Resolver{
 		sessionService: sessionService,
 		accountService: accountService,
+		stripeService: stripeService,
 	}
 }

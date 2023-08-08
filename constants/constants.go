@@ -29,6 +29,7 @@ var BonusVoteCostMapping = map[model.BonusVoteAmount]BonusVoteCostPair{
 	},
 }
 
-var FazoolTokenPLinkMapping = map[string]int{
-	"plink_1Nbn5WFrScZw72TaAINiKhPG": 5,
+var FazoolTokenProductMapping = map[string]int{
+	// test
+	"prod_OPijTEhckyCHAm": 5,
 }

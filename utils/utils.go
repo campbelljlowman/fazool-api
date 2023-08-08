@@ -23,11 +23,7 @@ func CompareHashAndPassword(passwordHash, password string) bool {
 	passwordBytes := []byte(password)
 
 	err := bcrypt.CompareHashAndPassword(passwordHashBytes, passwordBytes)
-	if err != nil {
-        return false
-    }
-    
-    return true
+	return err == nil
 }
 
 func ValidateEmail(email string) bool {
@@ -50,7 +46,7 @@ func GenerateSessionID() (int, error) {
 
 func LogAndReturnError(msg string, err error) error {
 	if err != nil {
-		slog.Warn(msg, "error", err)
+		slog.Error(msg, err)
 	} else {
 		slog.Warn(msg)
 	}

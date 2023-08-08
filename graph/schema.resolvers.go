@@ -243,13 +243,14 @@ func (r *mutationResolver) AddBonusVotes(ctx context.Context, sessionID int, tar
 }
 
 // AddFazoolTokens is the resolver for the addFazoolTokens field.
-func (r *mutationResolver) AddFazoolTokens(ctx context.Context, targetAccountID int, numberOfFazoolTokens int) (*model.Account, error) {
+func (r *mutationResolver) AddFazoolTokens(ctx context.Context, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) (string, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID != targetAccountID {
-		return nil, utils.LogAndReturnError("You can only set your own bonus votes!", nil)
+		return "", utils.LogAndReturnError("You can only set your own bonus votes!", nil)
 	}
 
-	return r.accountService.AddFazoolTokens(targetAccountID, numberOfFazoolTokens), nil
+	return r.stripeService.CreateCheckoutSession(sessionID, targetAccountID, fazoolTokenAmount)
+	// return r.accountService.AddFazoolTokens(targetAccountID, numberOfFazoolTokens), nil
 }
 
 // Login is the resolver for the login field.
