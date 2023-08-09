@@ -180,16 +180,20 @@ func (e BonusVoteAmount) MarshalGQL(w io.Writer) {
 type FazoolTokenAmount string
 
 const (
-	FazoolTokenAmountFive FazoolTokenAmount = "FIVE"
+	FazoolTokenAmountFive      FazoolTokenAmount = "FIVE"
+	FazoolTokenAmountTen       FazoolTokenAmount = "TEN"
+	FazoolTokenAmountTwentyTwo FazoolTokenAmount = "TWENTY_TWO"
 )
 
 var AllFazoolTokenAmount = []FazoolTokenAmount{
 	FazoolTokenAmountFive,
+	FazoolTokenAmountTen,
+	FazoolTokenAmountTwentyTwo,
 }
 
 func (e FazoolTokenAmount) IsValid() bool {
 	switch e {
-	case FazoolTokenAmountFive:
+	case FazoolTokenAmountFive, FazoolTokenAmountTen, FazoolTokenAmountTwentyTwo:
 		return true
 	}
 	return false

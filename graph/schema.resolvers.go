@@ -250,7 +250,6 @@ func (r *mutationResolver) AddFazoolTokens(ctx context.Context, sessionID int, t
 	}
 
 	return r.stripeService.CreateCheckoutSession(sessionID, targetAccountID, fazoolTokenAmount)
-	// return r.accountService.AddFazoolTokens(targetAccountID, numberOfFazoolTokens), nil
 }
 
 // Login is the resolver for the login field.

@@ -13,13 +13,13 @@ import (
 type Resolver struct {
 	sessionService		    session.SessionService
 	accountService  		account.AccountService
-	stripeService			*payments.StripeService
+	stripeService			payments.StripeService
 }
 
-func NewResolver(sessionService session.SessionService, accountService account.AccountService, stripeService *payments.StripeService) *Resolver {
+func NewResolver(sessionService session.SessionService, accountService account.AccountService, stripeService payments.StripeService) *Resolver {
 	return &Resolver{
 		sessionService: sessionService,
 		accountService: accountService,
-		stripeService: stripeService,
+		stripeService: 	stripeService,
 	}
 }

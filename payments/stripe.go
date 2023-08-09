@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/campbelljlowman/fazool-api/account"
-	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/model"
 
 	"github.com/stripe/stripe-go/v74"
@@ -18,37 +17,98 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-type StripeService struct {
-    accountService account.AccountService
-    endpointSecret string
-    frontendDomain string
-    fazoolTokensOptionsMapping map[model.FazoolTokenAmount]string
+type StripeService interface {
+    HandleStripeWebhook(w http.ResponseWriter, req *http.Request)
+    CreateCheckoutSession(sessionID, accountID int, fazoolTokensAmount model.FazoolTokenAmount) (string, error)
 }
 
-func NewStripeService(accountService account.AccountService) *StripeService {
+type stripeWrapper struct {
+    accountService      account.AccountService
+    endpointSecret      string
+    frontendDomain      string
+    fazoolTokenProducts [] *fazoolTokenProduct
+}
+
+type fazoolTokenProduct struct {
+    fazoolTokenAmount       model.FazoolTokenAmount
+    stripeProductID         string
+    stripePriceID           string
+    numberOfFazoolTokens    int
+    priceUSD                int
+}
+
+func NewStripeService(accountService account.AccountService) StripeService {
     stripe.Key = os.Getenv("STRIPE_KEY")
     endpointSecret := os.Getenv("STRIPE_WEBHOOK_ENDPOINT_SECRET")
     frontendDomain := os.Getenv("FRONTEND_DOMAIN")
-    fazoolTokensFivePrice := os.Getenv("FAZOOL_TOKENS_FIVE_PRICE")
+    stripeTestProductMode := os.Getenv("STRIPE_TEST_PRODUCT_MODE")
     
-    if (endpointSecret == "") || (frontendDomain == "") || (fazoolTokensFivePrice == "") {
+    if (endpointSecret == "") || (frontendDomain == "") {
 		slog.Warn("At least one environment variable needed for stripe service is empty", 
-        "endpointSecret", endpointSecret, "frontendDomain", frontendDomain, "fazoolTokensFivePrice", fazoolTokensFivePrice)
+        "endpointSecret", endpointSecret, "frontendDomain", frontendDomain)
 		os.Exit(1)
     }
 
-    stripeService := &StripeService{
-        accountService: accountService,
-        endpointSecret: endpointSecret,
-        frontendDomain: frontendDomain,
-        fazoolTokensOptionsMapping: map[model.FazoolTokenAmount]string{
-            model.FazoolTokenAmountFive: fazoolTokensFivePrice,
-        },
+    // THESE SHOULD BE EXACTLY THE SAME AS THE FRONTEND!!!
+    // https://github.com/campbelljlowman/fazool-ui/blob/master/src/constants.ts
+    var fazoolTokenProducts [] *fazoolTokenProduct
+
+    if (stripeTestProductMode == "true") {
+        fazoolTokenProducts = append(fazoolTokenProducts, &fazoolTokenProduct{
+            fazoolTokenAmount:      model.FazoolTokenAmountFive,
+            stripeProductID:        "prod_OPijTEhckyCHAm",
+            stripePriceID:          "price_1NctI5FrScZw72Ta1VoRFfSE",
+            numberOfFazoolTokens:   5,
+            priceUSD:               5,
+        })
+        fazoolTokenProducts = append(fazoolTokenProducts, &fazoolTokenProduct{
+            fazoolTokenAmount:      model.FazoolTokenAmountTen,
+            stripeProductID:        "prod_OPlsrZSSbZ6uO2",
+            stripePriceID:          "price_1NcwKwFrScZw72TaXQBa7YRu",
+            numberOfFazoolTokens:   10,
+            priceUSD:               10,
+        })
+        fazoolTokenProducts = append(fazoolTokenProducts, &fazoolTokenProduct{
+            fazoolTokenAmount:      model.FazoolTokenAmountTwentyTwo,
+            stripeProductID:        "prod_OPltQrkYshQQIg",
+            stripePriceID:          "price_1NcwLJFrScZw72TaFQ4sOj7f",
+            numberOfFazoolTokens:   22,
+            priceUSD:               20,
+        })
+    } else {
+        fazoolTokenProducts = append(fazoolTokenProducts, &fazoolTokenProduct{
+            fazoolTokenAmount:      model.FazoolTokenAmountFive,
+            stripeProductID:        "prod_OQ54LRbqQ276Kh",
+            stripePriceID:          "price_1NdEuoFrScZw72TaLjujszXB",
+            numberOfFazoolTokens:   5,
+            priceUSD:               5,
+        })
+        fazoolTokenProducts = append(fazoolTokenProducts, &fazoolTokenProduct{
+            fazoolTokenAmount:      model.FazoolTokenAmountTen,
+            stripeProductID:        "prod_OQ55OI2dpEa9D0",
+            stripePriceID:          "price_1NdEutFrScZw72TajoNE73Ys",
+            numberOfFazoolTokens:   10,
+            priceUSD:               10,
+        })
+        fazoolTokenProducts = append(fazoolTokenProducts, &fazoolTokenProduct{
+            fazoolTokenAmount:      model.FazoolTokenAmountTwentyTwo,
+            stripeProductID:        "prod_OQ55wh7ZC3EpWa",
+            stripePriceID:          "price_1NdEuwFrScZw72TayueTtJnu",
+            numberOfFazoolTokens:   22,
+            priceUSD:               20,
+        })
+    }
+
+    stripeService := &stripeWrapper{
+        accountService:         accountService,
+        endpointSecret:         endpointSecret,
+        frontendDomain:         frontendDomain,
+        fazoolTokenProducts:    fazoolTokenProducts,
     }
     return stripeService
 }
 
-func (s *StripeService) HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
+func (s *stripeWrapper) HandleStripeWebhook(w http.ResponseWriter, req *http.Request) {
 
     const MaxBodyBytes = int64(65536)
     req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
@@ -56,7 +116,7 @@ func (s *StripeService) HandleStripeWebhook(w http.ResponseWriter, req *http.Req
     if err != nil {
         slog.Warn("Error reading request body from stripe webhook", "error", err)
         w.WriteHeader(http.StatusServiceUnavailable)
-    return
+        return
     }
 
     event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"),
@@ -87,12 +147,9 @@ func (s *StripeService) HandleStripeWebhook(w http.ResponseWriter, req *http.Req
         }
 
         for _, lineItem := range(checkoutSessionData.LineItems.Data) {
-            fazoolTokensToAdd := constants.FazoolTokenProductMapping[lineItem.Price.Product.ID]
-            slog.Info("fazool tokens to add:", "data", fazoolTokensToAdd)
-            s.accountService.AddFazoolTokens(accountID, fazoolTokensToAdd)
+            fazoolTokenProduct := s.getFazoolTokenProductFromProductID(lineItem.Price.Product.ID)
+            s.accountService.AddFazoolTokens(accountID, fazoolTokenProduct.numberOfFazoolTokens)
         }
-
-        // LOG info about payment if not from one of the links or no client reference id
     default:
         slog.Warn("Unhandled stripe event type", "event-type", event.Type)
     }
@@ -100,21 +157,19 @@ func (s *StripeService) HandleStripeWebhook(w http.ResponseWriter, req *http.Req
     w.WriteHeader(http.StatusOK)
 }
 
-func (s *StripeService) CreateCheckoutSession(sessionID, accountID int, fazoolTokensAmount model.FazoolTokenAmount) (string, error) {
+func (s *stripeWrapper) CreateCheckoutSession(sessionID, accountID int, fazoolTokensAmount model.FazoolTokenAmount) (string, error) {
     accountIDString := fmt.Sprintf("%v", accountID)
     redirectURL := fmt.Sprintf("%v/session/%v", s.frontendDomain, sessionID)
-    priceID := s.fazoolTokensOptionsMapping[fazoolTokensAmount]
+    fazoolTokenProduct := s.getFazoolTokenProductFromAmount(fazoolTokensAmount)
 
     params := &stripe.CheckoutSessionParams{
       LineItems: []*stripe.CheckoutSessionLineItemParams{
         &stripe.CheckoutSessionLineItemParams{
-          // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-          Price: stripe.String(priceID),
+          Price: stripe.String(fazoolTokenProduct.stripePriceID),
           Quantity: stripe.Int64(1),
         },
       },
       Mode: stripe.String(string(stripe.CheckoutSessionModePayment)),
-    //   SuccessURL: stripe.String(s.frontendDomain + "/session/" + sessionID),
       SuccessURL: &redirectURL,
       CancelURL: &redirectURL,
       AutomaticTax: &stripe.CheckoutSessionAutomaticTaxParams{Enabled: stripe.Bool(true)},
@@ -128,4 +183,22 @@ func (s *StripeService) CreateCheckoutSession(sessionID, accountID int, fazoolTo
     }
   
     return checkoutSession.URL, nil
+}
+
+func (s *stripeWrapper) getFazoolTokenProductFromAmount(fazoolTokenAmount model.FazoolTokenAmount) *fazoolTokenProduct {
+    for _, fazoolTokenProduct := range(s.fazoolTokenProducts) {
+        if fazoolTokenProduct.fazoolTokenAmount == fazoolTokenAmount {
+            return fazoolTokenProduct
+        }
+    }
+    return nil
+}
+
+func (s *stripeWrapper) getFazoolTokenProductFromProductID(stripeProductID string) *fazoolTokenProduct {
+    for _, fazoolTokenProduct := range(s.fazoolTokenProducts) {
+        if fazoolTokenProduct.stripeProductID == stripeProductID {
+            return fazoolTokenProduct
+        }
+    }
+    return nil
 }

@@ -832,6 +832,8 @@ enum BonusVoteAmount {
 
 enum FazoolTokenAmount {
   FIVE
+  TEN
+  TWENTY_TWO
 }
 
 input SongUpdate {

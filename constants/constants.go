@@ -4,7 +4,8 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph/model"
 )
 
-// THESE SHOULD BE EXACTLY THE SMAE VALUES AS IN THE FRONTEND!!!
+// THESE SHOULD BE EXACTLY THE SAME VALUES AS IN THE FRONTEND!!!
+// https://github.com/campbelljlowman/fazool-ui/blob/master/src/constants.ts
 const (
 	SuperVoterCost = 6
 )
@@ -27,9 +28,4 @@ var BonusVoteCostMapping = map[model.BonusVoteAmount]BonusVoteCostPair{
 		NumberOfBonusVotes: 50,
 		CostInFazoolTokens: 10,
 	},
-}
-
-var FazoolTokenProductMapping = map[string]int{
-	// test
-	"prod_OPijTEhckyCHAm": 5,
 }
