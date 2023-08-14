@@ -199,7 +199,7 @@ func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, sessionID i
 		return nil, utils.LogAndReturnError("Voter ID required for setting super voter status", nil)
 	}
 	if accountID != targetAccountID {
-		return nil, utils.LogAndReturnError("You can only set your own voter super voten type", nil)
+		return nil, utils.LogAndReturnError("You can only set your own voter super voter type", nil)
 	}
 
 	accountFazoolTokens := r.accountService.GetAccountFazoolTokens(accountID)

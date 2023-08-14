@@ -33,7 +33,7 @@ type AccountService interface {
 	AddBonusVotes(accountID, bonusVotes, fazoolTokens int) *model.Account
 	AddFazoolTokens(accountID, fazoolTokens int) *model.Account
 
-	RemoveSuperVoter(accountID int, sessionID int)
+	RemoveSuperVoter(accountID int)
 	SubtractBonusVotes(accountID, bonusVotes int)
 
 	DeleteAccount(accountID int)
@@ -218,7 +218,7 @@ func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountServiceGorm) RemoveSuperVoter(accountID int, sessionID int) {
+func (a *AccountServiceGorm) RemoveSuperVoter(accountID int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 

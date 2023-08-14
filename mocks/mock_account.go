@@ -217,15 +217,15 @@ func (mr *MockAccountServiceMockRecorder) GetSuperVoterSessionsAndBonusVotes(arg
 }
 
 // RemoveSuperVoter mocks base method.
-func (m *MockAccountService) RemoveSuperVoter(arg0, arg1 int) {
+func (m *MockAccountService) RemoveSuperVoter(arg0 int) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RemoveSuperVoter", arg0, arg1)
+	m.ctrl.Call(m, "RemoveSuperVoter", arg0)
 }
 
 // RemoveSuperVoter indicates an expected call of RemoveSuperVoter.
-func (mr *MockAccountServiceMockRecorder) RemoveSuperVoter(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockAccountServiceMockRecorder) RemoveSuperVoter(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveSuperVoter", reflect.TypeOf((*MockAccountService)(nil).RemoveSuperVoter), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveSuperVoter", reflect.TypeOf((*MockAccountService)(nil).RemoveSuperVoter), arg0)
 }
 
 // SetAccountActiveSession mocks base method.

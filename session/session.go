@@ -1,6 +1,7 @@
 package session
 
 import (
+	"os"
 	"fmt"
 	"sort"
 	"sync"
@@ -11,6 +12,10 @@ import (
 	"github.com/campbelljlowman/fazool-api/streaming"
 	"github.com/campbelljlowman/fazool-api/utils"
 	"github.com/campbelljlowman/fazool-api/voter"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
+	"github.com/gin-gonic/gin"
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/slog"
 )
@@ -39,11 +44,15 @@ type SessionService interface {
 	RefreshVoterExpiration(sessionID int, voterID string)
 
 	EndSession(sessionID int)
+
+	GetActiveSessionMetrics(c *gin.Context) 
+	GetCompletedSessionMetrics(c *gin.Context)
 }
 
 type session struct {
 	sessionConfig    		*model.SessionConfig
 	sessionState    		*model.SessionState
+	sessionMetrics			*sessionMetrics					
 	channels 				[]chan *model.SessionState
 	voters         			map[string]*voter.Voter
 	streaming    			streaming.StreamingService
@@ -52,6 +61,7 @@ type session struct {
 	unusedBonusVotes     	map[string]map[int]int
 	streamingServiceUpdater	chan string
 	sessionStateMutex		*sync.Mutex
+	sessionMetricsMutex		*sync.Mutex
 	channelMutex 			*sync.Mutex
 	votersMutex    			*sync.Mutex
 	expiryMutex    			*sync.Mutex
@@ -62,6 +72,7 @@ type SessionServiceInMemory struct {
 	sessions			map[int]*session
 	allSessionsMutex 	*sync.Mutex
 	accountService 		account.AccountService
+	metricsGorm			*gorm.DB
 }
 
 //lint:file-ignore ST1011 Ignore rule for time.Duration unit in variable name
@@ -70,12 +81,25 @@ const sessionTimeoutMinutes time.Duration = 30
 const streamingServiceWatchFrequencySlowMilliseconds time.Duration = 4000
 const streamingServiceWatchFrequencyFastMilliseconds time.Duration = 250
 const voterWatchFrequencySeconds time.Duration = 5
+var emptyStructValue struct{}
 
 func NewSessionServiceInMemoryImpl(accountService account.AccountService) *SessionServiceInMemory{
+	postgresURL := os.Getenv("POSTGRES_URL")
+	slog.Debug("Databse URL", "url", postgresURL)
+
+    gormDB, err := gorm.Open(postgres.Open(postgresURL), &gorm.Config{})
+	if err != nil {
+		slog.Error("Unable to connect to database", err)
+		os.Exit(1)
+	}
+
+	gormDB.AutoMigrate(&sessionMetrics{})
+
 	sessionInMemory := &SessionServiceInMemory{
 		sessions: 			make(map[int]*session),
 		allSessionsMutex: 	&sync.Mutex{},
 		accountService: 	accountService,
+		metricsGorm: 		gormDB,
 	}
 
 	go sessionInMemory.watchSessions()
@@ -110,16 +134,26 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 		NumberOfVoters: 0,
 	}
 
+	sessionMetrics := &sessionMetrics{
+		StartedAt: 		time.Now(),
+		SessionID: 		sessionID,
+		AdminAccountID: adminAccountID,
+		superVoterMap: 	make(map[string]struct{}),
+		bonusVoterMap: 	make(map[int]struct{}),
+	}
+
 	session := session{
 		sessionConfig:    			sessionConfig,
 		sessionState: 				sessionState,
+		sessionMetrics: 			sessionMetrics,
 		channels: 					nil,
 		voters:         			make(map[string]*voter.Voter),
 		streaming:   				streaming,
 		expiresAt:      			time.Now().Add(sessionTimeoutMinutes * time.Minute),
-		unusedBonusVotes:     			make(map[string]map[int]int),
+		unusedBonusVotes:     		make(map[string]map[int]int),
 		streamingServiceUpdater:	make(chan string),
 		sessionStateMutex:			&sync.Mutex{},
+		sessionMetricsMutex: 		&sync.Mutex{},
 		channelMutex: 				&sync.Mutex{},
 		votersMutex:    			&sync.Mutex{},
 		expiryMutex:    			&sync.Mutex{},
@@ -241,6 +275,11 @@ func (s *SessionServiceInMemory) UpsertQueue(sessionID, numberOfVotes int, song 
 
 	sort.Slice(session.sessionState.Queue, func(i, j int) bool { return session.sessionState.Queue[i].Votes > session.sessionState.Queue[j].Votes })
 	session.sessionStateMutex.Unlock()
+
+	session.sessionMetricsMutex.Lock()
+	session.sessionMetrics.NumberOfVotes ++
+	session.sessionMetricsMutex.Unlock()
+
 	s.sendUpdatedState(sessionID)
 }
 
@@ -250,9 +289,27 @@ func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, voter *vote
 	s.allSessionsMutex.Unlock()
 
 	session.votersMutex.Lock()
+	_, exists := session.voters[voter.VoterID]
 	session.voters[voter.VoterID] = voter
 	numberOfVoters := len(session.voters)
 	session.votersMutex.Unlock()
+
+	if !exists {
+		session.sessionMetricsMutex.Lock()
+		session.sessionMetrics.NumberOfVoters ++ 
+		session.sessionMetricsMutex.Unlock()
+	}
+
+	if voter.VoterType == model.VoterTypeSuper {
+		session.sessionMetricsMutex.Lock()
+		_, exists := session.sessionMetrics.superVoterMap[voter.VoterID]
+		if !exists {
+			session.sessionMetrics.NumberOfSuperVoters ++ 
+			session.sessionMetrics.superVoterMap[voter.VoterID] = emptyStructValue
+		}
+		session.sessionMetricsMutex.Unlock()
+		
+	}
 
 	session.sessionStateMutex.Lock()
 	session.sessionState.NumberOfVoters = numberOfVoters
@@ -328,9 +385,13 @@ func (s *SessionServiceInMemory) PopQueue(sessionID int) error {
 		return err
 	}
 
+	session.sessionMetricsMutex.Lock()
+	session.sessionMetrics.NumberOfSongsPlayed ++ 
+	session.sessionMetricsMutex.Unlock()
+
 	delete(session.unusedBonusVotes, song.ID)
-	slog.Info("deleting bonus votes, map:")
-	slog.Info(fmt.Sprintf("%v", session.unusedBonusVotes))
+	slog.Debug("deleting bonus votes, map:")
+	slog.Debug(fmt.Sprintf("%v", session.unusedBonusVotes))
 
 	return nil
 }
@@ -378,6 +439,15 @@ func (s *SessionServiceInMemory) AddUnusedBonusVote(songID string, accountID, nu
 	}
 	session.unusedBonusVotes[songID][accountID] += numberOfVotes
 	session.bonusVoteMutex.Unlock()
+
+	session.sessionMetricsMutex.Lock()
+	session.sessionMetrics.NumberOfBonusVotesAdded += numberOfVotes
+	_, exists := session.sessionMetrics.bonusVoterMap[accountID]
+	if !exists {
+		session.sessionMetrics.NumberOfBonusVoters ++
+		session.sessionMetrics.bonusVoterMap[accountID] = emptyStructValue
+	}
+	session.sessionMetricsMutex.Unlock()
 }
 
 func (s *SessionServiceInMemory) AddChannel(sessionID int, channel chan *model.SessionState) {
@@ -435,10 +505,16 @@ func (s *SessionServiceInMemory) EndSession(sessionID int) {
 
 	s.accountService.SetAccountActiveSession(session.sessionConfig.AdminAccountID, 0)
 	s.addBackBonusVotes(session.unusedBonusVotes)
-	s.cleanupSuperVoters(sessionID, session.voters)
+	s.cleanupSuperVoters(session.voters)
+	session.sessionMetricsMutex.Lock()
+	session.sessionMetrics.EndedAt = time.Now()
+	session.sessionMetricsMutex.Unlock()
+
+	s.writeCompletedSessionMetrics(session.sessionMetrics)
 
 	expireSession(session)
 	closeChannels(session)
+
 
 	s.allSessionsMutex.Unlock()
 }

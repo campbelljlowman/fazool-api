@@ -32,6 +32,9 @@ run-docker:
 	--env POSTGRES_URL=${POSTGRES_DEV_URL_DOCKER} \
 	${UNIQUE_IMAGE_TAG}
 
+run-stripe-event-forwarder: 
+	stripe listen --forward-to localhost:8080/stripe-webhook
+
 build:
 	docker build \
 	-t ${STABLE_IMAGE_TAG} \

@@ -46,6 +46,9 @@ func InitializeRoutes() *gin.Engine {
 		stripeService.HandleStripeWebhook(c.Writer, c.Request)
 	})
 
+	router.GET("/active-session-metrics", sessionService.GetActiveSessionMetrics)
+	router.GET("/completed-session-metrics", sessionService.GetCompletedSessionMetrics)
+
 	return router
 }
 

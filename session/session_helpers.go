@@ -49,10 +49,10 @@ func (s *SessionServiceInMemory) addBackBonusVotes(unusedBonusVotesMap map[strin
 	}
 }
 
-func (s *SessionServiceInMemory) cleanupSuperVoters(sessionID int, voters map[string]*voter.Voter) {
+func (s *SessionServiceInMemory) cleanupSuperVoters(voters map[string]*voter.Voter) {
 	for _, voter := range(voters) {
 		if voter.VoterType == model.VoterTypeSuper {
-			s.accountService.RemoveSuperVoter(voter.AccountID, sessionID)
+			s.accountService.RemoveSuperVoter(voter.AccountID)
 		}
 	}
 }
