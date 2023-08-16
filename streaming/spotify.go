@@ -75,6 +75,9 @@ func (s *spotifyWrapper) TimeRemaining() (int, error) {
 		return 0, err
 	}
 
+	if status.Item == nil {
+		return 0, errors.New("currently playing song returned nil")
+	}
 	timeLeft := status.Item.SimpleTrack.Duration - status.Progress
 	return timeLeft, nil
 }
