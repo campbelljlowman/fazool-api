@@ -64,19 +64,20 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddBonusVotes          func(childComplexity int, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) int
-		AddFazoolTokens        func(childComplexity int, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) int
-		CreateAccount          func(childComplexity int, newAccount model.NewAccount) int
-		CreateSession          func(childComplexity int) int
-		DeleteAccount          func(childComplexity int, targetAccountID int) int
-		EndSession             func(childComplexity int, sessionID int) int
-		Login                  func(childComplexity int, accountLogin model.AccountLogin) int
-		SetAccountType         func(childComplexity int, targetAccountID int, accountType model.AccountType) int
-		SetPlaylist            func(childComplexity int, sessionID int, playlistID string) int
-		SetSuperVoterSession   func(childComplexity int, sessionID int, targetAccountID int) int
-		UpdateCurrentlyPlaying func(childComplexity int, sessionID int, action model.QueueAction) int
-		UpdateQueue            func(childComplexity int, sessionID int, song model.SongUpdate) int
-		UpsertSpotifyToken     func(childComplexity int, spotifyCreds model.SpotifyCreds) int
+		AddBonusVotes                 func(childComplexity int, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) int
+		AddFazoolTokens               func(childComplexity int, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) int
+		CreateAccount                 func(childComplexity int, newAccount model.NewAccount) int
+		CreateSession                 func(childComplexity int) int
+		DeleteAccount                 func(childComplexity int, targetAccountID int) int
+		EndSession                    func(childComplexity int, sessionID int) int
+		Login                         func(childComplexity int, accountLogin model.AccountLogin) int
+		RemoveSpotifyStreamingService func(childComplexity int, targetAccountID int) int
+		SetAccountType                func(childComplexity int, targetAccountID int, accountType model.AccountType) int
+		SetPlaylist                   func(childComplexity int, sessionID int, playlistID string) int
+		SetSpotifyStreamingService    func(childComplexity int, spotifyRefreshToken string) int
+		SetSuperVoterSession          func(childComplexity int, sessionID int, targetAccountID int) int
+		UpdateCurrentlyPlaying        func(childComplexity int, sessionID int, action model.QueueAction) int
+		UpdateQueue                   func(childComplexity int, sessionID int, song model.SongUpdate) int
 	}
 
 	Playlist struct {
@@ -138,7 +139,7 @@ type MutationResolver interface {
 	CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error)
 	UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionState, error)
 	UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionState, error)
-	UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error)
+	SetSpotifyStreamingService(ctx context.Context, spotifyRefreshToken string) (*model.Account, error)
 	SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error)
 	SetAccountType(ctx context.Context, targetAccountID int, accountType model.AccountType) (*model.Account, error)
 	SetSuperVoterSession(ctx context.Context, sessionID int, targetAccountID int) (*model.Account, error)
@@ -146,6 +147,7 @@ type MutationResolver interface {
 	AddFazoolTokens(ctx context.Context, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) (string, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
+	RemoveSpotifyStreamingService(ctx context.Context, targetAccountID int) (*model.Account, error)
 	DeleteAccount(ctx context.Context, targetAccountID int) (string, error)
 }
 type QueryResolver interface {
@@ -332,6 +334,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.Login(childComplexity, args["accountLogin"].(model.AccountLogin)), true
 
+	case "Mutation.removeSpotifyStreamingService":
+		if e.complexity.Mutation.RemoveSpotifyStreamingService == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeSpotifyStreamingService_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveSpotifyStreamingService(childComplexity, args["targetAccountID"].(int)), true
+
 	case "Mutation.setAccountType":
 		if e.complexity.Mutation.SetAccountType == nil {
 			break
@@ -355,6 +369,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SetPlaylist(childComplexity, args["sessionID"].(int), args["playlistID"].(string)), true
+
+	case "Mutation.setSpotifyStreamingService":
+		if e.complexity.Mutation.SetSpotifyStreamingService == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setSpotifyStreamingService_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetSpotifyStreamingService(childComplexity, args["spotifyRefreshToken"].(string)), true
 
 	case "Mutation.setSuperVoterSession":
 		if e.complexity.Mutation.SetSuperVoterSession == nil {
@@ -391,18 +417,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UpdateQueue(childComplexity, args["sessionID"].(int), args["song"].(model.SongUpdate)), true
-
-	case "Mutation.upsertSpotifyToken":
-		if e.complexity.Mutation.UpsertSpotifyToken == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_upsertSpotifyToken_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.UpsertSpotifyToken(childComplexity, args["spotifyCreds"].(model.SpotifyCreds)), true
 
 	case "Playlist.id":
 		if e.complexity.Playlist.ID == nil {
@@ -653,7 +667,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAccountLogin,
 		ec.unmarshalInputNewAccount,
 		ec.unmarshalInputSongUpdate,
-		ec.unmarshalInputSpotifyCreds,
 	)
 	first := true
 
@@ -858,11 +871,6 @@ input AccountLogin {
   password: String!
 }
 
-input SpotifyCreds {
-  accessToken:  String!
-  refreshToken: String!
-}
-
 type Query {
   sessionConfig(sessionID: Int!): SessionConfig!
   sessionState(sessionID: Int!): SessionState!
@@ -879,7 +887,7 @@ type Mutation {
 
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
-  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
+  setSpotifyStreamingService(spotifyRefreshToken: String!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
@@ -889,6 +897,7 @@ type Mutation {
   login(accountLogin: AccountLogin!): String!
 
   endSession(sessionID: Int!): String!
+  removeSpotifyStreamingService(targetAccountID: Int!): Account!
   deleteAccount(targetAccountID: Int!): String!
 }
 
@@ -1028,6 +1037,21 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_removeSpotifyStreamingService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["targetAccountID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetAccountID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["targetAccountID"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_setAccountType_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1073,6 +1097,21 @@ func (ec *executionContext) field_Mutation_setPlaylist_args(ctx context.Context,
 		}
 	}
 	args["playlistID"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setSpotifyStreamingService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["spotifyRefreshToken"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("spotifyRefreshToken"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["spotifyRefreshToken"] = arg0
 	return args, nil
 }
 
@@ -1145,21 +1184,6 @@ func (ec *executionContext) field_Mutation_updateQueue_args(ctx context.Context,
 		}
 	}
 	args["song"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_upsertSpotifyToken_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.SpotifyCreds
-	if tmp, ok := rawArgs["spotifyCreds"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("spotifyCreds"))
-		arg0, err = ec.unmarshalNSpotifyCreds2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSpotifyCreds(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["spotifyCreds"] = arg0
 	return args, nil
 }
 
@@ -2053,8 +2077,8 @@ func (ec *executionContext) fieldContext_Mutation_updateCurrentlyPlaying(ctx con
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_upsertSpotifyToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_upsertSpotifyToken(ctx, field)
+func (ec *executionContext) _Mutation_setSpotifyStreamingService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setSpotifyStreamingService(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2067,7 +2091,7 @@ func (ec *executionContext) _Mutation_upsertSpotifyToken(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpsertSpotifyToken(rctx, fc.Args["spotifyCreds"].(model.SpotifyCreds))
+		return ec.resolvers.Mutation().SetSpotifyStreamingService(rctx, fc.Args["spotifyRefreshToken"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2084,7 +2108,7 @@ func (ec *executionContext) _Mutation_upsertSpotifyToken(ctx context.Context, fi
 	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_upsertSpotifyToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_setSpotifyStreamingService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -2117,7 +2141,7 @@ func (ec *executionContext) fieldContext_Mutation_upsertSpotifyToken(ctx context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_upsertSpotifyToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_setSpotifyStreamingService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -2559,6 +2583,77 @@ func (ec *executionContext) fieldContext_Mutation_endSession(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_endSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_removeSpotifyStreamingService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_removeSpotifyStreamingService(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RemoveSpotifyStreamingService(rctx, fc.Args["targetAccountID"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Account)
+	fc.Result = res
+	return ec.marshalNAccount2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐAccount(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_removeSpotifyStreamingService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Account_id(ctx, field)
+			case "firstName":
+				return ec.fieldContext_Account_firstName(ctx, field)
+			case "lastName":
+				return ec.fieldContext_Account_lastName(ctx, field)
+			case "email":
+				return ec.fieldContext_Account_email(ctx, field)
+			case "activeSession":
+				return ec.fieldContext_Account_activeSession(ctx, field)
+			case "streamingService":
+				return ec.fieldContext_Account_streamingService(ctx, field)
+			case "fazoolTokens":
+				return ec.fieldContext_Account_fazoolTokens(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_removeSpotifyStreamingService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -6133,42 +6228,6 @@ func (ec *executionContext) unmarshalInputSongUpdate(ctx context.Context, obj in
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputSpotifyCreds(ctx context.Context, obj interface{}) (model.SpotifyCreds, error) {
-	var it model.SpotifyCreds
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"accessToken", "refreshToken"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "accessToken":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accessToken"))
-			it.AccessToken, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "refreshToken":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("refreshToken"))
-			it.RefreshToken, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -6339,10 +6398,10 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "upsertSpotifyToken":
+		case "setSpotifyStreamingService":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_upsertSpotifyToken(ctx, field)
+				return ec._Mutation_setSpotifyStreamingService(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -6406,6 +6465,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_endSession(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "removeSpotifyStreamingService":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_removeSpotifyStreamingService(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -7412,11 +7480,6 @@ func (ec *executionContext) unmarshalNSongVoteDirection2githubᚗcomᚋcampbellj
 
 func (ec *executionContext) marshalNSongVoteDirection2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSongVoteDirection(ctx context.Context, sel ast.SelectionSet, v model.SongVoteDirection) graphql.Marshaler {
 	return v
-}
-
-func (ec *executionContext) unmarshalNSpotifyCreds2githubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSpotifyCreds(ctx context.Context, v interface{}) (model.SpotifyCreds, error) {
-	res, err := ec.unmarshalInputSpotifyCreds(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

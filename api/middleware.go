@@ -21,6 +21,7 @@ func getAccountIDMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Split this up and write unit tests. Possible values for account token value, invalid token, expired token, good token
 		accountID, err := auth.GetAccountIDFromJWT(accountAuthenticationValue)
 		if err != nil {
 			slog.Debug("Account authentication passed isn't valid")
@@ -59,11 +60,11 @@ func parseAuthenticationHeader(header string, c *gin.Context) (string, error) {
 	authenticationRaw := c.Request.Header.Get(header)
 
 	if authenticationRaw == "" {
-		return "", errors.New("No authentication header passed on request")
+		return "", errors.New("no authentication header passed on request")
 	}
 
 	if len(strings.Split(authenticationRaw, " ")) != 2 {
-		return "", errors.New("Incorrect number of spaces in authentication raw string")
+		return "", errors.New("incorrect number of spaces in authentication raw string")
 	} 
 
 	authenticationValue := strings.Split(authenticationRaw, " ")[1]	

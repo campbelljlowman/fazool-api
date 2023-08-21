@@ -254,16 +254,16 @@ func (mr *MockAccountServiceMockRecorder) SetAccountType(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAccountType", reflect.TypeOf((*MockAccountService)(nil).SetAccountType), arg0, arg1)
 }
 
-// SetSpotifyRefreshToken mocks base method.
-func (m *MockAccountService) SetSpotifyRefreshToken(arg0 int, arg1 string) {
+// SetSpotifyStreamingService mocks base method.
+func (m *MockAccountService) SetSpotifyStreamingService(arg0 int, arg1 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSpotifyRefreshToken", arg0, arg1)
+	m.ctrl.Call(m, "SetSpotifyStreamingService", arg0, arg1)
 }
 
-// SetSpotifyRefreshToken indicates an expected call of SetSpotifyRefreshToken.
-func (mr *MockAccountServiceMockRecorder) SetSpotifyRefreshToken(arg0, arg1 interface{}) *gomock.Call {
+// SetSpotifyStreamingService indicates an expected call of SetSpotifyStreamingService.
+func (mr *MockAccountServiceMockRecorder) SetSpotifyStreamingService(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSpotifyRefreshToken", reflect.TypeOf((*MockAccountService)(nil).SetSpotifyRefreshToken), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSpotifyStreamingService", reflect.TypeOf((*MockAccountService)(nil).SetSpotifyStreamingService), arg0, arg1)
 }
 
 // SetSuperVoterSession mocks base method.

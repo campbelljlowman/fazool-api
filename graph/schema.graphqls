@@ -125,11 +125,6 @@ input AccountLogin {
   password: String!
 }
 
-input SpotifyCreds {
-  accessToken:  String!
-  refreshToken: String!
-}
-
 type Query {
   sessionConfig(sessionID: Int!): SessionConfig!
   sessionState(sessionID: Int!): SessionState!
@@ -146,7 +141,7 @@ type Mutation {
 
   updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
   updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
-  upsertSpotifyToken(spotifyCreds: SpotifyCreds!): Account!
+  setSpotifyStreamingService(spotifyRefreshToken: String!): Account!
   setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
   setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
   setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
@@ -156,6 +151,7 @@ type Mutation {
   login(accountLogin: AccountLogin!): String!
 
   endSession(sessionID: Int!): String!
+  removeSpotifyStreamingService(targetAccountID: Int!): Account!
   deleteAccount(targetAccountID: Int!): String!
 }
 

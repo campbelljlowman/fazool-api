@@ -1,10 +1,11 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"time"
 	"strconv"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/exp/slog"
@@ -16,7 +17,7 @@ var jwtSecretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func GenerateJWTForAccount(accountID int) (string, error){
 	if (accountID == 0) {
-		return "", fmt.Errorf("Account ID is a required field for generating JWT Token!")
+		return "", fmt.Errorf("account ID is a required field for generating JWT Token")
 	}
 
 	jwtToken := jwt.New(jwt.SigningMethodHS256)
@@ -38,10 +39,13 @@ func GenerateJWTForAccount(accountID int) (string, error){
 func GetAccountIDFromJWT(tokenString string) (int, error) {
 	jwtToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return jwtSecretKey, nil
 	})
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		return 0, fmt.Errorf("jwt is expired")
+	}
 	if err != nil {
 		return 0, err
 	}

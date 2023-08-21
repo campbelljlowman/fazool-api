@@ -77,11 +77,6 @@ type SongUpdate struct {
 	Action SongVoteAction    `json:"action"`
 }
 
-type SpotifyCreds struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-}
-
 type Voter struct {
 	ID             string    `json:"id"`
 	AccountID      int       `json:"accountID"`

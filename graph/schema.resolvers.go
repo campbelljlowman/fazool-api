@@ -29,16 +29,17 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 		return nil, utils.LogAndReturnError("You already have an active session", nil)
 	}
 
-	refreshToken := r.accountService.GetSpotifyRefreshToken(accountID)
-	if refreshToken == "" {
+	// TODO: Add logic here to make this not dependent on spotify alone
+	spotifyRefreshToken := r.accountService.GetSpotifyRefreshToken(accountID)
+	if spotifyRefreshToken == "" {
 		return nil, utils.LogAndReturnError("No spotify refresh token found", nil)
 	}
 
-	client := streaming.NewSpotifyClient(refreshToken)
+	streamingService := streaming.NewSpotifyClient(spotifyRefreshToken)
 
 	accountType := r.accountService.GetAccountType(accountID)
 
-	sessionID, err := r.sessionService.CreateSession(accountID, accountType, client)
+	sessionID, err := r.sessionService.CreateSession(accountID, accountType, streamingService)
 	if err != nil {
 		return nil, utils.LogAndReturnError("Error creating new session", err)
 	}
@@ -145,14 +146,14 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 	return r.sessionService.GetSessionState(sessionID), nil
 }
 
-// UpsertSpotifyToken is the resolver for the upsertSpotifyToken field.
-func (r *mutationResolver) UpsertSpotifyToken(ctx context.Context, spotifyCreds model.SpotifyCreds) (*model.Account, error) {
+// SetSpotifyStreamingService is the resolver for the setSpotifyStreamingService field.
+func (r *mutationResolver) SetSpotifyStreamingService(ctx context.Context, spotifyRefreshToken string) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
 	if accountID == 0 {
 		return nil, utils.LogAndReturnError("Account ID required for adding Spotify token", nil)
 	}
 
-	r.accountService.SetSpotifyRefreshToken(accountID, spotifyCreds.RefreshToken)
+	r.accountService.SetSpotifyStreamingService(accountID, spotifyRefreshToken)
 
 	return &model.Account{ID: accountID}, nil
 }
@@ -287,6 +288,16 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 	r.sessionService.EndSession(sessionID)
 
 	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
+}
+
+// RemoveSpotifyStreamingService is the resolver for the removeSpotifyStreamingService field.
+func (r *mutationResolver) RemoveSpotifyStreamingService(ctx context.Context, targetAccountID int) (*model.Account, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+	if accountID != targetAccountID {
+		return nil, utils.LogAndReturnError("you can only remove spotify on your own account", nil)
+	}
+	
+	return r.accountService.RemoveSpotifyStreamingService(targetAccountID), nil
 }
 
 // DeleteAccount is the resolver for the deleteAccount field.

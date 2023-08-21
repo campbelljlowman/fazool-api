@@ -27,7 +27,7 @@ type AccountService interface {
 	CheckIfEmailHasAccount(email string) bool
 
 	SetAccountActiveSession(accountID int, sessionID int)
-	SetSpotifyRefreshToken(accountID int, refreshToken string)
+	SetSpotifyStreamingService(accountID int, refreshToken string)
 	SetAccountType(accountID int, accountType model.AccountType) *model.Account
 	SetSuperVoterSession(accountID, sessionID, fazoolTokens int) *model.Account
 	AddBonusVotes(accountID, bonusVotes, fazoolTokens int) *model.Account
@@ -36,6 +36,7 @@ type AccountService interface {
 	RemoveSuperVoter(accountID int)
 	SubtractBonusVotes(accountID, bonusVotes int)
 
+	RemoveSpotifyStreamingService(accountID int) *model.Account
 	DeleteAccount(accountID int)
 }
 
@@ -151,6 +152,20 @@ func (a *AccountServiceGorm) GetAccountFazoolTokens(accountID int) int {
 	return fullAccount.FazoolTokens
 }
 
+func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
+	var fullAccount account
+	err := a.gorm.Where("email = ?", strings.ToLower(email)).First(&fullAccount).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			slog.Info("No account found with email", "email", strings.ToLower(email))
+			return false
+		}
+		slog.Warn("Error checking if email has an account", "error", err)
+	}
+	return true
+}
+
 func (a *AccountServiceGorm) SetAccountActiveSession(accountID int, sessionID int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
@@ -159,7 +174,7 @@ func (a *AccountServiceGorm) SetAccountActiveSession(accountID int, sessionID in
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountServiceGorm) SetSpotifyRefreshToken(accountID int, refreshToken string) {
+func (a *AccountServiceGorm) SetSpotifyStreamingService(accountID int, refreshToken string) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
 
@@ -210,14 +225,6 @@ func (a *AccountServiceGorm) AddFazoolTokens(accountID, fazoolTokens int) *model
 	return transformAccountType(fullAccount)
 }
 
-func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {
-	var fullAccount account
-	a.gorm.First(&fullAccount, accountID)
-
-	fullAccount.BonusVotes -= bonusVotes
-	a.gorm.Save(&fullAccount)
-}
-
 func (a *AccountServiceGorm) RemoveSuperVoter(accountID int) {
 	var fullAccount account
 	a.gorm.First(&fullAccount, accountID)
@@ -226,24 +233,30 @@ func (a *AccountServiceGorm) RemoveSuperVoter(accountID int) {
 	a.gorm.Save(&fullAccount)
 }
 
-func (a *AccountServiceGorm) CheckIfEmailHasAccount(email string) bool {
+func (a *AccountServiceGorm) SubtractBonusVotes(accountID, bonusVotes int) {
 	var fullAccount account
-	err := a.gorm.Where("email = ?", strings.ToLower(email)).First(&fullAccount).Error
+	a.gorm.First(&fullAccount, accountID)
 
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			slog.Info("No account found with email", "email", strings.ToLower(email))
-			return false
-		}
-		slog.Warn("Error checking if email has an account", "error", err)
-	}
-	return true
+	fullAccount.BonusVotes -= bonusVotes
+	a.gorm.Save(&fullAccount)
+}
+
+func (a *AccountServiceGorm) RemoveSpotifyStreamingService(accountID int) *model.Account {
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.SpotifyRefreshToken = ""
+	fullAccount.StreamingService = model.StreamingServiceNone
+	a.gorm.Save(&fullAccount)
+
+	return transformAccountType(fullAccount)
 }
 
 func (a *AccountServiceGorm) DeleteAccount(accountID int) {
 	var fullAccount account
 	a.gorm.Delete(&fullAccount, accountID)
 }
+
 
 func transformAccountType(fullAccount account) *model.Account {
 	accountToReturn := &model.Account{
