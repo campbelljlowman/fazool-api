@@ -47,7 +47,9 @@ func InitializeRoutes() *gin.Engine {
 	})
 
 	router.GET("/active-session-metrics", sessionService.GetActiveSessionMetrics)
+	router.GET("/asm", sessionService.GetActiveSessionMetrics)
 	router.GET("/completed-session-metrics", sessionService.GetCompletedSessionMetrics)
+	router.GET("/csm", sessionService.GetCompletedSessionMetrics)
 
 	return router
 }

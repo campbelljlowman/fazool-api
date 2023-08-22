@@ -1,6 +1,9 @@
 # GraphQL schema example
 #
 # https://gqlgen.com/getting-started/
+directive @hasVoterID on FIELD_DEFINITION
+directive @hasAccountID on FIELD_DEFINITION
+
 
 type SimpleSong {
   id:     String!
@@ -126,35 +129,35 @@ input AccountLogin {
 }
 
 type Query {
-  sessionConfig(sessionID: Int!): SessionConfig!
-  sessionState(sessionID: Int!): SessionState!
-  voter(sessionID: Int!): Voter!
+  sessionConfig(sessionID: Int!): SessionConfig! @hasVoterID
+  sessionState(sessionID: Int!): SessionState! @hasVoterID
+  voter(sessionID: Int!): Voter! @hasVoterID
   voterToken(sessionID: Int!): String!
-  account: Account!
-  playlists(sessionID: Int!): [Playlist!]
-  musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
+  account: Account! @hasAccountID
+  playlists(sessionID: Int!): [Playlist!] @hasAccountID
+  musicSearch(sessionID: Int!, query: String!): [SimpleSong!] @hasVoterID
 }
 
 type Mutation {
-  createSession: Account!
+  createSession: Account! @hasAccountID
   createAccount(newAccount: NewAccount!): String!
 
-  updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
-  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
-  setSpotifyStreamingService(spotifyRefreshToken: String!): Account!
-  setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
-  setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
-  setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
-  addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
-  addFazoolTokens(sessionID: Int!, targetAccountID: Int!, fazoolTokenAmount: FazoolTokenAmount!): String!
+  updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!  @hasVoterID
+  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState! @hasAccountID
+  setSpotifyStreamingService(spotifyRefreshToken: String!): Account! @hasAccountID
+  setPlaylist(sessionID: Int!, playlistID: String!): SessionState! @hasAccountID
+  setAccountType(targetAccountID: Int!, accountType: AccountType!): Account! @hasAccountID
+  setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account! @hasVoterID @hasAccountID
+  addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account! @hasVoterID @hasAccountID
+  addFazoolTokens(sessionID: Int!, targetAccountID: Int!, fazoolTokenAmount: FazoolTokenAmount!): String! @hasAccountID
 
   login(accountLogin: AccountLogin!): String!
 
-  endSession(sessionID: Int!): String!
-  removeSpotifyStreamingService(targetAccountID: Int!): Account!
-  deleteAccount(targetAccountID: Int!): String!
+  endSession(sessionID: Int!): String! @hasAccountID
+  removeSpotifyStreamingService(targetAccountID: Int!): Account! @hasAccountID
+  deleteAccount(targetAccountID: Int!): String! @hasAccountID
 }
 
 type Subscription {
-  subscribeSessionState(sessionID: Int!): SessionState!
+  subscribeSessionState(sessionID: Int!): SessionState! @hasVoterID
 }

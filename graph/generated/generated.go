@@ -43,6 +43,8 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	HasAccountID func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	HasVoterID   func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -747,6 +749,9 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `# GraphQL schema example
 #
 # https://gqlgen.com/getting-started/
+directive @hasVoterID on FIELD_DEFINITION
+directive @hasAccountID on FIELD_DEFINITION
+
 
 type SimpleSong {
   id:     String!
@@ -872,37 +877,37 @@ input AccountLogin {
 }
 
 type Query {
-  sessionConfig(sessionID: Int!): SessionConfig!
-  sessionState(sessionID: Int!): SessionState!
-  voter(sessionID: Int!): Voter!
+  sessionConfig(sessionID: Int!): SessionConfig! @hasVoterID
+  sessionState(sessionID: Int!): SessionState! @hasVoterID
+  voter(sessionID: Int!): Voter! @hasVoterID
   voterToken(sessionID: Int!): String!
-  account: Account!
-  playlists(sessionID: Int!): [Playlist!]
-  musicSearch(sessionID: Int!, query: String!): [SimpleSong!]
+  account: Account! @hasAccountID
+  playlists(sessionID: Int!): [Playlist!] @hasAccountID
+  musicSearch(sessionID: Int!, query: String!): [SimpleSong!] @hasVoterID
 }
 
 type Mutation {
-  createSession: Account!
+  createSession: Account! @hasAccountID
   createAccount(newAccount: NewAccount!): String!
 
-  updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!
-  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState!
-  setSpotifyStreamingService(spotifyRefreshToken: String!): Account!
-  setPlaylist(sessionID: Int!, playlistID: String!): SessionState!
-  setAccountType(targetAccountID: Int!, accountType: AccountType!): Account!
-  setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account!
-  addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account!
-  addFazoolTokens(sessionID: Int!, targetAccountID: Int!, fazoolTokenAmount: FazoolTokenAmount!): String!
+  updateQueue(sessionID: Int!, song: SongUpdate!): SessionState!  @hasVoterID
+  updateCurrentlyPlaying(sessionID: Int!, action: QueueAction!): SessionState! @hasAccountID
+  setSpotifyStreamingService(spotifyRefreshToken: String!): Account! @hasAccountID
+  setPlaylist(sessionID: Int!, playlistID: String!): SessionState! @hasAccountID
+  setAccountType(targetAccountID: Int!, accountType: AccountType!): Account! @hasAccountID
+  setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account! @hasVoterID @hasAccountID
+  addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account! @hasVoterID @hasAccountID
+  addFazoolTokens(sessionID: Int!, targetAccountID: Int!, fazoolTokenAmount: FazoolTokenAmount!): String! @hasAccountID
 
   login(accountLogin: AccountLogin!): String!
 
-  endSession(sessionID: Int!): String!
-  removeSpotifyStreamingService(targetAccountID: Int!): Account!
-  deleteAccount(targetAccountID: Int!): String!
+  endSession(sessionID: Int!): String! @hasAccountID
+  removeSpotifyStreamingService(targetAccountID: Int!): Account! @hasAccountID
+  deleteAccount(targetAccountID: Int!): String! @hasAccountID
 }
 
 type Subscription {
-  subscribeSessionState(sessionID: Int!): SessionState!
+  subscribeSessionState(sessionID: Int!): SessionState! @hasVoterID
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1849,8 +1854,28 @@ func (ec *executionContext) _Mutation_createSession(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateSession(rctx)
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CreateSession(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Account); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Account`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1964,8 +1989,28 @@ func (ec *executionContext) _Mutation_updateQueue(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateQueue(rctx, fc.Args["sessionID"].(int), fc.Args["song"].(model.SongUpdate))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().UpdateQueue(rctx, fc.Args["sessionID"].(int), fc.Args["song"].(model.SongUpdate))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.SessionState); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.SessionState`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2027,8 +2072,28 @@ func (ec *executionContext) _Mutation_updateCurrentlyPlaying(ctx context.Context
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateCurrentlyPlaying(rctx, fc.Args["sessionID"].(int), fc.Args["action"].(model.QueueAction))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().UpdateCurrentlyPlaying(rctx, fc.Args["sessionID"].(int), fc.Args["action"].(model.QueueAction))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.SessionState); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.SessionState`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2090,8 +2155,28 @@ func (ec *executionContext) _Mutation_setSpotifyStreamingService(ctx context.Con
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetSpotifyStreamingService(rctx, fc.Args["spotifyRefreshToken"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetSpotifyStreamingService(rctx, fc.Args["spotifyRefreshToken"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Account); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Account`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2161,8 +2246,28 @@ func (ec *executionContext) _Mutation_setPlaylist(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetPlaylist(rctx, fc.Args["sessionID"].(int), fc.Args["playlistID"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetPlaylist(rctx, fc.Args["sessionID"].(int), fc.Args["playlistID"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.SessionState); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.SessionState`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2224,8 +2329,28 @@ func (ec *executionContext) _Mutation_setAccountType(ctx context.Context, field 
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetAccountType(rctx, fc.Args["targetAccountID"].(int), fc.Args["accountType"].(model.AccountType))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetAccountType(rctx, fc.Args["targetAccountID"].(int), fc.Args["accountType"].(model.AccountType))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Account); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Account`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2295,8 +2420,34 @@ func (ec *executionContext) _Mutation_setSuperVoterSession(ctx context.Context, 
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetSuperVoterSession(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetSuperVoterSession(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+		directive2 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive1)
+		}
+
+		tmp, err := directive2(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Account); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Account`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2366,8 +2517,34 @@ func (ec *executionContext) _Mutation_addBonusVotes(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddBonusVotes(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int), fc.Args["bonusVoteAmount"].(model.BonusVoteAmount))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().AddBonusVotes(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int), fc.Args["bonusVoteAmount"].(model.BonusVoteAmount))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+		directive2 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive1)
+		}
+
+		tmp, err := directive2(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Account); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Account`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2437,8 +2614,28 @@ func (ec *executionContext) _Mutation_addFazoolTokens(ctx context.Context, field
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddFazoolTokens(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int), fc.Args["fazoolTokenAmount"].(model.FazoolTokenAmount))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().AddFazoolTokens(rctx, fc.Args["sessionID"].(int), fc.Args["targetAccountID"].(int), fc.Args["fazoolTokenAmount"].(model.FazoolTokenAmount))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(string); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2547,8 +2744,28 @@ func (ec *executionContext) _Mutation_endSession(ctx context.Context, field grap
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().EndSession(rctx, fc.Args["sessionID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().EndSession(rctx, fc.Args["sessionID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(string); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2602,8 +2819,28 @@ func (ec *executionContext) _Mutation_removeSpotifyStreamingService(ctx context.
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().RemoveSpotifyStreamingService(rctx, fc.Args["targetAccountID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().RemoveSpotifyStreamingService(rctx, fc.Args["targetAccountID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Account); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Account`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2673,8 +2910,28 @@ func (ec *executionContext) _Mutation_deleteAccount(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteAccount(rctx, fc.Args["targetAccountID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().DeleteAccount(rctx, fc.Args["targetAccountID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(string); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2860,8 +3117,28 @@ func (ec *executionContext) _Query_sessionConfig(ctx context.Context, field grap
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().SessionConfig(rctx, fc.Args["sessionID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().SessionConfig(rctx, fc.Args["sessionID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.SessionConfig); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.SessionConfig`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2923,8 +3200,28 @@ func (ec *executionContext) _Query_sessionState(ctx context.Context, field graph
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().SessionState(rctx, fc.Args["sessionID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().SessionState(rctx, fc.Args["sessionID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.SessionState); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.SessionState`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2986,8 +3283,28 @@ func (ec *executionContext) _Query_voter(ctx context.Context, field graphql.Coll
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Voter(rctx, fc.Args["sessionID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Voter(rctx, fc.Args["sessionID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Voter); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Voter`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3110,8 +3427,28 @@ func (ec *executionContext) _Query_account(ctx context.Context, field graphql.Co
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Account(rctx)
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Account(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Account); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.Account`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3170,8 +3507,28 @@ func (ec *executionContext) _Query_playlists(ctx context.Context, field graphql.
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Playlists(rctx, fc.Args["sessionID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Playlists(rctx, fc.Args["sessionID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Playlist); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/campbelljlowman/fazool-api/graph/model.Playlist`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3230,8 +3587,28 @@ func (ec *executionContext) _Query_musicSearch(ctx context.Context, field graphq
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().MusicSearch(rctx, fc.Args["sessionID"].(int), fc.Args["query"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().MusicSearch(rctx, fc.Args["sessionID"].(int), fc.Args["query"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.SimpleSong); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/campbelljlowman/fazool-api/graph/model.SimpleSong`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3972,8 +4349,28 @@ func (ec *executionContext) _Subscription_subscribeSessionState(ctx context.Cont
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().SubscribeSessionState(rctx, fc.Args["sessionID"].(int))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Subscription().SubscribeSessionState(rctx, fc.Args["sessionID"].(int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasVoterID == nil {
+				return nil, errors.New("directive hasVoterID is not implemented")
+			}
+			return ec.directives.HasVoterID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(<-chan *model.SessionState); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be <-chan *github.com/campbelljlowman/fazool-api/graph/model.SessionState`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

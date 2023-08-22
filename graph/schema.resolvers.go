@@ -20,9 +20,6 @@ import (
 // CreateSession is the resolver for the createSession field.
 func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return nil, utils.LogAndReturnError("Account ID is required to create session", nil)
-	}
 
 	sessionID := r.accountService.GetAccountActiveSession(accountID)
 	if sessionID != 0 {
@@ -91,9 +88,6 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song model.SongUpdate) (*model.SessionState, error) {
 	slog.Debug("Updating queue", "sessionID", sessionID, "song", song.Title)
 	voterID, _ := ctx.Value("voterID").(string)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID is required to update queue", nil)
-	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
@@ -125,9 +119,6 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 // UpdateCurrentlyPlaying is the resolver for the updateCurrentlyPlaying field.
 func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID int, action model.QueueAction) (*model.SessionState, error) {
 	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return nil, utils.LogAndReturnError("Account ID is required to update currently playing song", nil)
-	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
@@ -149,9 +140,6 @@ func (r *mutationResolver) UpdateCurrentlyPlaying(ctx context.Context, sessionID
 // SetSpotifyStreamingService is the resolver for the setSpotifyStreamingService field.
 func (r *mutationResolver) SetSpotifyStreamingService(ctx context.Context, spotifyRefreshToken string) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return nil, utils.LogAndReturnError("Account ID required for adding Spotify token", nil)
-	}
 
 	r.accountService.SetSpotifyStreamingService(accountID, spotifyRefreshToken)
 
@@ -161,9 +149,6 @@ func (r *mutationResolver) SetSpotifyStreamingService(ctx context.Context, spoti
 // SetPlaylist is the resolver for the setPlaylist field.
 func (r *mutationResolver) SetPlaylist(ctx context.Context, sessionID int, playlistID string) (*model.SessionState, error) {
 	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return nil, utils.LogAndReturnError("Account ID required for setting playlist", nil)
-	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
@@ -196,9 +181,6 @@ func (r *mutationResolver) SetAccountType(ctx context.Context, targetAccountID i
 func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, sessionID int, targetAccountID int) (*model.Account, error) {
 	voterID, _ := ctx.Value("voterID").(string)
 	accountID, _ := ctx.Value("accountID").(int)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID required for setting super voter status", nil)
-	}
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("You can only set your own voter super voter type", nil)
 	}
@@ -222,9 +204,6 @@ func (r *mutationResolver) SetSuperVoterSession(ctx context.Context, sessionID i
 func (r *mutationResolver) AddBonusVotes(ctx context.Context, sessionID int, targetAccountID int, bonusVoteAmount model.BonusVoteAmount) (*model.Account, error) {
 	voterID, _ := ctx.Value("voterID").(string)
 	accountID, _ := ctx.Value("accountID").(int)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID required for setting super voter status", nil)
-	}
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("You can only set your own bonus votes!", nil)
 	}
@@ -272,9 +251,6 @@ func (r *mutationResolver) Login(ctx context.Context, accountLogin model.Account
 // EndSession is the resolver for the endSession field.
 func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (string, error) {
 	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return "", utils.LogAndReturnError("Account ID is required to end session", nil)
-	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
@@ -296,7 +272,7 @@ func (r *mutationResolver) RemoveSpotifyStreamingService(ctx context.Context, ta
 	if accountID != targetAccountID {
 		return nil, utils.LogAndReturnError("you can only remove spotify on your own account", nil)
 	}
-	
+
 	return r.accountService.RemoveSpotifyStreamingService(targetAccountID), nil
 }
 
@@ -312,11 +288,6 @@ func (r *mutationResolver) DeleteAccount(ctx context.Context, targetAccountID in
 
 // SessionConfig is the resolver for the sessionConfig field.
 func (r *queryResolver) SessionConfig(ctx context.Context, sessionID int) (*model.SessionConfig, error) {
-	voterID, _ := ctx.Value("voterID").(string)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID is required to get session config", nil)
-	}
-
 	exists := r.sessionService.DoesSessionExist(sessionID)
 
 	if !exists {
@@ -328,11 +299,6 @@ func (r *queryResolver) SessionConfig(ctx context.Context, sessionID int) (*mode
 
 // SessionState is the resolver for the sessionState field.
 func (r *queryResolver) SessionState(ctx context.Context, sessionID int) (*model.SessionState, error) {
-	voterID, _ := ctx.Value("voterID").(string)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID is required to get session state", nil)
-	}
-
 	exists := r.sessionService.DoesSessionExist(sessionID)
 
 	if !exists {
@@ -346,9 +312,6 @@ func (r *queryResolver) SessionState(ctx context.Context, sessionID int) (*model
 func (r *queryResolver) Voter(ctx context.Context, sessionID int) (*model.Voter, error) {
 	voterID, _ := ctx.Value("voterID").(string)
 	accountID, _ := ctx.Value("accountID").(int)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID required for getting voter", nil)
-	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
@@ -390,9 +353,6 @@ func (r *queryResolver) VoterToken(ctx context.Context, sessionID int) (string, 
 // Account is the resolver for the account field.
 func (r *queryResolver) Account(ctx context.Context) (*model.Account, error) {
 	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return nil, utils.LogAndReturnError("No account found on token for getting account", nil)
-	}
 
 	account := r.accountService.GetAccountFromID(accountID)
 
@@ -402,9 +362,6 @@ func (r *queryResolver) Account(ctx context.Context) (*model.Account, error) {
 // Playlists is the resolver for the playlists field.
 func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.Playlist, error) {
 	accountID, _ := ctx.Value("accountID").(int)
-	if accountID == 0 {
-		return nil, utils.LogAndReturnError("accountID required for getting playlists", nil)
-	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
@@ -426,9 +383,6 @@ func (r *queryResolver) Playlists(ctx context.Context, sessionID int) ([]*model.
 // MusicSearch is the resolver for the musicSearch field.
 func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query string) ([]*model.SimpleSong, error) {
 	voterID, _ := ctx.Value("voterID").(string)
-	if voterID == "" {
-		return nil, utils.LogAndReturnError("Voter ID required for searching for music", nil)
-	}
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {
@@ -451,10 +405,6 @@ func (r *queryResolver) MusicSearch(ctx context.Context, sessionID int, query st
 // SubscribeSessionState is the resolver for the subscribeSessionState field.
 func (r *subscriptionResolver) SubscribeSessionState(ctx context.Context, sessionID int) (<-chan *model.SessionState, error) {
 	slog.Debug("Creating new subscription")
-	// voterID, _ := ctx.Value("voterID").(string)
-	// if voterID == "" {
-	// 	return nil, utils.LogAndReturnError("Voter ID is required to subscribe to session state", nil)
-	// }
 
 	exists := r.sessionService.DoesSessionExist(sessionID)
 	if !exists {

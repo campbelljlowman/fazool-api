@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/campbelljlowman/fazool-api/graph/generated"
+	"github.com/campbelljlowman/fazool-api/utils"
 	"golang.org/x/exp/slog"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
@@ -15,7 +17,26 @@ import (
 )
 
 func NewGraphQLServer(resolver *Resolver) *handler.Server {
-	srv := handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
+	config := generated.Config{Resolvers: resolver}
+	config.Directives.HasVoterID = func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
+		voterID, _ := ctx.Value("voterID").(string)
+		if voterID == "" {
+			return nil, utils.LogAndReturnError("no voter ID passed to resolver that requires voter ID", nil)
+		}
+
+		return next(ctx)
+	}
+
+	config.Directives.HasAccountID = func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
+		accountID, _ := ctx.Value("accountID").(int)
+		if accountID == 0 {
+			return nil, utils.LogAndReturnError("no account ID passed to resolver that requires account ID", nil)
+		}
+
+		return next(ctx)
+	}
+
+	srv := handler.New(generated.NewExecutableSchema(config))
 	
 	srv.AddTransport(&transport.Websocket{
 		Upgrader: websocket.Upgrader{

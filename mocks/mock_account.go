@@ -216,6 +216,20 @@ func (mr *MockAccountServiceMockRecorder) GetSuperVoterSessionsAndBonusVotes(arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSuperVoterSessionsAndBonusVotes", reflect.TypeOf((*MockAccountService)(nil).GetSuperVoterSessionsAndBonusVotes), arg0)
 }
 
+// RemoveSpotifyStreamingService mocks base method.
+func (m *MockAccountService) RemoveSpotifyStreamingService(arg0 int) *model.Account {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveSpotifyStreamingService", arg0)
+	ret0, _ := ret[0].(*model.Account)
+	return ret0
+}
+
+// RemoveSpotifyStreamingService indicates an expected call of RemoveSpotifyStreamingService.
+func (mr *MockAccountServiceMockRecorder) RemoveSpotifyStreamingService(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveSpotifyStreamingService", reflect.TypeOf((*MockAccountService)(nil).RemoveSpotifyStreamingService), arg0)
+}
+
 // RemoveSuperVoter mocks base method.
 func (m *MockAccountService) RemoveSuperVoter(arg0 int) {
 	m.ctrl.T.Helper()
