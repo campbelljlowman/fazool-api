@@ -28,6 +28,11 @@ func NewGraphQLServer(resolver *Resolver) *handler.Server {
 	}
 
 	config.Directives.HasAccountID = func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
+		accountTokenIsExpired, _ := ctx.Value("accountTokenIsExpired").(bool)
+		if accountTokenIsExpired {
+			return nil, utils.LogAndReturnError("account token is expired", nil)
+		}
+
 		accountID, _ := ctx.Value("accountID").(int)
 		if accountID == 0 {
 			return nil, utils.LogAndReturnError("no account ID passed to resolver that requires account ID", nil)

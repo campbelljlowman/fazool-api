@@ -1,6 +1,7 @@
 package api
 
 import (
+	"os"
 	"net/http"
 
 
@@ -8,6 +9,7 @@ import (
 	"github.com/campbelljlowman/fazool-api/graph"
 	"github.com/campbelljlowman/fazool-api/session"
 	"github.com/campbelljlowman/fazool-api/payments"
+	"github.com/campbelljlowman/fazool-api/auth"
 
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-contrib/cors"
@@ -16,10 +18,13 @@ import (
 
 func InitializeRoutes() *gin.Engine {
 	router := gin.Default()
+    frontendDomain := os.Getenv("FRONTEND_DOMAIN")
+
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowOrigins = append(corsConfig.AllowOrigins, frontendDomain)
 	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "AccountAuthentication")
 	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "VoterAuthentication")
+	corsConfig.AllowCredentials = true
 	router.Use(cors.New(corsConfig))
 	router.Use(getAccountIDMiddleware())
 	router.Use(getVoterIDMiddleware())
@@ -41,6 +46,9 @@ func InitializeRoutes() *gin.Engine {
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
 	})
+
+	router.GET("refresh-token", auth.GetRefreshToken)
+	router.POST("refresh-token", auth.RefreshToken)
 
 	router.POST("/stripe-webhook", func(c *gin.Context) {
 		stripeService.HandleStripeWebhook(c.Writer, c.Request)

@@ -1,21 +1,34 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/campbelljlowman/fazool-api/utils"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/exp/slog"
 )
 
-const accountTokenDurationMinutes time.Duration = 30
+const accountAccessTokenDurationMinutes time.Duration = 30
+const accountRefreshTokenDurationHours time.Duration = 168 // 24 * 7
+const refreshTokenCookieName string = "fazool_refresh_token"
+const refreshTokenCookieMaxAgeSeconds int = 608400 // 60 seconds * 60 minutes * 24 hours * 7 days + 3600 seconds 
 
 var jwtSecretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
-func GenerateJWTForAccount(accountID int) (string, error){
+func GenerateJWTAccessTokenForAccount(accountID int) (string, error){
+	accessToken, err := generateJWTForAccount(accountID, accountAccessTokenDurationMinutes * time.Minute) 
+	if err != nil {
+		return "", err
+	}
+
+	return accessToken, nil
+}
+
+func generateJWTForAccount(accountID int, duractionValid time.Duration) (string, error){
 	if (accountID == 0) {
 		return "", fmt.Errorf("account ID is a required field for generating JWT Token")
 	}
@@ -24,7 +37,7 @@ func GenerateJWTForAccount(accountID int) (string, error){
 
 	jwtClaims := jwtToken.Claims.(jwt.MapClaims)
 	jwtClaims["iat"] = time.Now().Unix()
-	jwtClaims["exp"] = time.Now().Add(accountTokenDurationMinutes * time.Minute).Unix()
+	jwtClaims["exp"] = time.Now().Add(duractionValid).Unix()
 	jwtClaims["iss"] = "fazool-api"
 	jwtClaims["accountID"] = accountID
 
@@ -43,9 +56,6 @@ func GetAccountIDFromJWT(tokenString string) (int, error) {
 		}
 		return jwtSecretKey, nil
 	})
-	if errors.Is(err, jwt.ErrTokenExpired) {
-		return 0, fmt.Errorf("jwt is expired")
-	}
 	if err != nil {
 		return 0, err
 	}
@@ -64,4 +74,46 @@ func GetAccountIDFromJWT(tokenString string) (int, error) {
 	return accountID, nil
 }
 
-//TODO: Figure out how to refresh tokens
+func GetRefreshToken(c *gin.Context) {
+	accoundID, _ := c.Request.Context().Value("accountID").(int)
+	if accoundID == 0 {
+		c.AbortWithError(403, fmt.Errorf("account ID couldn't be parsed from request: %v", accoundID))
+		return
+	}
+
+	refreshToken, err := generateJWTForAccount(accoundID, accountRefreshTokenDurationHours * time.Hour)
+	if err != nil {
+		utils.LogAndReturnError("error generating refresh token", err)
+		c.Abort()
+	}
+
+	frontendDomain := os.Getenv("FRONTEND_DOMAIN")
+	c.SetCookie(refreshTokenCookieName, refreshToken, refreshTokenCookieMaxAgeSeconds, "/", frontendDomain, true, true)
+}
+
+func RefreshToken(c *gin.Context) {
+	refreshToken, err := c.Cookie(refreshTokenCookieName)
+	if err != nil {
+		utils.LogAndReturnError("error getting refresh token cookie", err)
+		c.Abort()
+		return
+	}
+
+	accountID, err := GetAccountIDFromJWT(refreshToken)
+	if err != nil {
+		utils.LogAndReturnError("error getting accound ID from refresh token", err)
+		c.Abort()
+		return
+	}
+
+	slog.Debug("refreshing access token", "account", accountID)
+
+	accessToken, err := generateJWTForAccount(accountID, accountAccessTokenDurationMinutes * time.Minute)
+	if err != nil {
+		utils.LogAndReturnError("error generating new access token", err)
+		c.Abort()
+		return
+	}
+
+	c.String(200, accessToken)
+}

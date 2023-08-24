@@ -76,12 +76,12 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 
 	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, newAccount.PhoneNumber, passwordHash, accountType, 0, streamingService)
 
-	jwtToken, err := auth.GenerateJWTForAccount(accountID)
+	jwtAccessToken, err := auth.GenerateJWTAccessTokenForAccount(accountID)
 	if err != nil {
 		return "", utils.LogAndReturnError("Error creating account token", err)
 	}
 
-	return jwtToken, nil
+	return jwtAccessToken, nil
 }
 
 // UpdateQueue is the resolver for the updateQueue field.
@@ -240,12 +240,12 @@ func (r *mutationResolver) Login(ctx context.Context, accountLogin model.Account
 		return "", utils.LogAndReturnError("Invalid Login Credentials!", nil)
 	}
 
-	jwtToken, err := auth.GenerateJWTForAccount(accountID)
+	jwtAccessToken, err := auth.GenerateJWTAccessTokenForAccount(accountID)
 	if err != nil {
-		return "", utils.LogAndReturnError("Error creating account token", err)
+		return "", utils.LogAndReturnError("Error creating account access token", err)
 	}
 
-	return jwtToken, nil
+	return jwtAccessToken, nil
 }
 
 // EndSession is the resolver for the endSession field.

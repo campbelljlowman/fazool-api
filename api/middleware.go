@@ -8,6 +8,7 @@ import (
 	"golang.org/x/exp/slog"
 	
 	"github.com/campbelljlowman/fazool-api/auth"
+	"github.com/golang-jwt/jwt/v4"
 
 	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
@@ -18,18 +19,25 @@ func getAccountIDMiddleware() gin.HandlerFunc {
 		accountAuthenticationValue, err := parseAuthenticationHeader("AccountAuthentication", c)
 		if err != nil {
 			slog.Debug("Account authentication header wasn't parsed", "error", err)
+			c.Next()
 			return
 		}
 
-		// Split this up and write unit tests. Possible values for account token value, invalid token, expired token, good token
 		accountID, err := auth.GetAccountIDFromJWT(accountAuthenticationValue)
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			ctx1 := context.WithValue(c.Request.Context(), "accountTokenIsExpired", true)
+			c.Request = c.Request.WithContext(ctx1)
+			return
+		}
 		if err != nil {
 			slog.Debug("Account authentication passed isn't valid")
+			c.Next()
 			return
 		}
 
 		ctx1 := context.WithValue(c.Request.Context(), "accountID", accountID)
 		c.Request = c.Request.WithContext(ctx1)
+
 		c.Next()
 	}
 }
@@ -39,12 +47,14 @@ func getVoterIDMiddleware() gin.HandlerFunc {
 	voterAuthenticationValue, err := parseAuthenticationHeader("VoterAuthentication", c)
 	if err != nil {
 		slog.Debug("Voter authentication header wasn't parsed", "error", err)
+		c.Next()
 		return
 	}
 
 	_, err = uuid.Parse(voterAuthenticationValue)
 	if err != nil {
 		slog.Debug("Voter authentication passed isn't a valid")
+		c.Next()
 		return
 	}
 
