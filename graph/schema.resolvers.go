@@ -111,7 +111,7 @@ func (r *mutationResolver) UpdateQueue(ctx context.Context, sessionID int, song 
 
 	r.sessionService.RefreshVoterExpiration(sessionID, voterID)
 	r.sessionService.UpsertVoterInSession(sessionID, existingVoter)
-	r.sessionService.UpsertQueue(sessionID, numberOfVotes, song)
+	r.sessionService.UpsertSongInQueue(sessionID, numberOfVotes, song)
 
 	return r.sessionService.GetSessionState(sessionID), nil
 }
@@ -264,6 +264,11 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 	r.sessionService.EndSession(sessionID)
 
 	return fmt.Sprintf("Session %v successfully deleted", sessionID), nil
+}
+
+// RemoveSongFromQueue is the resolver for the removeSongFromQueue field.
+func (r *mutationResolver) RemoveSongFromQueue(ctx context.Context, sessionID int, songID string) (string, error) {
+	panic(fmt.Errorf("not implemented: RemoveSongFromQueue - removeSongFromQueue"))
 }
 
 // RemoveSpotifyStreamingService is the resolver for the removeSpotifyStreamingService field.

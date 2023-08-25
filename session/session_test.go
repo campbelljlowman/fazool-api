@@ -180,7 +180,7 @@ func TestSearchForSongs(t *testing.T) {
 var title = "the boogie"
 var artist = "charles"
 var image = "Image url"
-var UpsertQueueTests = []struct {
+var UpsertSongInQueueTests = []struct {
 	songToQueue				*model.SongUpdate
 	votesToAdd 				int
 	expectedNumberOfVotes 	int
@@ -198,21 +198,21 @@ var UpsertQueueTests = []struct {
 		}, 2, 3,
 	},
 }
-func TestUpsertQueue(t *testing.T) {
+func TestUpsertSongInQueue(t *testing.T) {
 	_, mockStreamingService, sessionService := newTestingServices(t)
 	sessionID, err := sessionService.CreateSession(123, model.AccountTypeFree, mockStreamingService)
 	if err != nil {
 		t.Errorf("CreateSession() failed! Got an error: %v", err)
 	}
 
-	for _, testCase := range(UpsertQueueTests) {
-		sessionService.UpsertQueue(sessionID, testCase.votesToAdd, *testCase.songToQueue)
+	for _, testCase := range(UpsertSongInQueueTests) {
+		sessionService.UpsertSongInQueue(sessionID, testCase.votesToAdd, *testCase.songToQueue)
 
 		sessionState := sessionService.GetSessionState(sessionID)
 		index := slices.IndexFunc(sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == testCase.songToQueue.ID })
 		songInQueue := sessionState.Queue[index]
 		if songInQueue.Votes != testCase.expectedNumberOfVotes {
-			t.Errorf("UpsertQueue() failed! Wanted votes %v, got: %v", testCase.expectedNumberOfVotes, songInQueue.Votes)	
+			t.Errorf("UpsertSongInQueue() failed! Wanted votes %v, got: %v", testCase.expectedNumberOfVotes, songInQueue.Votes)	
 		}
 	}
 }

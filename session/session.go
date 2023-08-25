@@ -32,7 +32,7 @@ type SessionService interface {
 	DoesSessionExist(sessionID int) bool
 	SearchForSongs(sessionID int, query string) ([]*model.SimpleSong, error)
 
-	UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate)
+	UpsertSongInQueue(sessionID, numberOfVotes int, song model.SongUpdate)
 	UpsertVoterInSession(sessionID int, voter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction) error
 	UpdateVoterAccount(sessionID, accountID int, voter *voter.Voter) *voter.Voter
@@ -249,7 +249,7 @@ func (s *SessionServiceInMemory) SearchForSongs(sessionID int, query string) ([]
 	return session.streaming.Search(query)
 }
 
-func (s *SessionServiceInMemory) UpsertQueue(sessionID, numberOfVotes int, song model.SongUpdate) {
+func (s *SessionServiceInMemory) UpsertSongInQueue(sessionID, numberOfVotes int, song model.SongUpdate) {
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
 	s.allSessionsMutex.Unlock()

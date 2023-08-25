@@ -73,6 +73,7 @@ type ComplexityRoot struct {
 		DeleteAccount                 func(childComplexity int, targetAccountID int) int
 		EndSession                    func(childComplexity int, sessionID int) int
 		Login                         func(childComplexity int, accountLogin model.AccountLogin) int
+		RemoveSongFromQueue           func(childComplexity int, sessionID int, songID string) int
 		RemoveSpotifyStreamingService func(childComplexity int, targetAccountID int) int
 		SetAccountType                func(childComplexity int, targetAccountID int, accountType model.AccountType) int
 		SetPlaylist                   func(childComplexity int, sessionID int, playlistID string) int
@@ -149,6 +150,7 @@ type MutationResolver interface {
 	AddFazoolTokens(ctx context.Context, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) (string, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
+	RemoveSongFromQueue(ctx context.Context, sessionID int, songID string) (string, error)
 	RemoveSpotifyStreamingService(ctx context.Context, targetAccountID int) (*model.Account, error)
 	DeleteAccount(ctx context.Context, targetAccountID int) (string, error)
 }
@@ -335,6 +337,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Login(childComplexity, args["accountLogin"].(model.AccountLogin)), true
+
+	case "Mutation.removeSongFromQueue":
+		if e.complexity.Mutation.RemoveSongFromQueue == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeSongFromQueue_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveSongFromQueue(childComplexity, args["sessionID"].(int), args["songID"].(string)), true
 
 	case "Mutation.removeSpotifyStreamingService":
 		if e.complexity.Mutation.RemoveSpotifyStreamingService == nil {
@@ -902,6 +916,7 @@ type Mutation {
   login(accountLogin: AccountLogin!): String!
 
   endSession(sessionID: Int!): String! @hasAccountID
+  removeSongFromQueue(sessionID: Int!, songID: String!): String! @hasAccountID
   removeSpotifyStreamingService(targetAccountID: Int!): Account! @hasAccountID
   deleteAccount(targetAccountID: Int!): String! @hasAccountID
 }
@@ -1039,6 +1054,30 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		}
 	}
 	args["accountLogin"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_removeSongFromQueue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["sessionID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionID"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sessionID"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["songID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("songID"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["songID"] = arg1
 	return args, nil
 }
 
@@ -2800,6 +2839,81 @@ func (ec *executionContext) fieldContext_Mutation_endSession(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_endSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_removeSongFromQueue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_removeSongFromQueue(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().RemoveSongFromQueue(rctx, fc.Args["sessionID"].(int), fc.Args["songID"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.HasAccountID == nil {
+				return nil, errors.New("directive hasAccountID is not implemented")
+			}
+			return ec.directives.HasAccountID(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(string); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_removeSongFromQueue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_removeSongFromQueue_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -6862,6 +6976,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_endSession(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "removeSongFromQueue":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_removeSongFromQueue(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
