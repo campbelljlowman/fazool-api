@@ -267,8 +267,21 @@ func (r *mutationResolver) EndSession(ctx context.Context, sessionID int) (strin
 }
 
 // RemoveSongFromQueue is the resolver for the removeSongFromQueue field.
-func (r *mutationResolver) RemoveSongFromQueue(ctx context.Context, sessionID int, songID string) (string, error) {
-	panic(fmt.Errorf("not implemented: RemoveSongFromQueue - removeSongFromQueue"))
+func (r *mutationResolver) RemoveSongFromQueue(ctx context.Context, sessionID int, songID string) (*model.SessionState, error) {
+	accountID, _ := ctx.Value("accountID").(int)
+
+	exists := r.sessionService.DoesSessionExist(sessionID)
+	if !exists {
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Session %v not found!", sessionID), nil)
+	}
+
+	if accountID != r.sessionService.GetSessionAdminAccountID(sessionID) {
+		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
+	}
+
+ 	r.sessionService.RemoveSongFromQueue(sessionID, songID)
+
+	return r.sessionService.GetSessionState(sessionID), nil
 }
 
 // RemoveSpotifyStreamingService is the resolver for the removeSpotifyStreamingService field.

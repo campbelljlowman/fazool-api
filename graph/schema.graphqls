@@ -154,7 +154,7 @@ type Mutation {
   login(accountLogin: AccountLogin!): String!
 
   endSession(sessionID: Int!): String! @hasAccountID
-  removeSongFromQueue(sessionID: Int!, songID: String!): String! @hasAccountID
+  removeSongFromQueue(sessionID: Int!, songID: String!): SessionState! @hasAccountID
   removeSpotifyStreamingService(targetAccountID: Int!): Account! @hasAccountID
   deleteAccount(targetAccountID: Int!): String! @hasAccountID
 }

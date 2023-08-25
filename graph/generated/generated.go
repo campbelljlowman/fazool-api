@@ -150,7 +150,7 @@ type MutationResolver interface {
 	AddFazoolTokens(ctx context.Context, sessionID int, targetAccountID int, fazoolTokenAmount model.FazoolTokenAmount) (string, error)
 	Login(ctx context.Context, accountLogin model.AccountLogin) (string, error)
 	EndSession(ctx context.Context, sessionID int) (string, error)
-	RemoveSongFromQueue(ctx context.Context, sessionID int, songID string) (string, error)
+	RemoveSongFromQueue(ctx context.Context, sessionID int, songID string) (*model.SessionState, error)
 	RemoveSpotifyStreamingService(ctx context.Context, targetAccountID int) (*model.Account, error)
 	DeleteAccount(ctx context.Context, targetAccountID int) (string, error)
 }
@@ -916,7 +916,7 @@ type Mutation {
   login(accountLogin: AccountLogin!): String!
 
   endSession(sessionID: Int!): String! @hasAccountID
-  removeSongFromQueue(sessionID: Int!, songID: String!): String! @hasAccountID
+  removeSongFromQueue(sessionID: Int!, songID: String!): SessionState! @hasAccountID
   removeSpotifyStreamingService(targetAccountID: Int!): Account! @hasAccountID
   deleteAccount(targetAccountID: Int!): String! @hasAccountID
 }
@@ -2876,10 +2876,10 @@ func (ec *executionContext) _Mutation_removeSongFromQueue(ctx context.Context, f
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(string); ok {
+		if data, ok := tmp.(*model.SessionState); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/campbelljlowman/fazool-api/graph/model.SessionState`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2891,9 +2891,9 @@ func (ec *executionContext) _Mutation_removeSongFromQueue(ctx context.Context, f
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*model.SessionState)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNSessionState2ᚖgithubᚗcomᚋcampbelljlowmanᚋfazoolᚑapiᚋgraphᚋmodelᚐSessionState(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_removeSongFromQueue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2903,7 +2903,15 @@ func (ec *executionContext) fieldContext_Mutation_removeSongFromQueue(ctx contex
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			switch field.Name {
+			case "currentlyPlaying":
+				return ec.fieldContext_SessionState_currentlyPlaying(ctx, field)
+			case "queue":
+				return ec.fieldContext_SessionState_queue(ctx, field)
+			case "numberOfVoters":
+				return ec.fieldContext_SessionState_numberOfVoters(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SessionState", field.Name)
 		},
 	}
 	defer func() {

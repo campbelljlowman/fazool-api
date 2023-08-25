@@ -2,7 +2,6 @@ package session
 
 import (
 	"os"
-	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -33,6 +32,7 @@ type SessionService interface {
 	SearchForSongs(sessionID int, query string) ([]*model.SimpleSong, error)
 
 	UpsertSongInQueue(sessionID, numberOfVotes int, song model.SongUpdate)
+	RemoveSongFromQueue(sessionID int, songID string)
 	UpsertVoterInSession(sessionID int, voter *voter.Voter)
 	UpdateCurrentlyPlaying(sessionID int, action model.QueueAction) error
 	UpdateVoterAccount(sessionID, accountID int, voter *voter.Voter) *voter.Voter
@@ -283,6 +283,20 @@ func (s *SessionServiceInMemory) UpsertSongInQueue(sessionID, numberOfVotes int,
 	s.sendUpdatedState(sessionID)
 }
 
+func (s *SessionServiceInMemory) RemoveSongFromQueue(sessionID int, songID string) {
+	s.allSessionsMutex.Lock()
+	session := s.sessions[sessionID]
+	s.allSessionsMutex.Unlock()
+
+	session.sessionStateMutex.Lock()
+	index := slices.IndexFunc(session.sessionState.Queue, func(s *model.QueuedSong) bool { return s.SimpleSong.ID == songID })
+	session.sessionState.Queue = append(session.sessionState.Queue[:index], session.sessionState.Queue[index+1:]...)
+	// Maybe create a blacklist of songs if it's removed manually?
+	session.sessionStateMutex.Unlock()
+
+	s.sendUpdatedState(sessionID)
+}
+
 func (s *SessionServiceInMemory) UpsertVoterInSession(sessionID int, voter *voter.Voter){
 	s.allSessionsMutex.Lock()
 	session := s.sessions[sessionID]
@@ -390,8 +404,6 @@ func (s *SessionServiceInMemory) PopQueue(sessionID int) error {
 	session.sessionMetricsMutex.Unlock()
 
 	delete(session.unusedBonusVotes, song.ID)
-	slog.Debug("deleting bonus votes, map:")
-	slog.Debug(fmt.Sprintf("%v", session.unusedBonusVotes))
 
 	return nil
 }
