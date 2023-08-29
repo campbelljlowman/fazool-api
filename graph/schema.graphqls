@@ -150,6 +150,8 @@ type Mutation {
   setSuperVoterSession(sessionID: Int!, targetAccountID: Int!): Account! @hasVoterID @hasAccountID
   addBonusVotes(sessionID: Int!, targetAccountID: Int!, bonusVoteAmount: BonusVoteAmount!): Account! @hasVoterID @hasAccountID
   addFazoolTokens(sessionID: Int!, targetAccountID: Int!, fazoolTokenAmount: FazoolTokenAmount!): String! @hasAccountID
+  createPasswordChangeRequest(email: String!): String!
+  changePassword(passwordChangeRequestID: String!, newPassword: String!): Account!
 
   login(accountLogin: AccountLogin!): String!
 

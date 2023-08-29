@@ -5,28 +5,6 @@ import (
 	"testing"
 )
 
-var passwordFunctionsTests = []struct {
-	input string
-}{
-	{"asdf"},
-	{"1234"},
-}
-func TestPasswordFunctions(t *testing.T) {
-	for _, testCase := range(passwordFunctionsTests) {
-		passwordHash, err := HashPassword(testCase.input)
-
-		if err != nil {
-			t.Errorf("Error while running HashPassword(%v): %v", testCase.input, err)
-		}
-
-		match := CompareHashAndPassword(passwordHash, testCase.input)
-
-		if match != true {
-			t.Errorf("Password %v doesn't match for hash %v!", testCase.input, passwordHash)
-		}
-	}
-}
-
 var validateEmailTests = []struct {
 	input string
 	expectedOutput bool

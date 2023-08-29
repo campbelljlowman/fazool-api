@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func getAccountIDMiddleware() gin.HandlerFunc {
+func getAccountIDMiddleware(authService auth.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accountAuthenticationValue, err := parseAuthenticationHeader("AccountAuthentication", c)
 		if err != nil {
@@ -23,7 +23,7 @@ func getAccountIDMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		accountID, err := auth.GetAccountIDFromJWT(accountAuthenticationValue)
+		accountID, err := authService.GetAccountIDFromJWT(accountAuthenticationValue)
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			ctx1 := context.WithValue(c.Request.Context(), "accountTokenIsExpired", true)
 			c.Request = c.Request.WithContext(ctx1)

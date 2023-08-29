@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/campbelljlowman/fazool-api/auth"
 	"github.com/campbelljlowman/fazool-api/constants"
 	"github.com/campbelljlowman/fazool-api/graph/generated"
 	"github.com/campbelljlowman/fazool-api/graph/model"
@@ -54,7 +53,7 @@ func (r *mutationResolver) CreateSession(ctx context.Context) (*model.Account, e
 // CreateAccount is the resolver for the createAccount field.
 func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.NewAccount) (string, error) {
 	slog.Debug("Creating new account")
-	passwordHash, err := utils.HashPassword(newAccount.Password)
+	passwordHash, err := r.authService.GenerateBcryptHashForString(newAccount.Password)
 	newAccount.Password = "BLANK"
 	if err != nil {
 		utils.LogAndReturnError("Error processing credentials", err)
@@ -76,7 +75,7 @@ func (r *mutationResolver) CreateAccount(ctx context.Context, newAccount model.N
 
 	accountID := r.accountService.CreateAccount(newAccount.FirstName, newAccount.LastName, newAccount.Email, newAccount.PhoneNumber, passwordHash, accountType, 0, streamingService)
 
-	jwtAccessToken, err := auth.GenerateJWTAccessTokenForAccount(accountID)
+	jwtAccessToken, err := r.authService.GenerateJWTAccessTokenForAccount(accountID)
 	if err != nil {
 		return "", utils.LogAndReturnError("Error creating account token", err)
 	}
@@ -232,15 +231,36 @@ func (r *mutationResolver) AddFazoolTokens(ctx context.Context, sessionID int, t
 	return r.stripeService.CreateCheckoutSession(sessionID, targetAccountID, fazoolTokenAmount)
 }
 
+// CreatePasswordChangeRequest is the resolver for the createPasswordChangeRequest field.
+func (r *mutationResolver) CreatePasswordChangeRequest(ctx context.Context, email string) (string, error) {
+	accountExists := r.accountService.CheckIfEmailHasAccount(email)
+	if !accountExists {
+		return "", utils.LogAndReturnError("this email address doesn't have an account", nil)
+	}
+	
+	account := r.accountService.GetAccountFromEmail(email)
+
+	err := r.authService.CreateAndSendPasswordChangeRequest(*account.Email, account.ID)
+	if err != nil {
+		return "", utils.LogAndReturnError("error generating password change request", err)
+	}
+	return "Password change request send", nil
+}
+
+// ChangePassword is the resolver for the changePassword field.
+func (r *mutationResolver) ChangePassword(ctx context.Context, passwordChangeRequestID string, newPassword string) (*model.Account, error) {
+	panic(fmt.Errorf("not implemented: ChangePassword - changePassword"))
+}
+
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, accountLogin model.AccountLogin) (string, error) {
 	accountID, accountPasswordHash := r.accountService.GetAccountIDAndPassHash(accountLogin.Email)
 
-	if !utils.CompareHashAndPassword(accountPasswordHash, accountLogin.Password) {
+	if !r.authService.CompareBcryptHashAndString(accountPasswordHash, accountLogin.Password) {
 		return "", utils.LogAndReturnError("Invalid Login Credentials!", nil)
 	}
 
-	jwtAccessToken, err := auth.GenerateJWTAccessTokenForAccount(accountID)
+	jwtAccessToken, err := r.authService.GenerateJWTAccessTokenForAccount(accountID)
 	if err != nil {
 		return "", utils.LogAndReturnError("Error creating account access token", err)
 	}
@@ -279,7 +299,7 @@ func (r *mutationResolver) RemoveSongFromQueue(ctx context.Context, sessionID in
 		return nil, utils.LogAndReturnError(fmt.Sprintf("Account %v is not the admin for this session!", accountID), nil)
 	}
 
- 	r.sessionService.RemoveSongFromQueue(sessionID, songID)
+	r.sessionService.RemoveSongFromQueue(sessionID, songID)
 
 	return r.sessionService.GetSessionState(sessionID), nil
 }

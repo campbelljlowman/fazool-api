@@ -26,7 +26,9 @@ func InitializeRoutes() *gin.Engine {
 	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "VoterAuthentication")
 	corsConfig.AllowCredentials = true
 	router.Use(cors.New(corsConfig))
-	router.Use(getAccountIDMiddleware())
+
+	authService := auth.NewAuthService()
+	router.Use(getAccountIDMiddleware(authService))
 	router.Use(getVoterIDMiddleware())
 
 	router.GET("/hc", healthCheck)
@@ -40,15 +42,15 @@ func InitializeRoutes() *gin.Engine {
 	sessionService := session.NewSessionServiceInMemoryImpl(accountService)
 	stripeService := payments.NewStripeService(accountService)
 
-	r := graph.NewResolver(sessionService, accountService, stripeService)
+	r := graph.NewResolver(sessionService, accountService, stripeService, authService)
 	srv := graph.NewGraphQLServer(r)
 
 	router.Any("/query", func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)
 	})
 
-	router.GET("refresh-token", auth.GetRefreshToken)
-	router.POST("refresh-token", auth.RefreshToken)
+	router.GET("refresh-token", authService.GetRefreshToken)
+	router.POST("refresh-token", authService.RefreshToken)
 
 	router.POST("/stripe-webhook", func(c *gin.Context) {
 		stripeService.HandleStripeWebhook(c.Writer, c.Request)

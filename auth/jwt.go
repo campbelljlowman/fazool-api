@@ -19,7 +19,7 @@ const refreshTokenCookieMaxAgeSeconds int = 608400 // 60 seconds * 60 minutes * 
 
 var jwtSecretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
-func GenerateJWTAccessTokenForAccount(accountID int) (string, error){
+func (a *AuthServiceImpl) GenerateJWTAccessTokenForAccount(accountID int) (string, error){
 	accessToken, err := generateJWTForAccount(accountID, accountAccessTokenDurationMinutes * time.Minute) 
 	if err != nil {
 		return "", err
@@ -49,7 +49,7 @@ func generateJWTForAccount(accountID int, duractionValid time.Duration) (string,
 	return jwtTokenString, nil
 }
 
-func GetAccountIDFromJWT(tokenString string) (int, error) {
+func (a *AuthServiceImpl) GetAccountIDFromJWT(tokenString string) (int, error) {
 	jwtToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -74,7 +74,7 @@ func GetAccountIDFromJWT(tokenString string) (int, error) {
 	return accountID, nil
 }
 
-func GetRefreshToken(c *gin.Context) {
+func (a *AuthServiceImpl) GetRefreshToken(c *gin.Context) {
 	accoundID, _ := c.Request.Context().Value("accountID").(int)
 	if accoundID == 0 {
 		c.AbortWithError(403, fmt.Errorf("account ID couldn't be parsed from request: %v", accoundID))
@@ -91,7 +91,7 @@ func GetRefreshToken(c *gin.Context) {
 	c.SetCookie(refreshTokenCookieName, refreshToken, refreshTokenCookieMaxAgeSeconds, "/", frontendDomain, true, true)
 }
 
-func RefreshToken(c *gin.Context) {
+func (a *AuthServiceImpl) RefreshToken(c *gin.Context) {
 	refreshToken, err := c.Cookie(refreshTokenCookieName)
 	if err != nil {
 		utils.LogAndReturnError("error getting refresh token cookie", err)
@@ -99,7 +99,7 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	accountID, err := GetAccountIDFromJWT(refreshToken)
+	accountID, err := a.GetAccountIDFromJWT(refreshToken)
 	if err != nil {
 		utils.LogAndReturnError("error getting accound ID from refresh token", err)
 		c.Abort()

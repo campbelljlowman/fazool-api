@@ -7,24 +7,7 @@ import (
 	"net/mail"
 
 	"golang.org/x/exp/slog"
-	"golang.org/x/crypto/bcrypt"
 )
-
-func HashPassword(password string) (string, error) {
-	passwordBytes := []byte(password)
-
-	passwordHash, err := bcrypt.GenerateFromPassword(passwordBytes, bcrypt.MinCost)
-
-	return string(passwordHash), err
-}
-
-func CompareHashAndPassword(passwordHash, password string) bool {
-	passwordHashBytes := []byte(passwordHash)
-	passwordBytes := []byte(password)
-
-	err := bcrypt.CompareHashAndPassword(passwordHashBytes, passwordBytes)
-	return err == nil
-}
 
 func ValidateEmail(email string) bool {
 	_, err := mail.ParseAddress(email)
