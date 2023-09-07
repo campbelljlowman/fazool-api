@@ -114,7 +114,7 @@ func (s *SessionServiceInMemory) CreateSession(adminAccountID int, accountType m
 
 	maximumVoters := 0
 	if accountType == model.AccountTypeFree {
-		maximumVoters = 50
+		maximumVoters = 100
 	}
 
 	sessionConfig := &model.SessionConfig{
