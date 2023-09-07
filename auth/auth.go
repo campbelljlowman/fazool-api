@@ -20,7 +20,7 @@ type AuthService interface {
 	CompareBcryptHashAndString(hash, testString string) bool
 
 	CreateAndSendPasswordChangeRequest(email string, accountID int) error
-	ValidatePasswordChangeRequest(passwordChangeRequestID string) bool
+	ValidatePasswordChangeRequest(passwordChangeRequestID string) (int, bool)
 }
 
 type AuthServiceImpl struct {
@@ -56,6 +56,7 @@ func NewAuthService() *AuthServiceImpl{
 		os.Exit(1)
 	}
 
+	// TODO: Loop through and remove any entries that are expired
 	gormDB.AutoMigrate(&passwordChangeRequest{})
 
 	authServiceImpl := &AuthServiceImpl{

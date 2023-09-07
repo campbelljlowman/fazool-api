@@ -254,6 +254,20 @@ func (mr *MockAccountServiceMockRecorder) SetAccountActiveSession(arg0, arg1 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAccountActiveSession", reflect.TypeOf((*MockAccountService)(nil).SetAccountActiveSession), arg0, arg1)
 }
 
+// SetAccountPasswordHash mocks base method.
+func (m *MockAccountService) SetAccountPasswordHash(arg0 int, arg1 string) *model.Account {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetAccountPasswordHash", arg0, arg1)
+	ret0, _ := ret[0].(*model.Account)
+	return ret0
+}
+
+// SetAccountPasswordHash indicates an expected call of SetAccountPasswordHash.
+func (mr *MockAccountServiceMockRecorder) SetAccountPasswordHash(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAccountPasswordHash", reflect.TypeOf((*MockAccountService)(nil).SetAccountPasswordHash), arg0, arg1)
+}
+
 // SetAccountType mocks base method.
 func (m *MockAccountService) SetAccountType(arg0 int, arg1 model.AccountType) *model.Account {
 	m.ctrl.T.Helper()

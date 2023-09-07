@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"crypto/sha256"
 	"net/smtp"
 	"time"
 
@@ -11,12 +12,22 @@ import (
 	"gorm.io/gorm"
 )
 
+const passwordChangeRequestValidityHours time.Duration = 24
+
 func (a *AuthServiceImpl) GenerateBcryptHashForString(inputString string) (string, error) {
 	inputStringBytes := []byte(inputString)
 
 	bcryptHash, err := bcrypt.GenerateFromPassword(inputStringBytes, bcrypt.MinCost)
 
 	return string(bcryptHash), err
+}
+
+func (a *AuthServiceImpl) generateSHAHashForString(inputString string) (string) {
+    hasher := sha256.New()
+    hasher.Write([]byte(inputString))
+
+    hash := fmt.Sprintf("%x", hasher.Sum(nil))
+	return hash
 }
 
 func (a *AuthServiceImpl) CompareBcryptHashAndString(hash, testString string) bool {
@@ -29,27 +40,24 @@ func (a *AuthServiceImpl) CompareBcryptHashAndString(hash, testString string) bo
 
 type passwordChangeRequest struct {
 	gorm.Model
-	passwordChangeRequestIDHash string
-	accountID 					int
-	timeCreated					time.Time
+	PasswordChangeRequestIDHash string
+	AccountID 					int
+	TimeCreated					time.Time
 }
 
 func (a *AuthServiceImpl) CreateAndSendPasswordChangeRequest(email string, accountID int) error {
 	passwordChangeRequestID := uuid.New().String()
-	passwordChangeRequestIDHash, err := a.GenerateBcryptHashForString(passwordChangeRequestID)
-	if err != nil {
-		return err
-	}
+	passwordChangeRequestIDHash := a.generateSHAHashForString(passwordChangeRequestID)
 
 	slog.Debug("Password change request id hash", "hash", passwordChangeRequestIDHash)
 	passwordChangeRequest := passwordChangeRequest{
-		passwordChangeRequestIDHash: 	passwordChangeRequestIDHash,
-		accountID: 						accountID,
-		timeCreated: 					time.Now(),
+		PasswordChangeRequestIDHash: 	passwordChangeRequestIDHash,
+		AccountID: 						accountID,
+		TimeCreated: 					time.Now(),
 	}
 	a.authGorm.Create(&passwordChangeRequest)
 
-	err = a.sendPasswordChangeRequestEmail(email, passwordChangeRequestID)
+	err := a.sendPasswordChangeRequestEmail(email, passwordChangeRequestID)
 	if err != nil {
 		return err
 	}
@@ -78,6 +86,17 @@ func (a *AuthServiceImpl) sendPasswordChangeRequestEmail(destinationEmail, passw
 	return nil
 }
 
-func (a *AuthServiceImpl) ValidatePasswordChangeRequest(passwordChangeRequestID string) bool {
-	return false
+func (a *AuthServiceImpl) ValidatePasswordChangeRequest(passwordChangeRequestID string) (int, bool) {
+	passwordChangeRequestIDHash := a.generateSHAHashForString(passwordChangeRequestID)
+
+	var passwordChangeRequest passwordChangeRequest
+	a.authGorm.Where("password_change_request_id_hash = ?", passwordChangeRequestIDHash).First(&passwordChangeRequest)
+	a.authGorm.Delete(&passwordChangeRequest, passwordChangeRequest.ID)
+
+	passwordChangeRequestExpiresAt := passwordChangeRequest.TimeCreated.Add(passwordChangeRequestValidityHours * time.Hour)
+	if passwordChangeRequestExpiresAt.Before(time.Now()) {
+		return 0, false
+	}
+
+	return passwordChangeRequest.AccountID, true
 }

@@ -29,6 +29,7 @@ type AccountService interface {
 	SetAccountActiveSession(accountID int, sessionID int)
 	SetSpotifyStreamingService(accountID int, refreshToken string)
 	SetAccountType(accountID int, accountType model.AccountType) *model.Account
+	SetAccountPasswordHash(accountID int, passwordHash string) *model.Account
 	SetSuperVoterSession(accountID, sessionID, fazoolTokens int) *model.Account
 	AddBonusVotes(accountID, bonusVotes, fazoolTokens int) *model.Account
 	AddFazoolTokens(accountID, fazoolTokens int) *model.Account
@@ -188,6 +189,16 @@ func (a *AccountServiceGorm) SetAccountType(accountID int, accountType model.Acc
 	a.gorm.First(&fullAccount, accountID)
 
 	fullAccount.AccountType = accountType
+	a.gorm.Save(&fullAccount)
+
+	return transformAccountType(fullAccount)
+}
+
+func (a *AccountServiceGorm) SetAccountPasswordHash(accountID int, passwordHash string) *model.Account{
+	var fullAccount account
+	a.gorm.First(&fullAccount, accountID)
+
+	fullAccount.PasswordHash = passwordHash
 	a.gorm.Save(&fullAccount)
 
 	return transformAccountType(fullAccount)

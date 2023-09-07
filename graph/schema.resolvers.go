@@ -249,7 +249,17 @@ func (r *mutationResolver) CreatePasswordChangeRequest(ctx context.Context, emai
 
 // ChangePassword is the resolver for the changePassword field.
 func (r *mutationResolver) ChangePassword(ctx context.Context, passwordChangeRequestID string, newPassword string) (*model.Account, error) {
-	panic(fmt.Errorf("not implemented: ChangePassword - changePassword"))
+	accountID, passwordChangeRequestIsValid := r.authService.ValidatePasswordChangeRequest(passwordChangeRequestID)
+	if !passwordChangeRequestIsValid {
+		return nil, utils.LogAndReturnError("password change request isn't valid", nil)
+	}
+
+	passwordHash, err := r.authService.GenerateBcryptHashForString(newPassword)
+	if err != nil {
+		return nil, utils.LogAndReturnError("error generating password hash", err)
+	}
+
+	return r.accountService.SetAccountPasswordHash(accountID, passwordHash), nil
 }
 
 // Login is the resolver for the login field.
